@@ -1,0 +1,11 @@
+---
+- name: create dataset
+  hosts: "{{ globals.ansiblehost }}"
+  become: no 
+  tasks:
+  - name: This command will create svm:"{{ globals.sourcesvm }}" volume:"{{ volname }}" size:"{{ volsize }}" path:"{{ junction_path }}"
+    command: /usr/local/bin/netapp_dataops_cli.py create volume --name="{{ volname }}" --size="{{ volsize }}" --junction "{{ junction_path }}" --svm="{{ globals.sourcesvm }}" --type="{{ globals.voltype }}" --aggregate="{{ globals.aggregate}}"
+    register: out
+  - debug: var=out.stdout_lines
+  - debug: var=out.stderr_lines 
+

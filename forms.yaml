@@ -1,0 +1,103 @@
+categories:
+  - name: Default
+    icon: bars
+  - name: Dataset
+    icon: bath
+  - name: Create
+    icon: bath  
+  - name: Clone
+    icon: bath             
+roles:
+  - name: admin
+    groups:
+      - local/admins
+      - ldap/Domain Admins
+  - name: operator
+    groups:
+      - local/operator
+  - name: demo
+    groups:
+      - local/demo
+  - name: public
+    groups: []
+  - name: DataOps
+    groups:
+      - local/DataOps Admins  
+forms:
+  - name: Create new dataset 
+    help: |
+      This is used to create new dataset in the FZ-DEV. The new dataset will be mounted under /data/{aud,eng,nlp,vis}/datasets  
+    roles:
+      - DataOps
+    description: New dataset creation 
+    categories:
+      - Dataset
+      - Create
+    #tileClass: has-background-link
+    icon: scroll
+    playbook: dataops_create_vol.yaml
+    inventory: hosts
+    type: ansible
+    fields:   
+
+      - type: expression
+        hide: true
+        label: globals
+        name: globals
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','')"    
+
+      - type: query
+        name: service
+        label: Service
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[.services[] | ({name} + {shortname}) ]')"
+        columns:
+        - name
+        default: __auto__
+
+      - type: expression
+        hide: true
+        label: company_jq
+        name: company_jq
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[(.services[] | select (.name==\"$(service.name)\")|.combinations)[]|{name:.company}]|unique')"          
+
+      - type: query
+        name: company
+        label: Company
+        expression: "JSON.parse('$(company_jq)')"
+        columns:
+        - name
+        required: true
+        runLocal: true
+        default: __auto__
+
+      - type: expression
+        label: environment_jq
+        name: environment_jq
+        hide: true 
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[(.services[] | select (.name==\"$(service.name)\")|.combinations)[]| select(.company==\"$(company.name)\")|{name: .environment}]|unique')"
+
+      - type: query
+        name: environment
+        label: Environment
+        expression: "JSON.parse('$(environment_jq)')"
+        columns:
+        - name
+        required: true
+        runLocal: true
+        default: __auto__     
+
+      - type: expression
+        label: location_jq
+        name: location_jq
+        hide: true 
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[(.services[] | select (.name==\"$(service.name)\")|.combinations)[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\")|{name: .location}]|unique')"
+
+      - type: query
+        name: location
+        label: Location
+        expression: "JSON.parse('$(location_jq.name)')"
+        columns:
+        - name
+        required: true
+        runLocal: true
+        default: __auto__  

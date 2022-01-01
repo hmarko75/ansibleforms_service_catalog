@@ -1,0 +1,11 @@
+---
+- name: clone dataset
+  hosts: "{{ globals.ansiblehost }}"
+  become: no 
+  tasks:
+  - name: This command will clone source svm:"{{ globals.sourcesvm }}" volume:"{{ dataset.Volume }}" snapshot:"{{ parent_snapshot.Snapshot }}" to target svm:"{{ globals.targetsvm }}" volume:"{{ targetvolume }}" on:"{{ junction_path }}"
+    command: /usr/local/bin/netapp_dataops_cli.py clone volume --source-svm={{ globals.sourcesvm }} --target-svm={{ globals.targetsvm }} --name={{ targetvolume }} --source-volume={{ dataset.Volume }} --junction={{ junction_path }} --source-snapshot={{ parent_snapshot.Snapshot }}
+    register: out
+  - debug: var=out.stdout_lines
+  - debug: var=out.stderr_lines 
+

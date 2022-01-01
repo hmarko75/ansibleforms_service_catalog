@@ -1,0 +1,146 @@
+companies:
+  - name: Company1
+    shortname: c1
+  - name: Company2
+    shortname: c2
+
+environments:
+  - name: Production
+    shortname: p
+    company: c1
+  - name: Test
+    shortname: t
+    company: c1
+  - name: Dev
+    shortname: d
+    company: c1    
+  - name: Dev
+    shortname: d
+    company: c2
+  - name: Training
+    shortname: t
+    company: c2
+
+locations:
+  - name: Site A
+    shortname: s1
+    company: c1
+  - name: Site B
+    shortname: s2
+    company: c1
+  - name: Site C
+    shortname: s3
+    company: c1
+
+services:
+  - name: NAS
+    shortname: nas
+    combinations:
+      - company: Company 1
+        environment: Prodcution
+        location: Site A
+        copies:
+          - type: production
+            snapshot-policy: dynamic 
+            dynamic-snapshot-policy: true
+            cluster:
+              - cluster1.demo.netapp.com:
+                svms:
+                  - svm1
+              - cluster2.demo.netapp.com:
+                svms:
+                  - svm3
+          - type: dr
+            source-type: production
+            schedule: daily
+            dynamic-schedule: true
+            policy: 9w_daily
+            cluster:
+              - cluster3.demo.netapp.com:
+                svms:
+                  - svm5
+                  - smv6       
+          - type: b2d
+            source-type: dr
+            schedule: daily
+            dynamic-schedule: true
+            policy: 9w_daily
+            cluster:
+              - cluster3.demo.netapp.com:
+                svms:
+                  - svm9
+                  - smv10
+      - company: Company 1
+        location: Site B
+        environment: Test
+        copies:
+          - type: production
+            snapshot-policy: dynamic 
+            dynamic-snapshot-policy: true
+            cluster:
+              - cluster1.demo.netapp.com:
+                svms:
+                  - svm1
+              - cluster2.demo.netapp.com:
+                svms:
+                  - svm3
+          - type: dr
+            source-type: production
+            schedule: daily
+            dynamic-schedule: true
+            policy: 9w_daily
+            cluster:
+              - cluster3.demo.netapp.com:
+                svms:
+                  - svm5
+                  - smv6       
+          - type: b2d
+            source-type: dr
+            schedule: daily
+            dynamic-schedule: true
+            policy: 9w_daily
+            cluster:
+              - cluster3.demo.netapp.com:
+                svms:
+                  - svm9
+                  - smv10
+
+
+  - name: SAN
+    shortname: san
+    combinations:
+      - company: c1
+        location: s1
+        environment: p
+        copies:
+          - type: production
+            snapshot-policy: dynamic 
+            dynamic-snapshot-policy: true
+            cluster:
+              - cluster1.demo.netapp.com:
+                svms:
+                  - svm1
+              - cluster2.demo.netapp.com:
+                svms:
+                  - svm3
+          - type: dr
+            source-type: production
+            schedule: daily
+            dynamic-schedule: true
+            policy: 9w_daily
+            cluster:
+              - cluster3.demo.netapp.com:
+                svms:
+                  - svm5
+                  - smv6       
+          - type: b2d
+            source-type: dr
+            schedule: daily
+            dynamic-schedule: true
+            policy: 9w_daily
+            cluster:
+              - cluster3.demo.netapp.com:
+                svms:
+                  - svm9
+                  - smv10
+
