@@ -101,3 +101,9 @@ forms:
         required: true
         runLocal: true
         default: __auto__  
+
+      - type: expression
+        name: cluster_aggr_jq 
+        label: cluster_aggr_jq
+        hide: true
+        expression: "fn.fnRestBasic('get','https://$(cluster.fqdn)/api/storage/aggregates?state=online','','def gb: tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+"GB";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]','','')"
