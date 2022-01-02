@@ -39,12 +39,18 @@ forms:
     inventory: hosts
     type: ansible
     fields:   
-
       - type: expression
         hide: true
         label: globals
         name: globals
         expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','')"    
+
+      - type: expression
+        name: aiqum
+        expression: "'aiqum.demo.netapp.com'" 
+        label: aiqum
+        asCredential: true
+        hide: true 
 
       - type: query
         name: service
@@ -103,7 +109,31 @@ forms:
         default: __auto__  
 
       - type: expression
+        name: aggr_filter_jq 
+        label: aggr_filter_jq
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"production\")|.clusters[]|keys|join(\"%7C\")')"
+
+
+      - type: expression
         name: cluster_aggr_jq 
         label: cluster_aggr_jq
         hide: true
-        expression: "fn.fnRestBasic('get','https://$(cluster.fqdn)/api/storage/aggregates?state=online','','def gb: tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+"GB";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]','','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]','','')"
+
+      - type: query
+        name: prod
+        label: Production Copy
+        expression: "JSON.parse('$(cluster_aggr_jq)')"
+        columns:
+        - Resource
+        - Aggregate
+        - Cluster
+        - Node
+        - Size
+        - Available
+        - Perf
+        - Type
+        required: true
+        runLocal: true
+        default: __auto__  
