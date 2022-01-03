@@ -39,12 +39,12 @@ forms:
     inventory: hosts
     type: ansible
     fields:   
-      - type: expression
-        hide: true
-        label: globals
-        name: globals
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','')"    
-        noOutput: true
+      #- type: expression
+      #  hide: true
+      #  label: globals
+      #  name: globals
+      #  expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','')"    
+      #  noOutput: true
 
       - type: expression
         name: aiqum
@@ -53,6 +53,10 @@ forms:
         asCredential: true
         hide: true 
         noOutput: true
+
+      ############################################################################################################################
+      # filter service, environment, company, location
+      ############################################################################################################################
 
       - type: query
         name: service
@@ -112,6 +116,51 @@ forms:
         required: true
         runLocal: true
         default: __auto__
+      ############################################################################################################################
+      # check which copies are needed 
+      ############################################################################################################################
+      #get the type of copies
+      - type: expression
+        name: copy_types_jq 
+        label: copy_types_jq
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|.type]')"
+        noOutput: true
+
+      #validate dr1 is required copy
+      - type: expression
+        name: dr1
+        label: dr1
+        hide: true
+        runLocal: true
+        expression: "(JSON.parse('$(copy_types_jq)')).includes('dr1')"
+        noOutput: true
+
+      #validate dr2 is required copy
+      - type: expression
+        name: dr2
+        label: dr2
+        hide: true
+        runLocal: true
+        expression: "(JSON.parse('$(copy_types_jq)')).includes('dr2')"
+        noOutput: true
+      #validate b2d1 is required copy
+      - type: expression
+        name: b2d1
+        label: b2d1
+        hide: true
+        runLocal: true
+        expression: "(JSON.parse('$(copy_types_jq)')).includes('b2d1')"
+        noOutput: true        
+      #validate b2d2 is required copy
+      - type: expression
+        name: b2d2
+        label: b2d2
+        hide: true
+        runLocal: true
+        expression: "(JSON.parse('$(copy_types_jq)')).includes('b2d2')"
+        noOutput: true              
+      
 
       #checkbox to see cluster/aggregate/svm information 
       #- type: checkbox
@@ -120,8 +169,12 @@ forms:
       #  default: false          
       #  group: Production
 
+      ############################################################################################################################
+      # create prod copy location information
+      ############################################################################################################################      
+
       - type: text
-        name: prodvolname
+        name: volname
         label: Volume Name
         default: ""
         required: true
@@ -134,7 +187,7 @@ forms:
         model: prod.volname
 
       - type: number
-        name: prodvolsize
+        name: volsize
         label: Volume Size (G)
         default: "100"
         required: true
@@ -142,7 +195,7 @@ forms:
         maxValue: 90000
         icon: user
         group: Production
-        model: prod.size
+        model: prod.volsize
       
       #will build a %7C (|) cluster list that will be used for rest aiqum aggr filter 
       - type: expression
@@ -164,7 +217,7 @@ forms:
 
       #aggr enum 
       - type: query
-        name: prod_cluster_aggr
+        name: cluster_aggr
         label: Cluster/Aggregate
         expression: "JSON.parse('$(cluster_aggr_jq)')"
         columns:
@@ -179,34 +232,46 @@ forms:
         default: __auto__  
         group: Production
         outputObject: true
-        model: prod.clusteraggr
-        #dependencies:         
-        #- name: show_prod_details
-        #  values:
-        #  - true        
+        noOutput: true
+      
+      - type: expression       
+        name: cluster
+        label: cluster
+        expression: "'$(cluster_aggr.Cluster)'"
+        hide: true
+        group: Production
+        model: prod.cluster
+
+      - type: expression       
+        name: aggregate
+        label: aggregate
+        expression: "'$(cluster_aggr.Aggregate)'"
+        hide: true
+        group: Production
+        model: prod.aggregate       
       
       # will build a %7C (|) svm list that will be used for rest aiqum aggr filter 
       - type: expression
         name: svm_filter_jq
         label: svm_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"production\")|.clusters[]|.$(prod_cluster_aggr.Cluster)|join(\"%7C\")')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"production\")|.clusters[]|.$(cluster_aggr.Cluster)|join(\"%7C\")')"
         group: Production
         noOutput: true
 
       #will get SVM list 
       - type: expression
-        name: prodsvm_jq
-        label: prodsvm_jq
+        name: svm_jq
+        label: svm_jq
         hide: true
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(prod_cluster_aggr.Cluster)&name=$(svm_filter_jq)','','AIQUM','[.records[]|{Name: .name}]','','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster_aggr.Cluster)&name=$(svm_filter_jq)','','AIQUM','[.records[]|{Name: .name}]','','')"
         group: Production
         noOutput: true
 
       - type: query
-        name: prod_svm
+        name: svm
         label: SVM
-        expression: "JSON.parse('$(prodsvm_jq)')"
+        expression: "JSON.parse('$(svm_jq)')"
         columns:
         - Name
         required: true
@@ -218,4 +283,177 @@ forms:
         # - name: show_prod_details
         #   values:
         #   - true
+
+      ############################################################################################################################
+      # create dr1 copy if required
+      ############################################################################################################################      
+
+      #dr1 name suffix if provided 
+      - type: expression
+        name: dr1_namesuffix
+        label: dr1_namesuffix
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.namesuffix')"
+        group: DR1
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true 
+
+      - type: expression
+        name: dr1_volname
+        label: Volume Name
+        hide: false
+        expression: "'$(volname)'+'$(dr1_namesuffix)'"
+        group: DR1
+        dependencies:         
+        - name: dr1
+          values:
+          - true  
+        model: dr1.volname
+
+      #dr1 size ratio
+      - type: expression
+        name: dr1_sizeratio
+        label: dr1_sizeratio
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.sizeratio')"
+        group: DR1
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true 
+
+      #vol size will be production vol size multiplied by size ratio
+      - type: expression
+        name: dr1_volsize
+        label: Volume Size
+        hide: true
+        runLocal: true
+        expression: "($(volsize)*$(dr1_sizeratio)).toString()"
+        group: DR1
+        dependencies:         
+        - name: dr1
+          values:
+          - true  
+        model: dr1.volsize
+
+      #will build a %7C (|) cluster list that will be used for rest aiqum aggr filter 
+      - type: expression
+        name: dr1_aggr_filter_jq 
+        label: dr1_aggr_filter_jq
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.clusters[]|keys|join(\"%7C\")')"
+        group: DR1
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true          
+      
+      #will get aggreagte list including capacity and perf using cluster filter. sorted by by avaialble capacity 
+      - type: expression
+        name: dr1_cluster_aggr_jq 
+        label: dr1_cluster_aggr_jq
+        hide: true
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(dr1_aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.block_storage.available}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
+        group: DR1
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true          
+
+      #aggr enum 
+      - type: query
+        name: dr1_cluster_aggr
+        label: Cluster/Aggregate
+        expression: "JSON.parse('$(dr1_cluster_aggr_jq)')"
+        columns:
+        - Resource
+        - Node
+        - Size
+        - Available
+        - Perf
+        - Type
+        noOutput: true
+        default: __auto__
+        required: true
+        runLocal: true  
+        group: DR1
+        outputObject: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true          
+      
+      - type: expression       
+        name: dr1_cluster
+        label: dr1_cluster
+        expression: "'$(dr1_cluster_aggr.Cluster)'"
+        hide: true
+        group: DR1
+        model: dr1.cluster
+        dependencies:         
+        - name: dr1
+          values:
+          - true          
+
+      - type: expression       
+        name: dr1_aggregate
+        label: dr1_aggregate
+        expression: "'$(dr1_cluster_aggr.Aggregate)'"
+        hide: true
+        group: DR1
+        model: dr1.aggregate
+        dependencies:         
+        - name: dr1
+          values:
+          - true              
+      
+      # will build a %7C (|) svm list that will be used for rest aiqum aggr filter 
+      - type: expression
+        name: dr1_svm_filter_jq
+        label: dr1_svm_filter_jq
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.clusters[]|.$(dr1_cluster_aggr.Cluster)|join(\"%7C\")')"
+        group: DR1
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true          
+
+      #will get SVM list 
+      - type: expression
+        name: dr1_svm_jq
+        label: dr1_svm_jq
+        hide: true
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(dr1_cluster_aggr.Cluster)&name=$(dr1_svm_filter_jq)','','AIQUM','[.records[]|{Name: .name}]','','')"
+        group: DR1
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true        
+
+      - type: query
+        name: dr1_svm
+        label: SVM
+        expression: "JSON.parse('$(dr1_svm_jq)')"
+        columns:
+        - Name
+        required: true
+        runLocal: true
+        default: __auto__  
+        group: DR1
+        model: dr1.svm
+        dependencies:         
+        - name: dr1
+          values:
+          - true  
+        
+ 
         

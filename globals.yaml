@@ -45,21 +45,36 @@ services:
             dynamic-snapshot-policy: true
             clusters:
               - cluster1: [svm1,svm2]
-                cluster2: [svm3,svm4]
-          - type: dr
+          - type: dr1
             source-type: production
             schedule: daily
-            dynamic-schedule: true
-            policy: 9w_daily
+            dynamicschedule: true
+            sizeratio: 1.5
+            namesuffix: ""
+            policy: MirrorAllSnapshots
             clusters:
-              - cluster3: [svm5,svm6]
-          - type: b2d
+              - cluster1: [svm5]
+          - type: dr2
+            source-type: production
+            schedule: daily
+            dynamicschedule: true
+            policy: MirrorAllSnapshots
+            clusters:
+              - cluster2: [svm7,svm8]              
+          - type: b2d1
             source-type: dr
             schedule: daily
-            dynamic-schedule: true
+            dynamicschedule: true
             policy: 9w_daily
             clusterss:
               - cluster3: [svm9,svm10]
+          - type: b2d2
+            source-type: dr
+            schedule: daily
+            dynamicschedule: true
+            policy: 9w_daily
+            clusterss:
+              - cluster3: [svm9,svm10]              
       - company: Company 1
         location: Site B
         environment: Test
@@ -73,14 +88,14 @@ services:
           - type: dr
             source-type: production
             schedule: daily
-            dynamic-schedule: true
+            dynamicschedule: true
             policy: 9w_daily
             cluster:
               - cluster3: [svm5,svm6]      
           - type: b2d
             source-type: dr
             schedule: daily
-            dynamic-schedule: true
+            dynamicschedule: true
             policy: 9w_daily
             clusters:
               - cluster3: [svm9,svm10]
@@ -102,14 +117,14 @@ services:
           - type: dr
             source-type: prod
             schedule: daily
-            dynamic-schedule: true
+            dynamicschedule: true
             policy: 9w_daily
             clusters:
               - cluster1: [svm5,svm6]     
           - type: b2d
             source-type: dr
             schedule: daily
-            dynamic-schedule: true
+            dynamicschedule: true
             policy: 9w_daily
             clusters:
               - cluster3: [svm9,svm10]
