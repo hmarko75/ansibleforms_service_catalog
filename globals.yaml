@@ -44,8 +44,8 @@ services:
             snapshot-policy: dynamic 
             dynamic-snapshot-policy: true
             clusters:
-              - cluster1: [svm1]
-                #cluster2: [svm3,svm4]
+              - cluster1: [svm1,svm2]
+                cluster2: [svm3,svm4]
           - type: dr
             source-type: production
             schedule: daily
