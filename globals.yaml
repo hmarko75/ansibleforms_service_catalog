@@ -40,13 +40,14 @@ services:
         environment: Production
         location: Site A
         copies:
-          - type: production
+          - type: prod
             snapshot-policy: dynamic 
             dynamic-snapshot-policy: true
             clusters:
               - cluster1: [svm1,svm2]
+                cluster2: [svm3,svm4]
           - type: dr1
-            source-type: production
+            source: prod
             schedule: daily
             dynamicschedule: true
             sizeratio: 1.5
@@ -55,45 +56,52 @@ services:
             clusters:
               - cluster1: [svm5]
           - type: dr2
-            source-type: production
+            source: dr1
             schedule: daily
             dynamicschedule: true
+            sizeratio: 1.5
+            namesuffix: ""
             policy: MirrorAllSnapshots
             clusters:
               - cluster2: [svm7,svm8]              
           - type: b2d1
-            source-type: dr
+            source: dr1
             schedule: daily
+            sizeratio: 2.5
+            namesuffix: "_b2d1"            
             dynamicschedule: true
             policy: 9w_daily
-            clusterss:
-              - cluster3: [svm9,svm10]
+            clusters:
+              - cluster2: [svm9,svm10]
           - type: b2d2
-            source-type: dr
+            source: dr2
             schedule: daily
+            sizeratio: 2.5
+            namesuffix: "_b2d2"             
             dynamicschedule: true
-            policy: 9w_daily
-            clusterss:
-              - cluster3: [svm9,svm10]              
+            policy: 12w_daily
+            clusters:
+              - cluster1: [svm1,svm2]              
+
       - company: Company 1
         location: Site B
         environment: Test
         copies:
-          - type: production
+          - type: prod
             snapshot-policy: dynamic 
             dynamic-snapshot-policy: true
             clusters:
               - cluster1: [svm1]
                 cluster2: [svm3]
           - type: dr
-            source-type: production
+            source: prod
             schedule: daily
             dynamicschedule: true
             policy: 9w_daily
             cluster:
-              - cluster3: [svm5,svm6]      
+              - cluster1: [svm1,svm2]      
           - type: b2d
-            source-type: dr
+            source: dr
             schedule: daily
             dynamicschedule: true
             policy: 9w_daily
@@ -115,14 +123,14 @@ services:
               - cluster1: [svm1]
                 cluster2: [svm3]
           - type: dr
-            source-type: prod
+            source: prod
             schedule: daily
             dynamicschedule: true
             policy: 9w_daily
             clusters:
               - cluster1: [svm5,svm6]     
           - type: b2d
-            source-type: dr
+            source: dr
             schedule: daily
             dynamicschedule: true
             policy: 9w_daily
