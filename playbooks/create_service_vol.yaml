@@ -1,0 +1,29 @@
+---
+- name: Create volume on prod
+  import_playbook: create_vol.yaml
+  vars:
+    copy: 'prod'
+    
+- name: Create volume on dr1
+  import_playbook: create_vol.yaml
+  vars:
+    copy: 'dr1'
+  when: dr1 is defined
+
+- name: Create volume on dr2
+  import_playbook: create_vol.yaml
+  vars:
+    copy: 'dr2'
+  when: dr2 is defined
+
+- name: Create volume on b2d1
+  import_playbook: create_vol.yaml
+  vars:
+    copy: 'b2d1'
+  when: b2d1 is defined
+
+- name: Create volume on b2d2
+  import_playbook: create_vol.yaml
+  vars:
+    copy: 'b2d2'
+  when: b2d2 is defined    

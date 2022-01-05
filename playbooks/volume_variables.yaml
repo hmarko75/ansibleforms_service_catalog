@@ -1,0 +1,89 @@
+# Do not format or change the spacing of keys in the variable files.  It is recommended that you specify string values by enclosing them in double-quote marks ("string").
+host:
+    name: "localhost"
+    ip: 192.168.0.101
+
+# Ensure the properties you want to apply to the selected object are not in the comments.
+UserInputs:
+    name: "vol123"
+    # Specify only an integer value.
+    size: 107374182400
+    # The value of "size_unit" can be "bytes", "b", "kb", "mb", "gb", "tb", "pb", "eb", "zb", or  "yb". The default value is "gb".
+    size_unit: "bytes"
+    #auto_provision_as: "-"
+    svm:
+        name: "svm1"
+    nas_application_template:
+        # Snapshot policy can not set for FlexCache volume.
+        snapshot_policy: "default"
+        #export_policy:
+            #name: ""
+        tiering:
+            control: "disallowed"
+            #policy: ""
+            #object_stores:
+            #- ""
+        storage_service:
+            name: "extreme"
+        #qos:
+            #policy:
+                #name: ""
+                # Specify the fixed QoS details.  When creating a new policy, specify the fixed QoS details and include the name.
+                #fixed:
+                # Specify "min/max throughput_mbps" value in MB/s for the QoS limit.
+                    #capacity_shared: 
+                    #min_throughput_mbps: ""
+                    #max_throughput_mbps: ""
+                    #min_throughput_iops: ""
+                    #max_throughput_iops: ""
+
+        nfs_access:
+               -   access:  "rw"
+                   host: "1.1.1.1"
+            
+        #cifs_access:
+               #-   access:  "full_control"
+                   #user_or_group: "Everyone"
+            
+        #flexcache:
+            #dr_cache: true
+            # Specify the remote volume name
+            #origin_component_name: ""
+            # The selected storage VM of the remote cluster must be peered. Specify the local name of the peer storage VM so that there will not be a name conflict.
+            #origin_svm_name: ""
+            #prepopulate:
+                #dir_paths:
+                
+                #exclude_dir_paths:
+                
+                #recurse: false
+
+        # SnapMirror Business Continuity is not supported in this release.
+        # Snapmirror inputs
+    # Please enter the remote cluster IP for creating Snapmirror relationship.
+    remoteClusterIP:
+    snapmirror:
+        create_destination:
+            enabled: true
+            storage_service:
+                enabled: true
+                enforce_performance: false
+                #name: undefined
+            tiering:
+                #supported: 
+                #policy: 
+        policy:
+            name: "Asynchronous"
+        initialized: "true"
+        
+        destination:
+            cluster:
+                name: "cluster2"
+            path: "svm10:vol123_dp"
+        source:
+            cluster: "cluster1"
+            path: "svm1:vol123"
+            #ipspace: ""
+
+
+

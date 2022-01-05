@@ -148,30 +148,6 @@ forms:
       ############################################################################################################################
       # create prod copy location information
       ############################################################################################################################      
-
-      - type: text
-        name: volname
-        label: Volume Name
-        default: ""
-        required: true
-        minLength: 1
-        maxLength: 30
-        regex: ^[a-zA-Z0-9_]*$
-        regexDescription: Invalid volume name
-        icon: user
-        group: Production
-        model: prod.volname
-
-      - type: number
-        name: volsize
-        label: Volume Size (G)
-        default: "100"
-        required: true
-        minValue: 10
-        maxValue: 90000
-        icon: user
-        group: Production
-        model: prod.volsize
       
       #will build a %7C (|) cluster list that will be used for rest aiqum aggr filter 
       - type: expression
@@ -228,15 +204,60 @@ forms:
       - type: query
         name: svm
         label: SVM
-        #expression: "JSON.parse('$(svm_jq)')"
         expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster)&name=$(svm_filter_jq)','','AIQUM','[.records[]|{Name: .name}]','','')"
         columns:
         - Name
         required: true
-        # runLocal: true
         default: __auto__  
         group: Production
         model: prod.svm
+
+      - type: expression
+        name: existingvols
+        label: existingvols
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/volumes?cluster.name=$(cluster)&svm.name=$(svm)&max_records=1000','','AIQUM','[.records[]|.name]','','')"
+        hide: true
+        group: Production
+        noOutput: true
+
+      - type: text
+        name: volname
+        label: Volume Name
+        default: ""
+        required: true
+        minLength: 1
+        maxLength: 30
+        regex: 
+          expression: ^[a-z0-9_]*$
+          description: Invalid volume name         
+        notIn:
+          field: "existingvols"
+          description: Volume already exists           
+        icon: user
+        group: Production
+        model: prod.volname
+
+      - type: number
+        name: volsize
+        label: Volume Size (G)
+        default: "100"
+        required: true
+        minValue: 10
+        maxValue: 90000
+        icon: user
+        group: Production
+        model: prod.volsize
+
+      - type: enum
+        name: secstyle
+        label: Security Style
+        default: ntfs
+        values:
+        - ntfs
+        - unix
+        required: true  
+        group: Production
+        model: prod.secstyle             
 
       ############################################################################################################################
       # create dr1 copy if required

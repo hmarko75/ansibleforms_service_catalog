@@ -44,26 +44,25 @@ services:
             snapshot-policy: dynamic 
             dynamic-snapshot-policy: true
             clusters:
-              - cluster1: [svm1,svm2]
-                cluster2: [svm3,svm4]
+              - cluster1: [svm1]
           - type: dr1
             source: prod
             schedule: daily
             dynamicschedule: true
             sizeratio: 1.5
-            namesuffix: ""
+            namesuffix: "_dr1"
             policy: MirrorAllSnapshots
             clusters:
-              - cluster1: [svm5]
+              - cluster1: [svm2]
           - type: dr2
             source: dr1
             schedule: daily
             dynamicschedule: true
             sizeratio: 1.5
-            namesuffix: ""
+            namesuffix: "_dr2"
             policy: MirrorAllSnapshots
             clusters:
-              - cluster2: [svm7,svm8]              
+              - cluster2: [svm3]              
           - type: b2d1
             source: dr1
             schedule: daily
@@ -72,7 +71,7 @@ services:
             dynamicschedule: true
             policy: 9w_daily
             clusters:
-              - cluster2: [svm9,svm10]
+              - cluster2: [svm9]
           - type: b2d2
             source: dr2
             schedule: daily
@@ -81,7 +80,7 @@ services:
             dynamicschedule: true
             policy: 12w_daily
             clusters:
-              - cluster1: [svm1,svm2]              
+              - cluster2: [svm10]              
 
       - company: Company 1
         location: Site B
