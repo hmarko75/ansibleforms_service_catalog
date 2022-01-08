@@ -1,0 +1,135 @@
+---
+- name: create prod volume  
+  hosts: "localhost"
+  become: no 
+  gather_facts: no
+  vars:
+    cluster: "{{ vars.prod.cluster }}"
+    aggregate: "{{ vars.prod.aggregate }}"
+    svm: "{{ vars.prod.svm }}"
+    volname: "{{ vars.prod.volname }}"
+    volsize: "{{ vars.prod.volsize }}"
+    secstyle: "{{ vars.prod.secstyle }}"
+    snapshot_policy: "{{ vars.prod.snapshotpolicy }}"
+
+    clusterauth:  &login
+      hostname: "{{ cluster }}"
+      username: "{{ login.user }}"
+      password: "{{ login.password }}"
+      https: true
+      validate_certs: false
+  
+  vars_files:
+  - volume_variables.yaml      
+
+  collections:
+  - netapp.ontap  
+  tasks:
+
+    - name: calculate base suffix for dynamic snapshot policy 
+      set_fact:
+        base_schedule_suffix: "{{ VolumeDefaults.data_protection.dynamic_snapshot_policy_suffix_end | random(start=VolumeDefaults.data_protection.dynamic_snapshot_policy_suffix_start) }}"
+      when: 
+        vars.prod.snapshotpolicy.dynamicschedule == true
+
+    #add suffix to snapshot policy name and schedules when synamic 
+    - name: dynamic snapshot policy
+      set_fact:
+        snapshot_policy: "{{ vars.prod.snapshotpolicy.name + (base_schedule_suffix|string) }}"
+        suffixedschedules: "{{ vars.prod.snapshotpolicy.schedule | product([(base_schedule_suffix|string)]) | map('join') | list }}"
+      when: 
+        vars.prod.snapshotpolicy.dynamicschedule == true and vars.prod.snapshotpolicy.name not in ['none','']        
+
+    - name: vol creation info
+      ansible.builtin.debug:
+        msg:
+        - "creating prod volume: {{ cluster }}:{{ svm }}:{{ volname }} size:{{ volsize }}GB copy:{{ copy }} snapshot policy:{{ snapshot_policy }}"   
+
+    - name: Create Prod Snapshot Policy
+      na_ontap_snapshot_policy:
+        state: present
+        vserver: "{{ svm }}"
+        name: "{{ snapshot_policy }}"
+        schedule: "{{ suffixedschedules if suffixedschedules is defined else vars.prod.snapshotpolicy.schedule }}"
+        prefix: "{{ vars.prod.snapshotpolicy.prefix }}"
+        count: "{{ vars.prod.snapshotpolicy.count }}"
+        snapmirror_label: "{{ vars.prod.snapshotpolicy.snapmirror_label }}"
+        enabled: True
+        <<: *login
+
+    - name: Create Prod Export Policy
+      na_ontap_export_policy:
+        state: present
+        name: "{{ volname }}"
+        vserver: "{{ svm }}" 
+        <<: *login    
+
+    - name: Create Prod ExportPolicyRule
+      netapp.ontap.na_ontap_export_policy_rule:
+        state: present
+        name: "{{ volname }}"
+        vserver: "{{ svm }}" 
+        client_match: "{{ vars.prod.exports }}"
+        ro_rule: sys
+        rw_rule: sys
+        protocol: nfs
+        super_user_security: any
+        <<: *login
+      when: 
+        vars.prod.exports != ''
+
+    - name: Create Prod Volume
+      na_ontap_volume:
+        state: present
+        aggregate_name: "{{ aggregate }}"
+        name: "{{ volname }}"
+        vserver: "{{ svm }}"
+        size: "{{ volsize | int }}"
+        junction_path: "{{ VolumeDefaults.defualt_junction_path + volname if VolumeDefaults.defualt_junction_path is defined else '/'+volname }}"
+        snapshot_policy: "{{ snapshot_policy | default(omit) }}"
+        percent_snapshot_space: "{{ VolumeDefaults.percent_snapshot_space | default(omit) }}"
+        volume_security_style: "{{ VolumeDefaults.secstyle | default(omit) }}"
+        export_policy: "{{ volname }}"
+        comment: "{{ general.comment }}"
+        <<: *login
+
+    - name: Enable Volume efficiency
+      na_ontap_volume_efficiency:
+        state: present
+        vserver: "{{ svm }}"
+        path: "/vol/{{ volname }}"
+        enable_compression: "{{ true if vars.prod.efficiency.enable_compression | default(omit) }}"
+        enable_cross_volume_background_dedupe: "{{ true if vars.prod.efficiency.enable_cross_volume_background_dedupe | default(omit) }}"
+        enable_cross_volume_inline_dedupe: "{{ true if vars.prod.efficiency.enable_cross_volume_inline_dedupe | default(omit) }}"
+        enable_data_compaction: "{{ true if vars.prod.efficiency.enable_data_compaction | default(omit) }}"
+        enable_inline_compression: "{{ true if vars.prod.efficiency.enable_inline_compression | default(omit) }}"
+        enable_inline_dedupe: "{{ true if vars.prod.efficiency.enable_inline_dedupe | default(omit) }}"
+        <<: *login
+
+    - name: Modify volume autosize
+      na_ontap_volume_autosize:
+        vserver: "{{ svm }}"
+        volume: "{{ volname }}"
+        mode: "{{ VolumeDefaults.auto_size.mode | default(omit) }}"
+        grow_threshold_percent: "{{ VolumeDefaults.auto_size.grow_threshold_percent | default(omit) }}"
+        shrink_threshold_percent: "{{ VolumeDefaults.auto_size.shrink_threshold_percent | default(omit) }}"
+        maximum_size: "{{ ((VolumeDefaults.auto_size.vol_max_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
+        minimum_size: "{{ ((VolumeDefaults.auto_size.vol_min_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
+        <<: *login
+
+        #size_unit: "{{  (UserInputs.size_unit | lower) if (UserInputs.size_unit is defined) else 'gb' }}"
+        #auto_provision_as: "{{ UserInputs.auto_provision_as  | default(omit) }}"
+        #snapshot_policy: "{{ UserInputs.nas_application_template.snapshot_policy  | default(omit) }}"
+        #qos_policy_group: "{{ omit if( UserInputs.nas_application_template.qos.policy.name is not defined or  UserInputs.nas_application_template.qos.policy.name == 'extreme' or  UserInputs.nas_application_template.qos.policy.name == 'performance' or UserInputs.nas_application_template.qos.policy.name == 'value') else UserInputs.nas_application_template.qos.policy.name }}"
+        #qos_adaptive_policy_group: "{{ omit if( UserInputs.nas_application_template.qos.policy.name is not defined or  (UserInputs.nas_application_template.qos.policy.name != 'extreme' and  UserInputs.nas_application_template.qos.policy.name != 'performance' and UserInputs.nas_application_template.qos.policy.name != 'value')) else UserInputs.nas_application_template.qos.policy.name }}"
+        #export_policy: "{{ UserInputs.nas_application_template.export_policy.name  | default(omit) }}"
+        # nas_application_template: 
+        #     use_nas_application: true
+        #     storage_service: "{{ UserInputs.nas_application_template.storage_service.name  | default(omit) }}"
+        #     tiering:
+        #         control: "{{ UserInputs.nas_application_template.tiering.control  | default(omit) }}"
+        #         policy: "{{ UserInputs.nas_application_template.tiering.policy  | default(omit) }}"
+        #         object_stores: "{{ UserInputs.nas_application_template.tiering.object_stores[0] | default(omit) }}"
+        #     nfs_access: "{{ UserInputs.nas_application_template.nfs_access  | default(omit) }}"
+        #     cifs_access: "{{ UserInputs.nas_application_template.cifs_access  | default(omit) }}"
+        

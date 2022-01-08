@@ -41,8 +41,21 @@ services:
         location: Site A
         copies:
           - type: prod
-            snapshot-policy: dynamic 
-            dynamic-snapshot-policy: true
+            snapshotpolicy:
+              name: sp
+              dynamicschedule: true
+              schedule: ['daily']
+              prefix: ['daily']
+              count: [24]
+              snapmirror_label: ['daily']
+            efficiency:
+#              enable_compression: true 
+#              enable_cross_volume_background_dedupe: true
+              enable_cross_volume_inline_dedupe: true
+              enable_data_compaction: true
+              enable_inline_compression: true
+              enable_inline_dedupe: true
+              dynamicschedule: true
             clusters:
               - cluster1: [svm1]
           - type: dr1

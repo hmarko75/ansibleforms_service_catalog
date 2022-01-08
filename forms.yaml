@@ -25,7 +25,7 @@ roles:
       - local/Provision Admins  
 forms:
   - name: Create New Volume 
-    help: |
+    help:
       This is used to create new volume for a service  
     roles:
       - Provision
@@ -99,6 +99,136 @@ forms:
         required: true
         default: __auto__
         model: general.location
+
+      - type: text
+        name: volname
+        label: Volume Name
+        default: ""
+        required: true
+        minLength: 1
+        maxLength: 30
+        regex: 
+          expression: ^[a-z0-9_]*$
+          description: Invalid volume name         
+        notIn:
+          field: "existingvols"
+          description: Volume already exists           
+        icon: user
+        #group: Production
+        model: prod.volname
+
+      - type: number
+        name: volsize
+        label: Volume Size (G)
+        default: "100"
+        required: true
+        minValue: 10
+        maxValue: 90000
+        icon: user
+        model: prod.volsize
+
+      - type: enum
+        name: secstyle
+        label: Security Style
+        default: ntfs
+        values:
+        - ntfs
+        - unix
+        required: true  
+        model: prod.secstyle
+
+      - type: text
+        name: exports
+        label: Export Hosts
+        default: ""
+        required: false
+        regex:
+          expression: ([^,]+)
+          description: Invalid volume name 
+        model: prod.exports
+        icon: user
+
+      - type: number
+        name: cr
+        label: Change Request
+        default: ""
+        required: false
+        minValue: 0
+        maxValue: 9999999999
+        icon: user
+        noOutput: true
+
+      - type: text
+        name: application
+        label: Application
+        default: ""
+        required: false
+        minLength: 1
+        maxLength: 30
+        regex: 
+          expression: ^[a-zA-Z0-9א-ת_-\s]*$
+          description: Invalid input         
+        noOutput: true
+        icon: user
+
+      - type: text
+        name: usedfor
+        label: Used For
+        default: ""
+        required: false
+        minLength: 1
+        maxLength: 30
+        regex: 
+          expression: ^[a-zA-Z0-9א-ת_-\s]*$
+          description: Invalid input         
+        noOutput: true
+        icon: user
+
+      - type: text
+        name: unit
+        label: Unit
+        default: ""
+        required: false
+        minLength: 1
+        maxLength: 30
+        regex: 
+          expression: ^[a-zA-Z0-9א-ת_-\s]*$
+          description: Invalid input         
+        noOutput: true
+        icon: user        
+
+      - type: text
+        name: owner
+        label: Owner
+        default: ""
+        required: false
+        minLength: 1
+        maxLength: 30
+        regex: 
+          expression: ^[a-zA-Z0-9א-ת_-\s]*$
+          description: Invalid input         
+        noOutput: true
+        icon: user
+
+      - type: text
+        name: comment
+        label: Comment
+        default: ""
+        required: false
+        minLength: 1
+        maxLength: 40
+        regex: 
+          expression: ^[a-zA-Z0-9א-ת_-\s]*$
+          description: Invalid input         
+        noOutput: true
+        icon: user
+      
+      - type: expression
+        name: volcomment 
+        label: volcomment
+        hide: true
+        expression: "'CR:\"$(cr)\" APPLICATION:\"$(application)\" Used For:\"$(usedfor)\" UNIT:\"$(unit)\" OWNER:\"$(owner)\" COMMENT:\"$(comment)\"'"
+        model: general.comment
 
       ############################################################################################################################
       # check which copies are needed 
@@ -220,45 +350,24 @@ forms:
         group: Production
         noOutput: true
 
-      - type: text
-        name: volname
-        label: Volume Name
-        default: ""
-        required: true
-        minLength: 1
-        maxLength: 30
-        regex: 
-          expression: ^[a-z0-9_]*$
-          description: Invalid volume name         
-        notIn:
-          field: "existingvols"
-          description: Volume already exists           
-        icon: user
+      #prod snapshot policy 
+      - type: expression
+        name: snapshotpolicy
+        label: snapshotpolicy
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"prod\")|.snapshotpolicy')"
         group: Production
-        model: prod.volname
+        model: prod.snapshotpolicy
 
-      - type: number
-        name: volsize
-        label: Volume Size (G)
-        default: "100"
-        required: true
-        minValue: 10
-        maxValue: 90000
-        icon: user
+      #prod efficiency configuration
+      - type: expression
+        name: efficiency
+        label: efficiency
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"prod\")|.efficiency')"
         group: Production
-        model: prod.volsize
-
-      - type: enum
-        name: secstyle
-        label: Security Style
-        default: ntfs
-        values:
-        - ntfs
-        - unix
-        required: true  
-        group: Production
-        model: prod.secstyle             
-
+        model: prod.efficiency            
+       
       ############################################################################################################################
       # create dr1 copy if required
       ############################################################################################################################      
