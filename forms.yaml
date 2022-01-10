@@ -230,6 +230,8 @@ forms:
         expression: "'CR:\"$(cr)\" APPLICATION:\"$(application)\" Used For:\"$(usedfor)\" UNIT:\"$(unit)\" OWNER:\"$(owner)\" COMMENT:\"$(comment)\"'"
         model: general.comment
 
+        
+
       ############################################################################################################################
       # check which copies are needed 
       ############################################################################################################################
@@ -368,6 +370,14 @@ forms:
         expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"prod\")|.efficiency')"
         group: Production
         model: prod.efficiency            
+
+      #prod cifs access
+      - type: expression
+        name: cifsaccess
+        label: cifsaccess
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"prod\")|.cifsaccess')"
+        model: prod.cifsaccess      
        
       ############################################################################################################################
       # create dr1 copy if required

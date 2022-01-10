@@ -5,10 +5,23 @@ VolumeDefaults:
     size_unit: "gb"
     percent_snapshot_space: 0
 
-    data_protection:
-      #for dynamic snapshot policy choose random suffix from this tange 
-      dynamic_snapshot_policy_suffix_start: 1
-      dynamic_snapshot_policy_suffix_end: 9
+    dynamic:
+      #total nu, for dynamic scheules 
+      total_schedules: 10
+      #for dynamic policies choose random suffix requires schedules to be created on all involved clusters 
+      prod_snapshot_policy_range_start: 1
+      prod_snapshot_policy_range_end: 3
+
+      #efficiency policy offset from prod daily snapshot start 
+      prod_efficiency_policy_offet: -3
+      prod_efficiency_policy_duation: 3
+
+      #replication offset production snapshot policy 
+      replication_schedule_offset:
+        dr1: 1
+        dr2: 2
+        b2d1: 3
+        b2d2: 4
 
     auto_size:
       mode: grow_shrink
@@ -24,80 +37,12 @@ VolumeDefaults:
       grow_threshold_percent: 95
       shrink_threshold_percent: 85
     
-    nas_application_template:
-      cifs_access:
-        - access:  "full_control"
-          user_or_group: "DEMO\administrator"
-
-      nfs_access:
-        - access:  "rw"
-          host: "1.1.1.1"
+    cifsaccess:
+      user_or_group: "DEMO\\administrator"
+      access:  "full_control"
+      
 
 
-    #     # Snapshot policy can not set for FlexCache volume.
-    #     snapshot_policy: "default"
-    #     #export_policy:
-    #         #name: ""
-    #     tiering:
-    #         control: "disallowed"
-    #         #policy: ""
-    #         #object_stores:
-    #         #- ""
-    #     storage_service:
-    #         name: "extreme"
-    #     #qos:
-    #         #policy:
-    #             #name: ""
-    #             # Specify the fixed QoS details.  When creating a new policy, specify the fixed QoS details and include the name.
-    #             #fixed:
-    #             # Specify "min/max throughput_mbps" value in MB/s for the QoS limit.
-    #                 #capacity_shared: 
-    #                 #min_throughput_mbps: ""
-    #                 #max_throughput_mbps: ""
-    #                 #min_throughput_iops: ""
-    #                 #max_throughput_iops: ""
-
-            
-
-            
-    #     #flexcache:
-    #         #dr_cache: true
-    #         # Specify the remote volume name
-    #         #origin_component_name: ""
-    #         # The selected storage VM of the remote cluster must be peered. Specify the local name of the peer storage VM so that there will not be a name conflict.
-    #         #origin_svm_name: ""
-    #         #prepopulate:
-    #             #dir_paths:
-                
-    #             #exclude_dir_paths:
-                
-    #             #recurse: false
-
-    #     # SnapMirror Business Continuity is not supported in this release.
-    #     # Snapmirror inputs
-    # # Please enter the remote cluster IP for creating Snapmirror relationship.
-    # snapmirror:
-    #     create_destination:
-    #         enabled: true
-    #         storage_service:
-    #             enabled: true
-    #             enforce_performance: false
-    #             #name: undefined
-    #         tiering:
-    #             #supported: 
-    #             #policy: 
-    #     policy:
-    #         name: "Asynchronous"
-    #     initialized: "true"
-        
-    #     destination:
-    #         cluster:
-    #             name: "cluster2"
-    #         path: "svm10:vol123_dp"
-    #     source:
-    #         cluster: "cluster1"
-    #         path: "svm1:vol123"
-    #         #ipspace: ""
 
 
 

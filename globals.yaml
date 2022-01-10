@@ -56,41 +56,48 @@ services:
               schedule: daily 
               dynamicschedule: true
               duration: 3
+            cifsaccess: false
             clusters:
               - cluster1: [svm1]
                 cluster2: [svm3]
-          - type: dr1      
-            sizeratio: 1.5
-            namesuffix: "_dr1"
-            clusters:
-              - cluster1: [svm2]
-            source:
-              copy: prod
-              policy: MirrorAllSnapshots
-              dynamicschedule: true
-              schedule: daily
-
-          - type: dr2
-            sizeratio: 1.5
-            namesuffix: "_dr2"
-            clusters:
-              - cluster2: [svm3]              
-            source:
-              copy: dr1
-              policy: MirrorAllSnapshots
-              dynamicschedule: true
-              schedule: daily
-
-          # - type: b2d1
-          #   sizeratio: 2.5
-          #   namesuffix: ""            
+          # - type: dr1      
+          #   sizeratio: 1.5
+          #   namesuffix: "_dr1"
           #   clusters:
-          #     - cluster2: [svm9]
+          #     - cluster1: [svm2]
           #   source:
           #     copy: prod
-          #     policy: 9w_daily
+          #     policy: 
+          #       name: MirrorAllSnapshots
           #     dynamicschedule: true
-          #     schedule: daily         
+          #     schedule: daily
+
+          # - type: dr2
+          #   sizeratio: 1.5
+          #   namesuffix: "_dr2"
+          #   clusters:
+          #     - cluster2: [svm3]              
+          #   source:
+          #     copy: dr1
+          #     policy: 
+          #       name: MirrorAllSnapshots
+          #     dynamicschedule: true
+          #     schedule: daily
+
+          - type: b2d1
+            sizeratio: 2.5
+            namesuffix: ""            
+            clusters:
+              - cluster2: [svm9]
+            source:
+              copy: prod
+              policy:
+                name: 90daily
+                snapmirror_label: ['daily']
+                keep: [90]
+                policy_type: async_mirror
+              dynamicschedule: true
+              schedule: daily         
 
           - type: b2d2
             sizeratio: 2.5
@@ -99,7 +106,11 @@ services:
               - cluster2: [svm10]              
             source:
               copy: b2d1
-              policy: 12w_daily
+              policy:
+                name: 120daily
+                snapmirror_label: ['daily']
+                keep: [120]
+                policy_type: async_mirror
               dynamicschedule: true
               schedule: daily                
 

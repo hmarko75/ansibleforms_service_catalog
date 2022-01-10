@@ -11,6 +11,7 @@
     volsize: "{{ vars.prod.volsize }}"
     secstyle: "{{ vars.prod.secstyle }}"
     snapshot_policy: "{{ vars.prod.snapshotpolicy }}"
+    cifsaccess:  "{{ vars.prod.cifsaccess }}"
 
     clusterauth:  &login
       hostname: "{{ cluster }}"
@@ -26,25 +27,66 @@
   - netapp.ontap  
   tasks:
 
+    #generate random number for dynaic schedules and policies 
     - name: calculate base suffix for dynamic snapshot policy 
+      no_log: true
       set_fact:
-        base_schedule_suffix: "{{ VolumeDefaults.data_protection.dynamic_snapshot_policy_suffix_end | random(start=VolumeDefaults.data_protection.dynamic_snapshot_policy_suffix_start) }}"
+        base_schedule_suffix: "{{ VolumeDefaults.dynamic.prod_snapshot_policy_range_end | random(start=VolumeDefaults.dynamic.prod_snapshot_policy_range_start) }}"
       when: 
         vars.prod.snapshotpolicy.dynamicschedule == true
 
-    #add suffix to snapshot policy name and schedules when synamic 
+    #add suffix to snapshot policy name and schedules when dynamic from range
     - name: dynamic snapshot policy
+      no_log: true
       set_fact:
         snapshot_policy: "{{ vars.prod.snapshotpolicy.name + (base_schedule_suffix|string) }}"
         suffixedschedules: "{{ vars.prod.snapshotpolicy.schedule | product([(base_schedule_suffix|string)]) | map('join') | list }}"
       when: 
-        vars.prod.snapshotpolicy.dynamicschedule == true and vars.prod.snapshotpolicy.name not in ['none','']        
+        vars.prod.snapshotpolicy.dynamicschedule == true and vars.prod.snapshotpolicy.name not in ['none',''] 
 
+    #add suffix to eff policy name and schedules with offset from the prod snapshot 
+    - name: dynamic efficiency policy
+      no_log: true
+      when: 
+        vars.prod.efficiency.dynamicschedule == true and vars.prod.efficiency.schedule not in ['none','']
+      set_fact:
+        efficiency_policy_suffix: "{{ (base_schedule_suffix|int + VolumeDefaults.dynamic.prod_efficiency_policy_offet|int)}}"
+
+    #when suffix is < 1 rotate 
+    - name: dynamic efficiency policy1
+      no_log: true
+      when: 
+        efficiency_policy_suffix is defined  and efficiency_policy_suffix|int < 1
+      set_fact:
+        efficiency_policy_suffix: "{{ VolumeDefaults.dynamic.total_schedules|int + efficiency_policy_suffix|int }}"
+    
+    # when suffix is > from VolumeDefaults.dynamic.total_schedules
+    - name: dynamic efficiency policy2
+      no_log: true
+      when: 
+        efficiency_policy_suffix is defined  and efficiency_policy_suffix|int > VolumeDefaults.dynamic.total_schedules
+      set_fact:
+        efficiency_policy_suffix: "{{ efficiency_policy_suffix|int - VolumeDefaults.dynamic.total_schedules|int }}"
+
+    # log volume infomration 
     - name: vol creation info
       ansible.builtin.debug:
         msg:
-        - "creating prod volume: {{ cluster }}:{{ svm }}:{{ volname }} size:{{ volsize }}GB copy:{{ copy }} snapshot policy:{{ snapshot_policy }}"   
+        - "creating prod volume: {{ cluster }}:{{ svm }}:{{ volname }} size:{{ volsize }}GB copy:{{ copy }} snapshot policy:{{ snapshot_policy }}"  
 
+    #create efficiency policy 
+    - name: Create Scheduled efficiency Policy
+      na_ontap_efficiency_policy:
+        state: present
+        vserver: "{{ svm }}"
+        policy_name: "{{ vars.prod.efficiency.schedule + efficiency_policy_suffix if efficiency_policy_suffix is defined else vars.prod.efficiency.schedule }}"
+        enabled: true
+        schedule: "{{ vars.prod.efficiency.schedule + efficiency_policy_suffix if efficiency_policy_suffix is defined else vars.prod.efficiency.schedule }}"
+        duration: "{{ vars.prod.efficiency.duration | default(omit) }}"
+        qos_policy: background
+        <<: *login
+
+    #create snapshot policy 
     - name: Create Prod Snapshot Policy
       na_ontap_snapshot_policy:
         state: present
@@ -98,14 +140,28 @@
         state: present
         vserver: "{{ svm }}"
         path: "/vol/{{ volname }}"
-        enable_compression: "{{ true if vars.prod.efficiency.enable_compression | default(omit) }}"
-        enable_cross_volume_background_dedupe: "{{ true if vars.prod.efficiency.enable_cross_volume_background_dedupe | default(omit) }}"
-        enable_cross_volume_inline_dedupe: "{{ true if vars.prod.efficiency.enable_cross_volume_inline_dedupe | default(omit) }}"
-        enable_data_compaction: "{{ true if vars.prod.efficiency.enable_data_compaction | default(omit) }}"
-        enable_inline_compression: "{{ true if vars.prod.efficiency.enable_inline_compression | default(omit) }}"
-        enable_inline_dedupe: "{{ true if vars.prod.efficiency.enable_inline_dedupe | default(omit) }}"
+        enable_compression: "{{ vars.prod.efficiency.enable_compression | default(omit) }}"
+        enable_cross_volume_background_dedupe: "{{  vars.prod.efficiency.enable_cross_volume_background_dedupe | default(omit) }}"
+        enable_cross_volume_inline_dedupe: "{{ vars.prod.efficiency.enable_cross_volume_inline_dedupe | default(omit) }}"
+        enable_data_compaction: "{{ vars.prod.efficiency.enable_data_compaction | default(omit) }}"
+        enable_inline_compression: "{{ vars.prod.efficiency.enable_inline_compression | default(omit) }}"
+        enable_inline_dedupe: "{{ vars.prod.efficiency.enable_inline_dedupe | default(omit) }}"
+        #not realy working to set policy 
+        #policy: "{{ vars.prod.efficiency.schedule + efficiency_policy_suffix if efficiency_policy_suffix is defined else vars.prod.efficiency.schedule }}"
         <<: *login
-
+    
+    #set efficiency policy using ssh due to issue with na_ontap_volume_efficiency and effciency policy 
+    - name: Set volume efficiency policy
+      na_ontap_ssh_command:
+        hostname: "{{ cluster }}"
+        username: "{{ login.user }}"
+        password: "{{ login.password }}"
+        command: "{{ 'vol efficiency modify -vserver '+svm+' -volumme '+volname+' -policy '+(vars.prod.efficiency.schedule + efficiency_policy_suffix if efficiency_policy_suffix is defined else vars.prod.efficiency.schedule) }}"
+        accept_unknown_host_keys: true
+        privilege: diag
+      when: 
+        vars.prod.efficiency.schedule is defined
+      
     - name: Modify volume autosize
       na_ontap_volume_autosize:
         vserver: "{{ svm }}"
@@ -117,19 +173,35 @@
         minimum_size: "{{ ((VolumeDefaults.auto_size.vol_min_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
         <<: *login
 
-        #size_unit: "{{  (UserInputs.size_unit | lower) if (UserInputs.size_unit is defined) else 'gb' }}"
-        #auto_provision_as: "{{ UserInputs.auto_provision_as  | default(omit) }}"
-        #snapshot_policy: "{{ UserInputs.nas_application_template.snapshot_policy  | default(omit) }}"
-        #qos_policy_group: "{{ omit if( UserInputs.nas_application_template.qos.policy.name is not defined or  UserInputs.nas_application_template.qos.policy.name == 'extreme' or  UserInputs.nas_application_template.qos.policy.name == 'performance' or UserInputs.nas_application_template.qos.policy.name == 'value') else UserInputs.nas_application_template.qos.policy.name }}"
-        #qos_adaptive_policy_group: "{{ omit if( UserInputs.nas_application_template.qos.policy.name is not defined or  (UserInputs.nas_application_template.qos.policy.name != 'extreme' and  UserInputs.nas_application_template.qos.policy.name != 'performance' and UserInputs.nas_application_template.qos.policy.name != 'value')) else UserInputs.nas_application_template.qos.policy.name }}"
-        #export_policy: "{{ UserInputs.nas_application_template.export_policy.name  | default(omit) }}"
-        # nas_application_template: 
-        #     use_nas_application: true
-        #     storage_service: "{{ UserInputs.nas_application_template.storage_service.name  | default(omit) }}"
-        #     tiering:
-        #         control: "{{ UserInputs.nas_application_template.tiering.control  | default(omit) }}"
-        #         policy: "{{ UserInputs.nas_application_template.tiering.policy  | default(omit) }}"
-        #         object_stores: "{{ UserInputs.nas_application_template.tiering.object_stores[0] | default(omit) }}"
-        #     nfs_access: "{{ UserInputs.nas_application_template.nfs_access  | default(omit) }}"
-        #     cifs_access: "{{ UserInputs.nas_application_template.cifs_access  | default(omit) }}"
-        
+    - name: Create CIFS share
+      netapp.ontap.na_ontap_cifs:
+        state: present
+        share_name: "{{ volname }}"
+        path: "{{ VolumeDefaults.defualt_junction_path + volname if VolumeDefaults.defualt_junction_path is defined else '/'+volname }}"
+        vserver: "{{ svm }}"
+        <<: *login
+      when:
+        cifsaccess == true
+
+    #Remove everyone 
+    - name: Create CIFS share ACL 
+      netapp.ontap.na_ontap_cifs_acl:
+        state: absent
+        share_name: "{{ volname }}"
+        vserver: "{{ svm }}"
+        user_or_group: everyone
+        <<: *login
+      when:
+        cifsaccess == true
+    
+    #set user from volume defaults 
+    - name: Create CIFS share ACL 
+      netapp.ontap.na_ontap_cifs_acl:
+        state: present
+        share_name: "{{ volname }}"
+        vserver: "{{ svm }}"
+        user_or_group: "{{ VolumeDefaults.cifsaccess.user_or_group }}"
+        permission: "{{ VolumeDefaults.cifsaccess.access }}"
+        <<: *login
+      when:
+        cifsaccess == true       

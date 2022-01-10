@@ -9,7 +9,18 @@
     svm: "{{ vars[copy].svm }}"
     volname: "{{ vars[copy].volname }}"
     volsize: "{{ vars[copy].volsize }}"
-    secstyle: "{{ vars.prod.secstyle }}"
+    
+    #get snapmirror configuration for the volume 
+    snapmirrorpolicy: "{{ vars[copy]['source'].policy }}"
+    snapmirrorschedule: "{{ vars[copy]['source'].schedule }}"
+    snapmirrordynamicschedule: "{{ vars[copy]['source'].dynamicschedule }}"
+    
+    #get snapmirror source configuration for the volume 
+    source: "{{ vars[copy]['source']['copy'] }}"
+    sourcecluster: "{{ vars[source]['cluster'] }}"
+    sourcesvm: "{{ vars[source]['svm'] }}"
+    sourcevolname: "{{ vars[source]['volname'] }}"
+    
     clusterauth:  &login
       hostname: "{{ cluster }}"
       username: "{{ login.user }}"
@@ -21,12 +32,37 @@
   collections:
   - netapp.ontap  
   tasks:
+    #add suffix to scheule name  with offset from the prod snapshot 
+    - name: dynamic snapmirror
+      no_log: true
+      when: 
+        snapmirrordynamicschedule == true and snapmirrorschedule not in ['none','']
+      set_fact:
+        snapmirror_schedule_suffix: "{{ (base_schedule_suffix|int + VolumeDefaults.dynamic.replication_schedule_offset[copy] |int)}}"
 
+    #when suffix is < 1 rotate 
+    - name: dynamic snapmirror1
+      no_log: true
+      when: 
+        snapmirror_schedule_suffix is defined and snapmirror_schedule_suffix|int < 1
+      set_fact:
+        snapmirror_schedule_suffix: "{{ VolumeDefaults.dynamic.total_schedules|int + snapmirror_schedule_suffix|int }}"
+    
+    # when suffix is > from VolumeDefaults.dynamic.total_schedules
+    - name: dynamic snapmirror2
+      no_log: true
+      when: 
+        snapmirror_schedule_suffix is defined  and snapmirror_schedule_suffix|int > VolumeDefaults.dynamic.total_schedules
+      set_fact:
+        snapmirror_schedule_suffix: "{{ snapmirror_schedule_suffix|int - VolumeDefaults.dynamic.total_schedules|int }}"
+
+    # display log 
     - name: vol creation info
       ansible.builtin.debug:
         msg:
-        - "creating dr/b2d volume: {{ cluster }}:{{ svm }}:{{ volname }} size:{{ volsize }}GB copy:{{ copy }}"
+        - "creating dr/b2d volume: {{ cluster }}:{{ svm }}:{{ volname }} size:{{ volsize }}GB copy:{{ copy }} source: {{ sourcecluster+':'+source }}"
 
+    # create dp volume 
     - name: create dr/b2d volume
       na_ontap_volume:
         state: present
@@ -38,6 +74,7 @@
         comment: "{{ general.comment }}"
         <<: *login 
 
+    # set dp volume autosize 
     - name: Modify volume autosize
       when: copy.startswith('b2d')
       na_ontap_volume_autosize:
@@ -49,24 +86,44 @@
         maximum_size: "{{ ((VolumeDefaults.auto_size_b2d.vol_max_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
         minimum_size: "{{ ((VolumeDefaults.auto_size_b2d.vol_min_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
         <<: *login
-      
+
+    # create vserver peer 
+    - name: Source vserver peer create
+      netapp.ontap.na_ontap_vserver_peer:
+        state: present
+        peer_vserver: "{{ sourcesvm }}"
+        peer_cluster: "{{ sourcecluster }}"
+        vserver: "{{ svm }}"
+        applications: ['snapmirror']   
+        peer_options:
+          hostname: "{{ sourcecluster }}"
+        <<: *login
+    
+    # create snapmirror policy if details are provided
+    - name: Create SnapMirror policy 
+      na_ontap_snapmirror_policy:
+        state: present
+        vserver: "{{ svm }}"
+        policy_name: "{{ snapmirrorpolicy.name }}"
+        policy_type: "{{ snapmirrorpolicy.policy_type }}"
+        snapmirror_label: "{{ snapmirrorpolicy.snapmirror_label }}"
+        keep: "{{ snapmirrorpolicy.keep }}"
+        <<: *login
+      when: snapmirrorpolicy.keep is defined 
+
+    # creates and initializes the snapmirror
+    - name: Create SnapMirror and initialize 
+      na_ontap_snapmirror:
+        state: present
+        source_endpoint:
+          path: "{{ sourcesvm+':'+sourcevolname }}"
+        destination_endpoint:
+          path: "{{ svm+':'+volname }}"
+        schedule: "{{ (snapmirrorschedule+snapmirror_schedule_suffix|string) if snapmirrordynamicschedule == true and snapmirrorschedule not in ['none','']  else snapmirrorschedule }}"
+        policy: "{{ snapmirrorpolicy.name }}"
+        initialize: True
+        <<: *login       
 
       
-
-        #size_unit: "{{  (UserInputs.size_unit | lower) if (UserInputs.size_unit is defined) else 'gb' }}"
-        #auto_provision_as: "{{ UserInputs.auto_provision_as  | default(omit) }}"
-        #snapshot_policy: "{{ UserInputs.nas_application_template.snapshot_policy  | default(omit) }}"
-        #qos_policy_group: "{{ omit if( UserInputs.nas_application_template.qos.policy.name is not defined or  UserInputs.nas_application_template.qos.policy.name == 'extreme' or  UserInputs.nas_application_template.qos.policy.name == 'performance' or UserInputs.nas_application_template.qos.policy.name == 'value') else UserInputs.nas_application_template.qos.policy.name }}"
-        #qos_adaptive_policy_group: "{{ omit if( UserInputs.nas_application_template.qos.policy.name is not defined or  (UserInputs.nas_application_template.qos.policy.name != 'extreme' and  UserInputs.nas_application_template.qos.policy.name != 'performance' and UserInputs.nas_application_template.qos.policy.name != 'value')) else UserInputs.nas_application_template.qos.policy.name }}"
-        #export_policy: "{{ UserInputs.nas_application_template.export_policy.name  | default(omit) }}"
-        # nas_application_template: 
-        #     use_nas_application: true
-        #     storage_service: "{{ UserInputs.nas_application_template.storage_service.name  | default(omit) }}"
-        #     tiering:
-        #         control: "{{ UserInputs.nas_application_template.tiering.control  | default(omit) }}"
-        #         policy: "{{ UserInputs.nas_application_template.tiering.policy  | default(omit) }}"
-        #         object_stores: "{{ UserInputs.nas_application_template.tiering.object_stores[0] | default(omit) }}"
-        #     nfs_access: "{{ UserInputs.nas_application_template.nfs_access  | default(omit) }}"
-        #     cifs_access: "{{ UserInputs.nas_application_template.cifs_access  | default(omit) }}"
         
 
