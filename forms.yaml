@@ -258,6 +258,7 @@ forms:
         runLocal: true
         expression: "($(copy_types_jq)).includes('dr2')"
         noOutput: true
+
       #validate b2d1 is required copy
       - type: expression
         name: b2d1
@@ -525,6 +526,7 @@ forms:
           values:
           - true
         model: dr1.source
+
         
       ############################################################################################################################
       # create dr2 copy if required
@@ -839,7 +841,7 @@ forms:
         - name: b2d1
           values:
           - true
-        model: b2d1.source          
+        model: b2d1.source  
 
       ############################################################################################################################
       # create b2d2 copy if required
@@ -997,3 +999,4 @@ forms:
           values:
           - true
         model: b2d2.source
+      

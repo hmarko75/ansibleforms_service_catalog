@@ -1,36 +1,34 @@
-companies:
-  - name: Company1
-    shortname: c1
-  - name: Company2
-    shortname: c2
+# companies:
+#   - name: Company1
+#   - name: Company2
 
-environments:
-  - name: Production
-    shortname: p
-    company: c1
-  - name: Test
-    shortname: t
-    company: c1
-  - name: Dev
-    shortname: d
-    company: c1    
-  - name: Dev
-    shortname: d
-    company: c2
-  - name: Training
-    shortname: t
-    company: c2
+# environments:
+#   - name: Production
+#     shortname: p
+#     company: c1
+#   - name: Test
+#     shortname: t
+#     company: c1
+#   - name: Dev
+#     shortname: d
+#     company: c1    
+#   - name: Dev
+#     shortname: d
+#     company: c2
+#   - name: Training
+#     shortname: t
+#     company: c2
 
-locations:
-  - name: Site A
-    shortname: s1
-    company: c1
-  - name: Site B
-    shortname: s2
-    company: c1
-  - name: Site C
-    shortname: s3
-    company: c1
+# locations:
+#   - name: Site A
+#     shortname: s1
+#     company: c1
+#   - name: Site B
+#     shortname: s2
+#     company: c1
+#   - name: Site C
+#     shortname: s3
+#     company: c1
 
 services:
   - name: NAS
@@ -49,51 +47,61 @@ services:
               count: [24]
               snapmirror_label: ['daily']
             efficiency:
-#              enable_compression: true 
-#              enable_cross_volume_background_dedupe: true
+              enable_compression: true 
+              enable_cross_volume_background_dedupe: true
               enable_cross_volume_inline_dedupe: true
               enable_data_compaction: true
               enable_inline_compression: true
               enable_inline_dedupe: true
+              schedule: daily 
               dynamicschedule: true
+              duration: 3
             clusters:
               - cluster1: [svm1]
-          - type: dr1
-            source: prod
-            schedule: daily
-            dynamicschedule: true
+                cluster2: [svm3]
+          - type: dr1      
             sizeratio: 1.5
             namesuffix: "_dr1"
-            policy: MirrorAllSnapshots
             clusters:
               - cluster1: [svm2]
+            source:
+              copy: prod
+              policy: MirrorAllSnapshots
+              dynamicschedule: true
+              schedule: daily
+
           - type: dr2
-            source: dr1
-            schedule: daily
-            dynamicschedule: true
             sizeratio: 1.5
             namesuffix: "_dr2"
-            policy: MirrorAllSnapshots
             clusters:
               - cluster2: [svm3]              
-          - type: b2d1
-            source: dr1
-            schedule: daily
-            sizeratio: 2.5
-            namesuffix: "_b2d1"            
-            dynamicschedule: true
-            policy: 9w_daily
-            clusters:
-              - cluster2: [svm9]
+            source:
+              copy: dr1
+              policy: MirrorAllSnapshots
+              dynamicschedule: true
+              schedule: daily
+
+          # - type: b2d1
+          #   sizeratio: 2.5
+          #   namesuffix: ""            
+          #   clusters:
+          #     - cluster2: [svm9]
+          #   source:
+          #     copy: prod
+          #     policy: 9w_daily
+          #     dynamicschedule: true
+          #     schedule: daily         
+
           - type: b2d2
-            source: dr2
-            schedule: daily
             sizeratio: 2.5
-            namesuffix: "_b2d2"             
-            dynamicschedule: true
-            policy: 12w_daily
+            namesuffix: ""             
             clusters:
               - cluster2: [svm10]              
+            source:
+              copy: b2d1
+              policy: 12w_daily
+              dynamicschedule: true
+              schedule: daily                
 
       - company: Company 1
         location: Site B
