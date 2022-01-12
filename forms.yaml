@@ -1,11 +1,9 @@
 categories:
   - name: Default
     icon: bars
-  - name: Dataset
-    icon: bath
-  - name: Create
+  - name: Provision
     icon: bath  
-  - name: Clone
+  - name: Maintenance
     icon: bath             
 roles:
   - name: admin
@@ -24,15 +22,15 @@ roles:
     groups:
       - local/Provision Admins  
 forms:
-  - name: Create New Volume 
+
+  - name: Create New Volume For Service
     help:
       This is used to create new volume for a service  
     roles:
       - Provision
     description: New volume creation
     categories:
-      - Volume
-      - Create
+      - Provision
     icon: scroll
     playbook: create_service_vol.yaml
     inventory: hosts
@@ -385,10 +383,10 @@ forms:
 
       #dr1 name suffix if provided 
       - type: expression
-        name: dr1_namesuffix
-        label: dr1_namesuffix
+        name: dr1_volnamesuffix
+        label: dr1_volnamesuffix
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.namesuffix')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.volnamesuffix')"
         group: DR1
         noOutput: true
         dependencies:         
@@ -401,7 +399,7 @@ forms:
         name: dr1_volname
         label: Volume Name
         hide: true
-        expression: "'$(volname)'+'$(dr1_namesuffix)'"
+        expression: "'$(volname)'+'$(dr1_volnamesuffix)'"
         group: DR1
         dependencies:         
         - name: dr1
@@ -436,24 +434,49 @@ forms:
           - true  
         model: dr1.volsize
 
-      #will build a %7C (|) cluster list that will be used for rest aiqum aggr filter 
+      #dedicated cluster 
       - type: expression
-        name: dr1_aggr_filter_jq 
-        label: dr1_aggr_filter_jq
+        name: dr1_dedicated_cluster 
+        label: dr1_dedicated_cluster
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.clusters[]|keys|join(\"%7C\")')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')"
         group: DR1
         noOutput: true
         dependencies:         
         - name: dr1
           values:
-          - true                   
+          - true   
+
+      #dedicated svm 
+      - type: expression
+        name: dr1_dedicated_svm 
+        label: dr1_dedicated_svm
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')"
+        group: DR1
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true             
+
+      #will build a %7C (|) cluster list that will be used for rest aiqum aggr filter for dedicated cluster
+      - type: expression
+        name: dr1_aggr_filter_jq
+        label: dr1_aggr_filter_jq
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(dr1_dedicated_cluster)\" != \"null\" then \"$(dr1_dedicated_cluster)\" else .services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.clusters[]|keys|join(\"%7C\") end')"
+        group: DR1
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true 
 
       #aggr enum 
       - type: query
         name: dr1_cluster_aggr
         label: Cluster/Aggregate
-        # expression: "JSON.parse('$(dr1_cluster_aggr_jq)')"
         expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(dr1_aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.block_storage.available}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
         columns:
         - Resource
@@ -501,7 +524,7 @@ forms:
         name: dr1_svm_filter_jq
         label: dr1_svm_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.clusters[]|.$(dr1_cluster)|join(\"%7C\")')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(dr1_dedicated_svm)\" != \"null\" then \"$(dr1_dedicated_svm)\" else .services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.clusters[]|.$(dr1_cluster)|join(\"%7C\") end')"
         group: DR1
         noOutput: true
         dependencies:         
@@ -544,10 +567,10 @@ forms:
 
       #dr2 name suffix if provided 
       - type: expression
-        name: dr2_namesuffix
-        label: dr2_namesuffix
+        name: dr2_volnamesuffix
+        label: dr2_volnamesuffix
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.namesuffix')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.volnamesuffix')"
         group: DR2
         noOutput: true
         dependencies:         
@@ -560,7 +583,7 @@ forms:
         name: dr2_volname
         label: Volume Name
         hide: true
-        expression: "'$(volname)'+'$(dr2_namesuffix)'"
+        expression: "'$(volname)'+'$(dr2_volnamesuffix)'"
         group: DR2
         dependencies:         
         - name: dr2
@@ -595,12 +618,38 @@ forms:
           - true  
         model: dr2.volsize
 
+      #dedicated cluster 
+      - type: expression
+        name: dr2_dedicated_cluster 
+        label: dr2_dedicated_cluster
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')"
+        group: DR2
+        noOutput: true
+        dependencies:         
+        - name: dr2
+          values:
+          - true   
+
+      #dedicated svm 
+      - type: expression
+        name: dr2_dedicated_svm 
+        label: dr2_dedicated_svm
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')"
+        group: DR2
+        noOutput: true
+        dependencies:         
+        - name: dr2
+          values:
+          - true          
+
       #will build a %7C (|) cluster list that will be used for rest aiqum aggr filter 
       - type: expression
         name: dr2_aggr_filter_jq 
         label: dr2_aggr_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.clusters[]|keys|join(\"%7C\")')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(dr2_dedicated_cluster)\" != \"null\" then \"$(dr2_dedicated_cluster)\" else .services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.clusters[]|keys|join(\"%7C\") end')"
         group: DR2
         noOutput: true
         dependencies:         
@@ -660,7 +709,7 @@ forms:
         name: dr2_svm_filter_jq
         label: dr2_svm_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.clusters[]|.$(dr2_cluster)|join(\"%7C\")')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(dr2_dedicated_svm)\" != \"null\" then \"$(dr2_dedicated_svm)\" else .services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.clusters[]|.$(dr2_cluster)|join(\"%7C\") end')"
         group: DR2
         noOutput: true
         dependencies:         
@@ -702,10 +751,10 @@ forms:
 
       #b2d1 name suffix if provided 
       - type: expression
-        name: b2d1_namesuffix
-        label: b2d1_namesuffix
+        name: b2d1_volnamesuffix
+        label: b2d1_volnamesuffix
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.namesuffix')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.volnamesuffix')"
         group: B2D1
         noOutput: true
         dependencies:         
@@ -718,7 +767,7 @@ forms:
         name: b2d1_volname
         label: Volume Name
         hide: true
-        expression: "'$(volname)'+'$(b2d1_namesuffix)'"
+        expression: "'$(volname)'+'$(b2d1_volnamesuffix)'"
         group: B2D1
         dependencies:         
         - name: b2d1
@@ -753,12 +802,38 @@ forms:
           - true  
         model: b2d1.volsize
 
+      #dedicated cluster 
+      - type: expression
+        name: b2d1_dedicated_cluster 
+        label: b2d1_dedicated_cluster
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')"
+        group: B2D1
+        noOutput: true
+        dependencies:         
+        - name: b2d1
+          values:
+          - true   
+
+      #dedicated svm 
+      - type: expression
+        name: b2d1_dedicated_svm 
+        label: b2d1_dedicated_svm
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')"
+        group: B2D1
+        noOutput: true
+        dependencies:         
+        - name: b2d1
+          values:
+          - true 
+
       #will build a %7C (|) cluster list that will be used for rest aiqum aggr filter 
       - type: expression
         name: b2d1_aggr_filter_jq 
         label: b2d1_aggr_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.clusters[]|keys|join(\"%7C\")')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(b2d1_dedicated_cluster)\" != \"null\" then \"$(b2d1_dedicated_cluster)\" else .services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.clusters[]|keys|join(\"%7C\") end')"
         group: B2D1
         noOutput: true
         dependencies:         
@@ -817,7 +892,7 @@ forms:
         name: b2d1_svm_filter_jq
         label: b2d1_svm_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.clusters[]|.$(b2d1_cluster)|join(\"%7C\")')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(b2d1_dedicated_svm)\" != \"null\" then \"$(b2d1_dedicated_svm)\" else .services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.clusters[]|.$(b2d1_cluster)|join(\"%7C\") end')"
         group: B2D1
         noOutput: true
         dependencies:         
@@ -859,10 +934,10 @@ forms:
 
       #b2d2 name suffix if provided 
       - type: expression
-        name: b2d2_namesuffix
-        label: b2d2_namesuffix
+        name: b2d2_volnamesuffix
+        label: b2d2_volnamesuffix
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.namesuffix')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.volnamesuffix')"
         group: B2D2
         noOutput: true
         dependencies:         
@@ -875,7 +950,7 @@ forms:
         name: b2d2_volname
         label: Volume Name
         hide: true
-        expression: "'$(volname)'+'$(b2d2_namesuffix)'"
+        expression: "'$(volname)'+'$(b2d2_volnamesuffix)'"
         group: B2D2
         dependencies:         
         - name: b2d2
@@ -910,12 +985,38 @@ forms:
           - true  
         model: b2d2.volsize
 
+      #dedicated cluster 
+      - type: expression
+        name: b2d2_dedicated_cluster 
+        label: b2d2_dedicated_cluster
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')"
+        group: B2D2
+        noOutput: true
+        dependencies:         
+        - name: b2d2
+          values:
+          - true   
+
+      #dedicated svm 
+      - type: expression
+        name: b2d2_dedicated_svm 
+        label: b2d2_dedicated_svm
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')"
+        group: B2D2
+        noOutput: true
+        dependencies:         
+        - name: b2d2
+          values:
+          - true          
+
       #will build a %7C (|) cluster list that will be used for rest aiqum aggr filter 
       - type: expression
         name: b2d2_aggr_filter_jq 
         label: b2d2_aggr_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.clusters[]|keys|join(\"%7C\")')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(b2d2_dedicated_cluster)\" != \"null\" then \"$(b2d2_dedicated_cluster)\" else .services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.clusters[]|keys|join(\"%7C\") end')"
         group: B2D2
         noOutput: true
         dependencies:         
@@ -974,7 +1075,7 @@ forms:
         name: b2d2_svm_filter_jq
         label: b2d2_svm_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.clusters[]|.$(b2d2_cluster)|join(\"%7C\")')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(b2d2_dedicated_svm)\" != \"null\" then \"$(b2d2_dedicated_svm)\" else .services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.clusters[]|.$(b2d2_cluster)|join(\"%7C\") end')"
         group: B2D2
         noOutput: true
         dependencies:         
@@ -1008,5 +1109,360 @@ forms:
         - name: b2d2
           values:
           - true
-        model: b2d2.source
+        model: b2d2.source         
       
+  - name: Cleanup Ansibleforms Jobs
+    showHelp: true
+    help: |
+      This form starts the `ansibleforms_job_cleanup.yaml` playbook
+      It will remove all ansible job logs
+    roles:
+      - admin
+    description: This will cleanup all ansible job logs.
+    icon: trash
+    categories:
+      - Maintenance
+    tileClass: has-background-danger-light
+    playbook: ansibleforms_job_cleanup.yaml
+    type: ansible
+    fields:
+      - type: expression
+        name: mysql_credential
+        expression: "'__self__'"
+        label: Credential to connect to database
+        asCredential: true
+        required: true
+        hide: true
+      - type: checkbox
+        name: areyousure
+        label: Confirmation
+        default: false
+        placeholder: Are you sure you want to cleanup
+      - type: text
+        name: confirmation
+        label: Please type YES to confirm you want to cleanup
+        placeholder: YES
+        required: true
+        regex:
+          expression: ^YES$
+          description: Type YES to confirm
+        dependencies:
+          - name: areyousure
+            values:
+              - true
+
+  - name: Create SVMs For Service
+    help:
+      This is used to create the required SVMs for a service  
+    roles:
+      - Provision
+    description: New Service SVMs creation
+    categories:
+      - Provision
+    icon: scroll
+    playbook: create_service_svm.yaml
+    inventory: hosts
+    type: ansible
+    fields:        
+      ############################################################################################################################
+      # environment General configuration
+      ############################################################################################################################    
+      - type: expression         # readonly
+        name: login
+        expression: "'ONTAP'" 
+        label: login
+        asCredential: true
+        hide: true               # hidden on the form   
+
+      - type: expression
+        name: aiqum
+        expression: "'aiqum.demo.netapp.com'" 
+        label: aiqum
+        asCredential: true
+        hide: true 
+        noOutput: true
+
+      ############################################################################################################################
+      # filter service, environment, company, location
+      ############################################################################################################################
+
+      - type: query
+        name: service
+        label: Service
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[.services[] | ({name} + {shortname}) ]')"
+        columns:
+        - name
+        default: __auto__
+        model: general.service
+
+      - type: query
+        name: company
+        label: Company
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[(.services[] | select (.name==\"$(service.name)\")|.combinations)[]|{name:.company}]|unique')"      
+        columns:
+        - name
+        required: true
+        default: __auto__
+        model: general.company
+
+      - type: query
+        name: environment
+        label: Environment
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[(.services[] | select (.name==\"$(service.name)\")|.combinations)[]| select(.company==\"$(company.name)\")|{name: .environment}]|unique')"
+        columns:
+        - name
+        required: true
+        default: __auto__     
+        model: general.environment
+
+      - type: query
+        name: location
+        label: Location
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[(.services[] | select (.name==\"$(service.name)\")|.combinations)[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\")|{name: .location}]|unique')"
+        columns:
+        - name
+        required: true
+        default: __auto__
+        model: general.location
+
+      ############################################################################################################################
+      # check which copies are needed 
+      ############################################################################################################################
+      #get the type of copies
+      - type: expression
+        name: copy_types_jq 
+        label: copy_types_jq
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|.type]')"
+        noOutput: true
+
+      #validate dr1 is required copy
+      - type: expression
+        name: dr1
+        label: dr1
+        hide: false
+        runLocal: true
+        expression: "($(copy_types_jq)).includes(\"dr1\")"
+        #expression: "fn.fnIncludes($(copy_types_jq),'dr1')"
+        #noOutput: true
+
+      #validate dr2 is required copy
+      - type: expression
+        name: dr2
+        label: dr2
+        hide: true
+        runLocal: true
+        expression: "($(copy_types_jq)).includes('dr2')"
+        noOutput: true
+
+      #validate b2d1 is required copy
+      - type: expression
+        name: b2d1
+        label: b2d1
+        hide: true
+        runLocal: true
+        expression: "($(copy_types_jq)).includes('b2d1')"
+        noOutput: true        
+        
+      #validate b2d2 is required copy
+      - type: expression
+        name: b2d2
+        label: b2d2
+        hide: true
+        runLocal: true
+        expression: "($(copy_types_jq)).includes('b2d2')"
+        noOutput: true              
+
+      ############################################################################################################################
+      # create prod copy location information
+      ############################################################################################################################      
+
+      # #will build a %7C (|) cluster list that will be used for rest aiqum aggr filter 
+      # - type: expression
+      #   name: cluster_filter_jq 
+      #   label: cluster_filter_jq
+      #   hide: true
+      #   expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"prod\")|.clusters[]|keys|join(\"%7C\")')"
+      #   group: Production
+      #   noOutput: true
+
+      #cluster enum 
+      - type: query
+        name: cluster_list
+        label: Clusters
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
+        columns:
+        - Name
+        - Version
+        - Location
+        - Contact
+        - "Total Capacity"
+        - "Available Capacity"
+        required: true
+        default: __auto__  
+        group: Production
+        outputObject: true
+        noOutput: true
+      
+      - type: expression       
+        name: cluster
+        label: cluster
+        expression: "'$(cluster_list.Name)'"
+        hide: true
+        group: Production
+        model: prod.cluster
+
+      - type: expression
+        name: existingsvms
+        label: existingsvms
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster)&max_records=1000','','AIQUM','[.records[]|.name]','','')"
+        hide: true
+        group: Production
+        noOutput: true        
+
+      - type: text
+        name: svm
+        label: SVM Name
+        default: ""
+        required: true
+        minLength: 1
+        maxLength: 30
+        regex: 
+          expression: ^[a-z0-9_]*$
+          description: Invalid SVM Name         
+        notIn:
+          field: "existingsvms"
+          description: SVM already exists           
+        icon: user
+        group: Production
+        model: prod.svm
+
+      ############################################################################################################################
+      # create dr1 svm if required
+      ############################################################################################################################      
+
+      #dr1 svm suffix
+      - type: expression
+        name: dr1_svmsuffix
+        label: dr1_svmsuffix
+        hide: true
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.svmnamesuffix')"
+        group: DR1
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true 
+                           
+      #cluster enum 
+      - type: query
+        name: dr1_cluster_list
+        label: Clusters1
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
+        columns:
+        - Name
+        - Version
+        - Location
+        - Contact
+        - "Total Capacity"
+        - "Available Capacity"
+        noOutput: true
+        default: __auto__
+        required: true
+        group: DR1
+        outputObject: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true 
+      
+      # - type: expression       
+      #   name: dr1_cluster
+      #   label: dr1_cluster
+      #   expression: "'$(dr1_cluster_list.Name)'"
+      #   hide: true
+      #   group: DR1
+      #   model: dr1.cluster
+      #   dependencies:         
+      #   - name: dr1
+      #     values:
+      #     - true         
+
+      # #dr1 standard svm
+      # - type: expression
+      #   name: dr1_standardsvm
+      #   label: SVM Name
+      #   hide: false
+      #   runLocal: true
+      #   expression: "'$(dr1_svmsuffix)'=='null' || '$(dr1_svmsuffix)'=='' ? '$(svm)'+'_dr1' : '$(svm)'+'$(dr1_svmsuffix)'"
+      #   group: DR1
+      #   noOutput: true
+      #   dependencies:         
+      #   - name: dr1
+      #     values:
+      #     - true 
+
+      # #dr1 svm suffix
+      # - type: expression
+      #   name: dr1_svm
+      #   label: dr1_svm
+      #   hide: false
+      #   runLocal: true
+      #   expression: "'$(dr1_svmsuffix)'=='null' || '$(dr1_svmsuffix)'=='' ? '$(svm)'+'_dr1' : '$(svm)'+'$(dr1_svmsuffix)'"
+      #   group: DR1
+      #   noOutput: true
+      #   dependencies:         
+      #   - name: dr1
+      #     values:
+      #     - true 
+      #   model: dr1.svm
+
+      # #override standard name 
+      # - type: checkbox
+      #   name: dr1_override 
+      #   label: Override default SVM Name
+      #   default: false
+      #   dependencies:         
+      #   - name: dr1
+      #     values:
+      #     - true         
+
+      # - type: expression
+      #   name: dr1_existingsvms
+      #   label: dr1_existingsvms
+      #   expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(dr1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]','','')"
+      #   hide: true
+      #   group: DR1
+      #   noOutput: true
+      #   dependencies:         
+      #   - name: dr1
+      #     values:
+      #     - true  
+      #   - name: dr1_override
+      #     values:
+      #     - true                  
+
+      # - type: text
+      #   name: dr1_svm
+      #   label: SVM Name
+      #   default: ""
+      #   required: true
+      #   minLength: 1
+      #   maxLength: 30
+      #   regex: 
+      #     expression: ^[a-z0-9_]*$
+      #     description: Invalid SVM Name         
+      #   notIn:
+      #     field: "dr1_existingsvms"
+      #     description: SVM already exists           
+      #   icon: user
+      #   group: DR1
+      #   dependencies:         
+      #   - name: dr1
+      #     values:
+      #     - true 
+      #   - name: dr1_override
+      #     values:
+      #     - true           
+      #   model: dr1.svm
+        
