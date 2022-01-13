@@ -9,8 +9,8 @@ VolumeDefaults:
       #total nu, for dynamic scheules 
       total_schedules: 10
       #for dynamic policies choose random suffix requires schedules to be created on all involved clusters 
-      prod_snapshot_policy_range_start: 1
-      prod_snapshot_policy_range_end: 3
+      prod_snapshot_policy_range_start: 5
+      prod_snapshot_policy_range_end: 9
 
       #efficiency policy offset from prod daily snapshot start 
       prod_efficiency_policy_offet: -3

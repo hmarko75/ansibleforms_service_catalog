@@ -34,7 +34,7 @@
   tasks:
     #add suffix to scheule name  with offset from the prod snapshot 
     - name: dynamic snapmirror
-      no_log: true
+      no_log: True
       when: 
         snapmirrordynamicschedule == true and snapmirrorschedule not in ['none','']
       set_fact:
@@ -42,7 +42,7 @@
 
     #when suffix is < 1 rotate 
     - name: dynamic snapmirror1
-      no_log: true
+      no_log: True
       when: 
         snapmirror_schedule_suffix is defined and snapmirror_schedule_suffix|int < 1
       set_fact:
@@ -50,7 +50,7 @@
     
     # when suffix is > from VolumeDefaults.dynamic.total_schedules
     - name: dynamic snapmirror2
-      no_log: true
+      no_log: True
       when: 
         snapmirror_schedule_suffix is defined  and snapmirror_schedule_suffix|int > VolumeDefaults.dynamic.total_schedules
       set_fact:

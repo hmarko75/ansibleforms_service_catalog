@@ -40,20 +40,30 @@ forms:
       ############################################################################################################################
       # environment General configuration
       ############################################################################################################################    
+
+      - type: expression
+        name: settings
+        label: settings
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','')"
+        noOutput: true 
+        hide: true
+
+      #aiqum server 
+      - type: expression
+        name: aiqum
+        expression: "fn.fnJq($(settings),'.general.aiqum')" 
+        label: aiqum
+        hide: true 
+        noOutput: true
+
+      #ontap credentials to use in ansible 
       - type: expression         # readonly
         name: login
         expression: "'ONTAP'" 
         label: login
         asCredential: true
-        hide: true               # hidden on the form   
+        hide: true    
 
-      - type: expression
-        name: aiqum
-        expression: "'aiqum.demo.netapp.com'" 
-        label: aiqum
-        asCredential: true
-        hide: true 
-        noOutput: true
 
       ############################################################################################################################
       # filter service, environment, company, location
@@ -62,18 +72,15 @@ forms:
       - type: query
         name: service
         label: Service
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[.services[] | ({name} + {shortname}) ]')"
-        columns:
-        - name
+        expression: "fn.fnJq($(settings),'.services[]|keys')"
+        required: true
         default: __auto__
         model: general.service
 
       - type: query
         name: company
         label: Company
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[(.services[] | select (.name==\"$(service.name)\")|.combinations)[]|{name:.company}]|unique')"      
-        columns:
-        - name
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|keys')"
         required: true
         default: __auto__
         model: general.company
@@ -81,9 +88,7 @@ forms:
       - type: query
         name: environment
         label: Environment
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[(.services[] | select (.name==\"$(service.name)\")|.combinations)[]| select(.company==\"$(company.name)\")|{name: .environment}]|unique')"
-        columns:
-        - name
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|keys')"
         required: true
         default: __auto__     
         model: general.environment
@@ -91,9 +96,7 @@ forms:
       - type: query
         name: location
         label: Location
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[(.services[] | select (.name==\"$(service.name)\")|.combinations)[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\")|{name: .location}]|unique')"
-        columns:
-        - name
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|keys')"
         required: true
         default: __auto__
         model: general.location
@@ -238,7 +241,7 @@ forms:
         name: copy_types_jq 
         label: copy_types_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|.type]')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|keys')"
         noOutput: true
 
       #validate dr1 is required copy
@@ -247,7 +250,7 @@ forms:
         label: dr1
         hide: true
         runLocal: true
-        expression: "($(copy_types_jq)).includes('dr1')"
+        expression: "$(copy_types_jq).includes('dr1')"
         noOutput: true
 
       #validate dr2 is required copy
@@ -256,7 +259,7 @@ forms:
         label: dr2
         hide: true
         runLocal: true
-        expression: "($(copy_types_jq)).includes('dr2')"
+        expression: "$(copy_types_jq).includes('dr2')"
         noOutput: true
 
       #validate b2d1 is required copy
@@ -265,7 +268,7 @@ forms:
         label: b2d1
         hide: true
         runLocal: true
-        expression: "($(copy_types_jq)).includes('b2d1')"
+        expression: "$(copy_types_jq).includes('b2d1')"
         noOutput: true        
       #validate b2d2 is required copy
       - type: expression
@@ -273,7 +276,7 @@ forms:
         label: b2d2
         hide: true
         runLocal: true
-        expression: "($(copy_types_jq)).includes('b2d2')"
+        expression: "$(copy_types_jq).includes('b2d2')"
         noOutput: true              
 
       ############################################################################################################################
@@ -285,7 +288,7 @@ forms:
         name: aggr_filter_jq 
         label: aggr_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"prod\")|.clusters[]|keys|join(\"%7C\")')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.prod|.clusters[]|keys|join(\"%7C\")')"
         group: Production
         noOutput: true
 
@@ -328,7 +331,7 @@ forms:
         name: svm_filter_jq
         label: svm_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"prod\")|.clusters[]|.$(cluster)|join(\"%7C\")')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.prod|.clusters[]|.$(cluster)|join(\"%7C\")')"
         group: Production
         noOutput: true
 
@@ -355,8 +358,8 @@ forms:
       - type: expression
         name: snapshotpolicy
         label: snapshotpolicy
-        hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"prod\")|.snapshotpolicy')"
+        hide: true        
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.prod|.snapshotpolicy')"
         group: Production
         model: prod.snapshotpolicy
 
@@ -365,7 +368,7 @@ forms:
         name: efficiency
         label: efficiency
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"prod\")|.efficiency')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.prod|.efficiency')"
         group: Production
         model: prod.efficiency            
 
@@ -374,7 +377,7 @@ forms:
         name: cifsaccess
         label: cifsaccess
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"prod\")|.cifsaccess')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.prod|.cifsaccess')"
         model: prod.cifsaccess      
        
       ############################################################################################################################
@@ -385,8 +388,8 @@ forms:
       - type: expression
         name: dr1_volnamesuffix
         label: dr1_volnamesuffix
-        hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.volnamesuffix')"
+        hide: true        
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr1|.volnamesuffix')"
         group: DR1
         noOutput: true
         dependencies:         
@@ -412,7 +415,7 @@ forms:
         name: dr1_sizeratio
         label: dr1_sizeratio
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.sizeratio')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr1|.sizeratio')"
         group: DR1
         noOutput: true
         dependencies:         
@@ -439,7 +442,7 @@ forms:
         name: dr1_dedicated_cluster 
         label: dr1_dedicated_cluster
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr1|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')"
         group: DR1
         noOutput: true
         dependencies:         
@@ -452,7 +455,7 @@ forms:
         name: dr1_dedicated_svm 
         label: dr1_dedicated_svm
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr1|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')"
         group: DR1
         noOutput: true
         dependencies:         
@@ -552,7 +555,7 @@ forms:
         name: dr1_source
         label: dr1_source
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.source')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr1|.source')"
         group: DR1
         dependencies:         
         - name: dr1
@@ -570,7 +573,7 @@ forms:
         name: dr2_volnamesuffix
         label: dr2_volnamesuffix
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.volnamesuffix')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr2|.volnamesuffix')"
         group: DR2
         noOutput: true
         dependencies:         
@@ -596,7 +599,7 @@ forms:
         name: dr2_sizeratio
         label: dr2_sizeratio
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.sizeratio')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr2|.sizeratio')"
         group: DR2
         noOutput: true
         dependencies:         
@@ -623,7 +626,7 @@ forms:
         name: dr2_dedicated_cluster 
         label: dr2_dedicated_cluster
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr2|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')"
         group: DR2
         noOutput: true
         dependencies:         
@@ -636,7 +639,7 @@ forms:
         name: dr2_dedicated_svm 
         label: dr2_dedicated_svm
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr2|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')"
         group: DR2
         noOutput: true
         dependencies:         
@@ -737,7 +740,7 @@ forms:
         name: dr2_source
         label: dr2_source
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.source')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr2|.source')"
         group: DR2
         dependencies:         
         - name: dr2
@@ -754,7 +757,7 @@ forms:
         name: b2d1_volnamesuffix
         label: b2d1_volnamesuffix
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.volnamesuffix')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d1|.volnamesuffix')"
         group: B2D1
         noOutput: true
         dependencies:         
@@ -780,7 +783,7 @@ forms:
         name: b2d1_sizeratio
         label: b2d1_sizeratio
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.sizeratio')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d1|.sizeratio')"
         group: B2D1
         noOutput: true
         dependencies:         
@@ -807,7 +810,7 @@ forms:
         name: b2d1_dedicated_cluster 
         label: b2d1_dedicated_cluster
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d1|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')"
         group: B2D1
         noOutput: true
         dependencies:         
@@ -820,7 +823,7 @@ forms:
         name: b2d1_dedicated_svm 
         label: b2d1_dedicated_svm
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d1|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')"
         group: B2D1
         noOutput: true
         dependencies:         
@@ -920,7 +923,7 @@ forms:
         name: b2d1_source
         label: b2d1_source
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.source')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d1|.source')"
         group: B2D1
         dependencies:         
         - name: b2d1
@@ -937,7 +940,7 @@ forms:
         name: b2d2_volnamesuffix
         label: b2d2_volnamesuffix
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.volnamesuffix')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d2|.volnamesuffix')"
         group: B2D2
         noOutput: true
         dependencies:         
@@ -963,7 +966,7 @@ forms:
         name: b2d2_sizeratio
         label: b2d2_sizeratio
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.sizeratio')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d2|.sizeratio')"
         group: B2D2
         noOutput: true
         dependencies:         
@@ -990,7 +993,7 @@ forms:
         name: b2d2_dedicated_cluster 
         label: b2d2_dedicated_cluster
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d2|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')"
         group: B2D2
         noOutput: true
         dependencies:         
@@ -1003,7 +1006,7 @@ forms:
         name: b2d2_dedicated_svm 
         label: b2d2_dedicated_svm
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d2|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')"
         group: B2D2
         noOutput: true
         dependencies:         
@@ -1103,7 +1106,7 @@ forms:
         name: b2d2_source
         label: b2d2_source
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.source')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d2|.source')"
         group: B2D2
         dependencies:         
         - name: b2d2
@@ -1164,23 +1167,33 @@ forms:
     inventory: hosts
     type: ansible
     fields:        
+
       ############################################################################################################################
       # environment General configuration
       ############################################################################################################################    
+
+      - type: expression
+        name: settings
+        label: settings
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','')"
+        noOutput: true 
+        hide: true
+
+      #aiqum server 
+      - type: expression
+        name: aiqum
+        expression: "fn.fnJq($(settings),'.general.aiqum')" 
+        label: aiqum
+        hide: true 
+        noOutput: true
+
+      #ontap credentials to use in ansible 
       - type: expression         # readonly
         name: login
         expression: "'ONTAP'" 
         label: login
         asCredential: true
-        hide: true               # hidden on the form   
-
-      - type: expression
-        name: aiqum
-        expression: "'aiqum.demo.netapp.com'" 
-        label: aiqum
-        asCredential: true
-        hide: true 
-        noOutput: true
+        hide: true   
 
       ############################################################################################################################
       # filter service, environment, company, location
@@ -1189,18 +1202,15 @@ forms:
       - type: query
         name: service
         label: Service
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[.services[] | ({name} + {shortname}) ]')"
-        columns:
-        - name
+        expression: "fn.fnJq($(settings),'.services[]|keys')"
+        required: true
         default: __auto__
         model: general.service
 
       - type: query
         name: company
         label: Company
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[(.services[] | select (.name==\"$(service.name)\")|.combinations)[]|{name:.company}]|unique')"      
-        columns:
-        - name
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|keys')"
         required: true
         default: __auto__
         model: general.company
@@ -1208,9 +1218,7 @@ forms:
       - type: query
         name: environment
         label: Environment
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[(.services[] | select (.name==\"$(service.name)\")|.combinations)[]| select(.company==\"$(company.name)\")|{name: .environment}]|unique')"
-        columns:
-        - name
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|keys')"
         required: true
         default: __auto__     
         model: general.environment
@@ -1218,9 +1226,7 @@ forms:
       - type: query
         name: location
         label: Location
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[(.services[] | select (.name==\"$(service.name)\")|.combinations)[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\")|{name: .location}]|unique')"
-        columns:
-        - name
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|keys')"
         required: true
         default: __auto__
         model: general.location
@@ -1232,9 +1238,11 @@ forms:
       - type: expression
         name: copy_types_jq 
         label: copy_types_jq
-        hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','[.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|.type]')"
-        noOutput: true
+        hide: false
+        #expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|keys')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"NAS\"[]|.\"Company 1\"[]|.\"Production\"[]|.\"$(location)\"[]|keys')"
+        #expression: "['dr1','fff']"
+        noOutput: false
 
       #validate dr1 is required copy
       - type: expression
@@ -1242,100 +1250,92 @@ forms:
         label: dr1
         hide: false
         runLocal: true
-        expression: "($(copy_types_jq)).includes(\"dr1\")"
-        #expression: "fn.fnIncludes($(copy_types_jq),'dr1')"
-        #noOutput: true
+        expression: "$(copy_types_jq).includes('dr1')"
+        #expression: "[1,2,3].includes(1)"
+        #expression: "true"
+        noOutput: false
 
-      #validate dr2 is required copy
-      - type: expression
-        name: dr2
-        label: dr2
-        hide: true
-        runLocal: true
-        expression: "($(copy_types_jq)).includes('dr2')"
-        noOutput: true
+      # #validate dr2 is required copy
+      # - type: expression
+      #   name: dr2
+      #   label: dr2
+      #   hide: true
+      #   runLocal: true
+      #   expression: "$(copy_types_jq).includes('dr2')"
+      #   noOutput: true
 
-      #validate b2d1 is required copy
-      - type: expression
-        name: b2d1
-        label: b2d1
-        hide: true
-        runLocal: true
-        expression: "($(copy_types_jq)).includes('b2d1')"
-        noOutput: true        
-        
-      #validate b2d2 is required copy
-      - type: expression
-        name: b2d2
-        label: b2d2
-        hide: true
-        runLocal: true
-        expression: "($(copy_types_jq)).includes('b2d2')"
-        noOutput: true              
+      # #validate b2d1 is required copy
+      # - type: expression
+      #   name: b2d1
+      #   label: b2d1
+      #   hide: true
+      #   runLocal: true
+      #   expression: "$(copy_types_jq).includes('b2d1')"
+      #   noOutput: true
+
+      # #validate b2d2 is required copy
+      # - type: expression
+      #   name: b2d2
+      #   label: b2d2
+      #   hide: true
+      #   runLocal: true
+      #   expression: "$(copy_types_jq).includes('b2d2')"
+      #   noOutput: true              
 
       ############################################################################################################################
       # create prod copy location information
       ############################################################################################################################      
 
-      # #will build a %7C (|) cluster list that will be used for rest aiqum aggr filter 
-      # - type: expression
-      #   name: cluster_filter_jq 
-      #   label: cluster_filter_jq
-      #   hide: true
-      #   expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"prod\")|.clusters[]|keys|join(\"%7C\")')"
+      # #cluster enum 
+      # - type: query
+      #   name: cluster_list
+      #   label: Clusters
+      #   expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
+      #   columns:
+      #   - Name
+      #   - Version
+      #   - Location
+      #   - Contact
+      #   - "Total Capacity"
+      #   - "Available Capacity"
+      #   required: true
+      #   default: __auto__  
       #   group: Production
+      #   outputObject: true
       #   noOutput: true
-
-      #cluster enum 
-      - type: query
-        name: cluster_list
-        label: Clusters
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
-        columns:
-        - Name
-        - Version
-        - Location
-        - Contact
-        - "Total Capacity"
-        - "Available Capacity"
-        required: true
-        default: __auto__  
-        group: Production
-        outputObject: true
-        noOutput: true
       
-      - type: expression       
-        name: cluster
-        label: cluster
-        expression: "'$(cluster_list.Name)'"
-        hide: true
-        group: Production
-        model: prod.cluster
+      # - type: expression       
+      #   name: cluster
+      #   label: cluster
+      #   expression: "'$(cluster_list.Name)'"
+      #   hide: true
+      #   group: Production
+      #   model: prod.cluster
 
-      - type: expression
-        name: existingsvms
-        label: existingsvms
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster)&max_records=1000','','AIQUM','[.records[]|.name]','','')"
-        hide: true
-        group: Production
-        noOutput: true        
+      # - type: expression
+      #   name: existingsvms
+      #   label: existingsvms
+      #   expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster)&max_records=1000','','AIQUM','[.records[]|.name]','','')"
+      #   hide: true
+      #   group: Production
+      #   noOutput: true        
 
-      - type: text
-        name: svm
-        label: SVM Name
-        default: ""
-        required: true
-        minLength: 1
-        maxLength: 30
-        regex: 
-          expression: ^[a-z0-9_]*$
-          description: Invalid SVM Name         
-        notIn:
-          field: "existingsvms"
-          description: SVM already exists           
-        icon: user
-        group: Production
-        model: prod.svm
+      # - type: text
+      #   name: svm
+      #   label: SVM Name
+      #   default: ""
+      #   required: true
+      #   minLength: 1
+      #   maxLength: 30
+      #   regex: 
+      #     expression: ^[a-z0-9_]*$
+      #     description: Invalid SVM Name         
+      #   notIn:
+      #     field: "existingsvms"
+      #     description: SVM already exists           
+      #   icon: user
+      #   group: Production
+      #   model: prod.svm
 
       ############################################################################################################################
       # create dr1 svm if required
@@ -1346,7 +1346,7 @@ forms:
         name: dr1_svmsuffix
         label: dr1_svmsuffix
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','.services[] | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.svmnamesuffix')"
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr1|.svmnamesuffix')"
         group: DR1
         noOutput: true
         dependencies:         
@@ -1355,9 +1355,9 @@ forms:
           - true 
                            
       #cluster enum 
-      - type: query
+      - type: expression
         name: dr1_cluster_list
-        label: Clusters1
+        label: Clusters
         expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
         columns:
         - Name
@@ -1366,15 +1366,13 @@ forms:
         - Contact
         - "Total Capacity"
         - "Available Capacity"
-        noOutput: true
         default: __auto__
-        required: true
-        group: DR1
-        outputObject: true
+        #group: DR1
+        #noOutput: true
         dependencies:         
         - name: dr1
           values:
-          - true 
+          - true  
       
       # - type: expression       
       #   name: dr1_cluster
