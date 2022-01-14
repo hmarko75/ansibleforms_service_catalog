@@ -1238,71 +1238,68 @@ forms:
       - type: expression
         name: copy_types_jq 
         label: copy_types_jq
-        hide: false
-        #expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|keys')"
-        expression: "fn.fnJq($(settings),'.services[]|.\"NAS\"[]|.\"Company 1\"[]|.\"Production\"[]|.\"$(location)\"[]|keys')"
-        #expression: "['dr1','fff']"
-        noOutput: false
+        hide: true
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|keys')"
+        noOutput: true
 
       #validate dr1 is required copy
       - type: expression
         name: dr1
         label: dr1
-        hide: false
+        hide: true
         runLocal: true
         expression: "$(copy_types_jq).includes('dr1')"
-        #expression: "[1,2,3].includes(1)"
-        #expression: "true"
-        noOutput: false
+        noOutput: true
 
-      # #validate dr2 is required copy
-      # - type: expression
-      #   name: dr2
-      #   label: dr2
-      #   hide: true
-      #   runLocal: true
-      #   expression: "$(copy_types_jq).includes('dr2')"
-      #   noOutput: true
+      #validate dr2 is required copy
+      - type: expression
+        name: dr2
+        label: dr2
+        hide: true
+        runLocal: true
+        expression: "$(copy_types_jq).includes('dr2')"
+        noOutput: true
 
-      # #validate b2d1 is required copy
-      # - type: expression
-      #   name: b2d1
-      #   label: b2d1
-      #   hide: true
-      #   runLocal: true
-      #   expression: "$(copy_types_jq).includes('b2d1')"
-      #   noOutput: true
+      #validate b2d1 is required copy
+      - type: expression
+        name: b2d1
+        label: b2d1
+        hide: true
+        runLocal: true
+        expression: "$(copy_types_jq).includes('b2d1')"
+        noOutput: true
 
-      # #validate b2d2 is required copy
-      # - type: expression
-      #   name: b2d2
-      #   label: b2d2
-      #   hide: true
-      #   runLocal: true
-      #   expression: "$(copy_types_jq).includes('b2d2')"
-      #   noOutput: true              
+      #validate b2d2 is required copy
+      - type: expression
+        name: b2d2
+        label: b2d2
+        hide: true
+        runLocal: true
+        expression: "$(copy_types_jq).includes('b2d2')"
+        noOutput: true              
 
       ############################################################################################################################
       # create prod copy location information
       ############################################################################################################################      
 
-      # #cluster enum 
-      # - type: query
-      #   name: cluster_list
-      #   label: Clusters
-      #   expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
-      #   columns:
-      #   - Name
-      #   - Version
-      #   - Location
-      #   - Contact
-      #   - "Total Capacity"
-      #   - "Available Capacity"
-      #   required: true
-      #   default: __auto__  
-      #   group: Production
-      #   outputObject: true
-      #   noOutput: true
+      #cluster enum 
+      - type: query
+        name: cluster_list
+        label: Clusters
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
+        columns:
+        - Name
+        - Version
+        - Location
+        - Contact
+        - "Total Capacity"
+        - "Available Capacity"
+        required: true
+        default: __auto__  
+        group: Production
+        outputObject: false
+        noOutput: false
+        model: prod.cluster
       
       # - type: expression       
       #   name: cluster
@@ -1312,30 +1309,30 @@ forms:
       #   group: Production
       #   model: prod.cluster
 
-      # - type: expression
-      #   name: existingsvms
-      #   label: existingsvms
-      #   expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster)&max_records=1000','','AIQUM','[.records[]|.name]','','')"
-      #   hide: true
-      #   group: Production
-      #   noOutput: true        
+      - type: expression
+        name: existingsvms
+        label: existingsvms
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster)&max_records=1000','','AIQUM','[.records[]|.name]','','')"
+        hide: true
+        group: Production
+        noOutput: true        
 
-      # - type: text
-      #   name: svm
-      #   label: SVM Name
-      #   default: ""
-      #   required: true
-      #   minLength: 1
-      #   maxLength: 30
-      #   regex: 
-      #     expression: ^[a-z0-9_]*$
-      #     description: Invalid SVM Name         
-      #   notIn:
-      #     field: "existingsvms"
-      #     description: SVM already exists           
-      #   icon: user
-      #   group: Production
-      #   model: prod.svm
+      - type: text
+        name: svm
+        label: SVM Name
+        default: ""
+        required: true
+        minLength: 1
+        maxLength: 30
+        regex: 
+          expression: ^[a-z0-9_]*$
+          description: Invalid SVM Name         
+        notIn:
+          field: "existingsvms"
+          description: SVM already exists           
+        icon: user
+        group: Production
+        model: prod.svm
 
       ############################################################################################################################
       # create dr1 svm if required
@@ -1355,8 +1352,8 @@ forms:
           - true 
                            
       #cluster enum 
-      - type: expression
-        name: dr1_cluster_list
+      - type: query
+        name: dr1_cluster
         label: Clusters
         expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
         columns:
@@ -1367,13 +1364,15 @@ forms:
         - "Total Capacity"
         - "Available Capacity"
         default: __auto__
-        #group: DR1
-        #noOutput: true
+        group: DR1
+        noOutput: false
         dependencies:         
         - name: dr1
           values:
-          - true  
+          - true 
+        model: dr1.cluster 
       
+      # #cluster name
       # - type: expression       
       #   name: dr1_cluster
       #   label: dr1_cluster
@@ -1384,83 +1383,78 @@ forms:
       #   dependencies:         
       #   - name: dr1
       #     values:
-      #     - true         
+      #     - true        
 
-      # #dr1 standard svm
-      # - type: expression
-      #   name: dr1_standardsvm
-      #   label: SVM Name
-      #   hide: false
-      #   runLocal: true
-      #   expression: "'$(dr1_svmsuffix)'=='null' || '$(dr1_svmsuffix)'=='' ? '$(svm)'+'_dr1' : '$(svm)'+'$(dr1_svmsuffix)'"
-      #   group: DR1
-      #   noOutput: true
-      #   dependencies:         
-      #   - name: dr1
-      #     values:
-      #     - true 
+      #dr1 svm suffix
+      - type: expression
+        name: dr1_svm_standard
+        label: SVM Name
+        hide: false
+        runLocal: true
+        expression: "'$(dr1_svmsuffix)'=='null' || '$(dr1_svmsuffix)'=='' ? '$(svm)'+'_dr1' : '$(svm)'+'$(dr1_svmsuffix)'"
+        group: DR1
+        model: dr1.svm_standard
+        dependencies:         
+        - name: dr1
+          values:
+          - true 
+        - name: dr1_override
+          values:
+          - false           
 
-      # #dr1 svm suffix
-      # - type: expression
-      #   name: dr1_svm
-      #   label: dr1_svm
-      #   hide: false
-      #   runLocal: true
-      #   expression: "'$(dr1_svmsuffix)'=='null' || '$(dr1_svmsuffix)'=='' ? '$(svm)'+'_dr1' : '$(svm)'+'$(dr1_svmsuffix)'"
-      #   group: DR1
-      #   noOutput: true
-      #   dependencies:         
-      #   - name: dr1
-      #     values:
-      #     - true 
-      #   model: dr1.svm
+      #override standard name 
+      - type: checkbox
+        name: dr1_override 
+        label: Override default SVM Name
+        default: false
+        group: DR1
+        noOutput: true        
+        dependencies:         
+        - name: dr1
+          values:
+          - true         
 
-      # #override standard name 
-      # - type: checkbox
-      #   name: dr1_override 
-      #   label: Override default SVM Name
-      #   default: false
-      #   dependencies:         
-      #   - name: dr1
-      #     values:
-      #     - true         
+      # current svms
+      - type: expression
+        name: dr1_existingsvms
+        label: dr1_existingsvms
+        #expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(dr1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|if \"$(dr1_cluster)\"==\"$(cluster)\" then (. +=[\"$(svm)\"]) else (.) end','','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(dr1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|. +=[\"$(svm)\"]','','')"
+        hide: true
+        group: DR1
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true    
+        - name: dr1_override
+          values:
+          - true        
 
-      # - type: expression
-      #   name: dr1_existingsvms
-      #   label: dr1_existingsvms
-      #   expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(dr1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]','','')"
-      #   hide: true
-      #   group: DR1
-      #   noOutput: true
-      #   dependencies:         
-      #   - name: dr1
-      #     values:
-      #     - true  
-      #   - name: dr1_override
-      #     values:
-      #     - true                  
-
-      # - type: text
-      #   name: dr1_svm
-      #   label: SVM Name
-      #   default: ""
-      #   required: true
-      #   minLength: 1
-      #   maxLength: 30
-      #   regex: 
-      #     expression: ^[a-z0-9_]*$
-      #     description: Invalid SVM Name         
-      #   notIn:
-      #     field: "dr1_existingsvms"
-      #     description: SVM already exists           
-      #   icon: user
-      #   group: DR1
-      #   dependencies:         
-      #   - name: dr1
-      #     values:
-      #     - true 
-      #   - name: dr1_override
-      #     values:
-      #     - true           
-      #   model: dr1.svm
+      #custom svm name
+      - type: text
+        name: dr1_svm_custom
+        label: SVM Name
+        default: ""
+        required: true
+        minLength: 1
+        maxLength: 30
+        model: dr1.svm_custom
+        #noOutput: true
+        regex: 
+          expression: ^[a-z0-9_]*$
+          description: Invalid SVM Name         
+        notIn:
+          field: "dr1_existingsvms"
+          description: SVM already exists or duplicate    
+        icon: user
+        group: DR1
+        dependencies:         
+        - name: dr1
+          values:
+          - true 
+        - name: dr1_override
+          values:
+          - true           
+        
         

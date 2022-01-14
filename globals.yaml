@@ -33,26 +33,6 @@ general:
 
 # services list
 services:
-  # - SAN:
-  #   - COM2:
-  #     - Prod:
-  #       - Site 1:
-      
-  #         Site 2:
-      
-  #       Test:
-  #       - Site 3:
-      
-  #         Site 4:       
-      
-  #     COM3:
-  #     - Prod3:
-  #       - Site 1:
-  #         Site 2:
-  #       Test:
-  #       - Site 3:
-  #         Site 4: 
-
   - NAS:  # service
     - Company 1: #company
       - Production: #environemnt 
@@ -82,7 +62,7 @@ services:
 
             dr1:
               sizeratio: 1.5
-              #svmnamesuffix: ""
+              svmnamesuffix: "_yoyo"
               volnamesuffix: "_dr1"
               fixed_relationship_for_prod:
                 cluster1_nas1: 
