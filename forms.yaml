@@ -296,7 +296,7 @@ forms:
       - type: query
         name: cluster_aggr
         label: Cluster/Aggregate
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.block_storage.available}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.block_storage.available}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
         columns:
         - Resource
         - Node
@@ -480,7 +480,7 @@ forms:
       - type: query
         name: dr1_cluster_aggr
         label: Cluster/Aggregate
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(dr1_aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.block_storage.available}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(dr1_aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.block_storage.available}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
         columns:
         - Resource
         - Node
@@ -665,7 +665,7 @@ forms:
         name: dr2_cluster_aggr
         label: Cluster/Aggregate
         # expression: "JSON.parse('$(dr2_cluster_aggr_jq)')"
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(dr2_aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.block_storage.available}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(dr2_aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.block_storage.available}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
         columns:
         - Resource
         - Node
@@ -848,7 +848,7 @@ forms:
       - type: query
         name: b2d1_cluster_aggr
         label: Cluster/Aggregate
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(b2d1_aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.block_storage.available}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(b2d1_aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.block_storage.available}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
         columns:
         - Resource
         - Node
@@ -1031,7 +1031,7 @@ forms:
       - type: query
         name: b2d2_cluster_aggr
         label: Cluster/Aggregate
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(b2d2_aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.block_storage.available}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/aggregates?state=online&cluster.name=$(b2d2_aggr_filter_jq)','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource: (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster: .cluster.name}+{Node: .node.name}+{Size: (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.block_storage.available}+{Available: (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf: (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type: .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
         columns:
         - Resource
         - Node
@@ -1286,7 +1286,7 @@ forms:
       - type: query
         name: cluster_list
         label: Clusters
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
         columns:
         - Name
         - Version
@@ -1300,19 +1300,50 @@ forms:
         outputObject: false
         noOutput: false
         model: prod.cluster
-      
-      # - type: expression       
-      #   name: cluster
-      #   label: cluster
-      #   expression: "'$(cluster_list.Name)'"
-      #   hide: true
-      #   group: Production
-      #   model: prod.cluster
+
+      - type: expression
+        name: svmnetwork
+        label: svmnetwork
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.prod|.svmnetwork')"
+        hide: true
+        group: Production
+        model: prod.network
+
+      - type: expression
+        name: svmsubnet
+        label: svmsubnet
+        expression: "fn.fnJq($(settings),'.networks|.\"$(svmnetwork)\"|.subnet')"
+        hide: true
+        group: Production
+        noOutput: true   
+
+      - type: expression
+        name: iprange
+        label: iprange
+        expression: "fn.fnJq($(settings),'.networks|.\"$(svmnetwork)\"|.iprange')"
+        hide: true
+        group: Production
+        noOutput: true  
+
+      - type: expression
+        name: iplist
+        label: iplist
+        hide: true
+        expression: "fnc.fnIpRangeToList('$(iprange)')"  
+        model: prod.iprange
+
+      - type: expression
+        name: svm_network_subnet
+        label: SVM Subnet
+        expression: "'$(svmnetwork) ($(svmsubnet))'"
+        hide: false
+        group: Production
+        noOutput: true                     
 
       - type: expression
         name: existingsvms
         label: existingsvms
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster)&max_records=1000','','AIQUM','[.records[]|.name]','','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster_list)&max_records=1000','','AIQUM','[.records[]|.name]','','')"
         hide: true
         group: Production
         noOutput: true        
@@ -1355,7 +1386,7 @@ forms:
       - type: query
         name: dr1_cluster
         label: Clusters
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]','(a, b) => a.AvailRaw < b.AvailRaw && 1 || -1','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
         columns:
         - Name
         - Version
@@ -1370,20 +1401,68 @@ forms:
         - name: dr1
           values:
           - true 
-        model: dr1.cluster 
-      
-      # #cluster name
-      # - type: expression       
-      #   name: dr1_cluster
-      #   label: dr1_cluster
-      #   expression: "'$(dr1_cluster_list.Name)'"
-      #   hide: true
-      #   group: DR1
-      #   model: dr1.cluster
-      #   dependencies:         
-      #   - name: dr1
-      #     values:
-      #     - true        
+        model: dr1.cluster
+
+
+      - type: expression
+        name: dr1_svmnetwork
+        label: dr1_svmnetwork
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr1|.svmnetwork')"
+        hide: true
+        group: DR1
+        dependencies:         
+        - name: dr1
+          values:
+          - true 
+        model: dr1.network
+
+      - type: expression
+        name: dr1_iprange
+        label: dr1_iprange
+        expression: "fn.fnJq($(settings),'.networks|.\"$(dr1_svmnetwork)\"|.iprange')"
+        hide: true
+        group: DR1
+        dependencies:         
+        - name: dr1
+          values:
+          - true 
+
+      - type: expression
+        name: dr1_iplist
+        label: dr1_iplist
+        hide: true
+        expression: "fnc.fnIpRangeToList('$(dr1_iprange)')"  
+        group: DR1
+        dependencies:         
+        - name: dr1
+          values:
+          - true 
+        model: dr1.iprange        
+
+      - type: expression
+        name: dr1_svmsubnet
+        label: dr1_svmsubnet
+        expression: "fn.fnJq($(settings),'.networks|.\"$(dr1_svmnetwork)\"|.subnet')"
+        hide: true
+        group: DR1
+        dependencies:         
+        - name: dr1
+          values:
+          - true 
+        noOutput: true    
+
+      - type: expression
+        name: dr1_svm_network_subnet
+        label: SVM Subnet
+        expression: "'$(dr1_svmnetwork) ($(dr1_svmsubnet))'"
+        hide: false
+        group: DR1
+        dependencies:         
+        - name: dr1
+          values:
+          - true 
+        noOutput: true               
+
 
       #dr1 svm suffix
       - type: expression
@@ -1418,7 +1497,6 @@ forms:
       - type: expression
         name: dr1_existingsvms
         label: dr1_existingsvms
-        #expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(dr1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|if \"$(dr1_cluster)\"==\"$(cluster)\" then (. +=[\"$(svm)\"]) else (.) end','','')"
         expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(dr1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|. +=[\"$(svm)\"]','','')"
         hide: true
         group: DR1
@@ -1440,7 +1518,6 @@ forms:
         minLength: 1
         maxLength: 30
         model: dr1.svm_custom
-        #noOutput: true
         regex: 
           expression: ^[a-z0-9_]*$
           description: Invalid SVM Name         
@@ -1455,6 +1532,92 @@ forms:
           - true 
         - name: dr1_override
           values:
-          - true           
-        
-        
+          - true 
+
+      # # current svms
+      # - type: expression
+      #   name: dr1_svm
+      #   label: dr1_svm
+      #   #expression: "($(dr1_svm_custom)!=undefined)?'$(dr1_svm_custom)':'$(dr1_svm_standard)'"
+      #   expression: "'$(dr1_svm_custom)'"
+      #   hide: false
+      #   runLocal: true
+      #   model: dr1.svm
+      #   group: DR1
+
+  - name: Debug 
+    help:
+      Debug  
+    roles:
+      - Provision
+    description: Debug
+    categories:
+      - Provision
+    icon: scroll
+    playbook: debug.yaml
+    inventory: hosts
+    type: ansible
+    fields:        
+
+      ############################################################################################################################
+      # environment General configuration
+      ############################################################################################################################    
+
+      #settings
+      - type: expression
+        name: settings
+        label: settings
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','')"
+        noOutput: true 
+        hide: true
+
+      #aiqum server 
+      - type: expression
+        name: aiqum
+        expression: "fn.fnJq($(settings),'.general.aiqum')" 
+        label: aiqum
+        hide: false 
+        noOutput: true
+
+
+      # ############################################################################################################################
+      # # filter service, environment, company, location
+      # ############################################################################################################################
+
+      # - type: query
+      #   name: service
+      #   label: Service
+      #   expression: "fn.fnJq($(settings),'.services[]|keys')"
+      #   required: true
+      #   default: __auto__
+      #   model: general.service
+
+      # - type: query
+      #   name: company
+      #   label: Company
+      #   expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|keys')"
+      #   required: true
+      #   default: __auto__
+      #   model: general.company
+
+      # - type: query
+      #   name: environment
+      #   label: Environment
+      #   expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|keys')"
+      #   required: true
+      #   default: __auto__     
+      #   model: general.environment
+
+      # - type: query
+      #   name: location
+      #   label: Location
+      #   expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|keys')"
+      #   required: true
+      #   default: __auto__
+      #   model: general.location
+ 
+      - type: expression
+        name: iplist
+        label: iplist
+        hide: false
+        expression: "fnc.fnIpRangetoList('$(iprange)')"

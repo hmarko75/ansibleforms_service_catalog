@@ -1,0 +1,11 @@
+---
+
+- name: Create SVM on prod
+  import_playbook: create_svm.yaml
+  vars:
+    copy: 'prod'
+
+- name: Create SVM on dr1
+  import_playbook: create_svm.yaml
+  vars:
+    copy: 'dr1'  

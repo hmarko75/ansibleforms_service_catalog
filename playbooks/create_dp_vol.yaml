@@ -28,7 +28,8 @@
       https: true
       validate_certs: false
   vars_files:
-  - volume_variables.yaml      
+  #- volume_variables.yaml      
+  - ../globals.yaml
   collections:
   - netapp.ontap  
   tasks:
