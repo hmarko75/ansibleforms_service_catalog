@@ -2,17 +2,21 @@ general:
   aiqum: aiqum.demo.netapp.com
 
 networks:
-  vlan-1:
-    subnet: 10.1.1.0/24
-    gateway: 10.1.1.254
-    brocadcastdoamin: vlan-1
-    iprange: 10.1.1.[100-121],10.1.1.125   
-
-  vlan-2:
-    subnet: 10.1.2.0/24
-    gateway: 10.1.2.254
-    brocadcastdoamin: vlan-2
+  vlan-1: #should correlate to the name of broadcast domain names on the controllers 
+    iprange: 192.168.0.[30-100],192.168.0.101,192.168.0.112,192.168.0.141,192.168.0.192,192.168.0.[111-115]
+    subnetmask: 255.255.255.0
+    gateway: 192.168.0.1
+  
+  vlan-2: #should correlate to the name of broadcast domain names on the controllers
     iprange: 10.1.2.[30-35],10.1.2.240
+    subnetmask: 255.255.255.0
+    gateway: 10.1.2.254
+
+domains:
+  demo.netapp.com:
+    dnsservers: ['192.168.0.253']
+    adou: CN=Computers
+    adusername: DEMO\adminsitrator
 
 # services list
 services:
@@ -20,8 +24,27 @@ services:
     - Company 1: #company
       - Production: #environemnt 
         - Site A: #site 
-          - prod:  #copy
-              svmnetwork: vlan-1 
+          - prod:  #prodcution copy
+              newsvm: 
+                network: 
+                  name: vlan-1
+                  domain: demo.netapp.com 
+                  lifcount: 3
+                  dnszone: true
+                protocols:
+                  cifs:
+                    enabled: true 
+                    domain: demo.netapp.com
+                  nfs:
+                    enabled: true 
+                    v3.0: true 
+                    v4.0: true 
+                    v4.1: true 
+                  iscsi:
+                    enabled: false
+                  fcp:
+                    enabled: false
+
               clusters:
                 - cluster1: [nas1]
                   cluster2: []      
@@ -44,15 +67,37 @@ services:
                 duration: 3
               cifsaccess: false
 
-            dr1:
+            dr1:  #optional dr1 copy 
               sizeratio: 1.5
-              svmnamesuffix: "_dr1"
-              svmnetwork: vlan-2
               volnamesuffix: "_dr1"
+
+              newsvm:
+                suffix: "_dr1koko"
+                network: 
+                  name: vlan-2
+                  domain: demo.netapp.com 
+                  lifcount: 12
+                  dnszone: true
+
+                protocols:
+                  cifs:
+                    enabled: true 
+                    domain: demo.netapp.com
+                  nfs:
+                    enabled: true 
+                    v3.0: true 
+                    v4.0: true 
+                    v4.1: true 
+                  iscsi:
+                    enabled: false
+                  fcp:
+                    enabled: false
+
               fixed_relationship_for_prod:
                 cluster1_nas1: 
                   cluster: cluster1
                   svm: nas1_dr1
+
               clusters:
                 - cluster1: [svm1]
                   cluster2: [svm4]
@@ -63,7 +108,7 @@ services:
                 dynamicschedule: true
                 schedule: daily
 
-            dr2:
+            dr2: #optional dr copy 
               sizeratio: 1.5
               volnamesuffix: "_dr2"
               fixed_relationship_for_prod:
@@ -79,7 +124,7 @@ services:
                 dynamicschedule: true
                 schedule: daily
 
-            b2d1:
+            b2d1:  #optional b2d copy 
               sizeratio: 2.5
               volnamesuffix: ""    
               fixed_relationship_for_prod:
@@ -98,7 +143,7 @@ services:
                 dynamicschedule: true
                 schedule: daily         
 
-            b2d2:
+            b2d2:   #optional b2d copy
               sizeratio: 2.5
               volnamesuffix: ""
               fixed_relationship_for_prod:

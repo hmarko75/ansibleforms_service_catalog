@@ -1,0 +1,42 @@
+---
+- name: create svm  
+  hosts: "localhost"
+  become: no 
+  gather_facts: no
+  vars:
+    cluster: "{{ vars[copy].cluster }}"
+    svm: "{{ vars[copy].svm | vars[copy].standard_svm || vars[copy].custom_svm }}"
+    network: "{{ vars[copy].network }}"
+    iplist: "{{ vars[copy].iplist }}"
+
+    clusterauth:  &login
+      hostname: "{{ cluster }}"
+      username: "{{ login.user }}"
+      password: "{{ login.password }}"
+      https: true
+      validate_certs: false
+  
+  vars_files:
+  #- volume_variables.yaml
+  - ../globals.yaml
+
+  collections:
+  - netapp.ontap  
+
+  tasks:
+    # - name: "Test if the ip address is already online."
+    #   command: "ping -q -c 1 -W 1 {{ item }}"
+    #   register: res
+    #   loop: "{{ iplist }}" 
+
+    - name: Test reachability to iplist
+      ansible.netcommon.net_ping:
+        dest: "{{ item }}" 
+      register: res
+      loop: "{{ iplist }}"            
+      
+
+    - name: debug
+      ansible.builtin.debug:
+        msg: 
+        - "{{ res }}"      
