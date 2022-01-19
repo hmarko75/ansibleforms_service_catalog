@@ -498,6 +498,7 @@ forms:
           values:
           - true          
       
+      #cluster name 
       - type: expression       
         name: dr1_cluster
         label: dr1_cluster
@@ -1195,6 +1196,53 @@ forms:
         asCredential: true
         hide: true   
 
+
+      ############################################################################################################################
+      # general DB queries 
+      ############################################################################################################################
+
+      #get list of cluster peers 
+      - type: expression
+        name: clusterpeers
+        label: clusterpeers
+        dbConfig:
+          name: AIQUMSQL
+          type: mysql
+        hide: true
+        query: select cluster.name as src, cluster_peer.remoteClusterName as dst, cluster_peer.availability as status 
+                from netapp_model_view.cluster_peer, netapp_model_view.cluster 
+                where cluster_peer.clusterId=cluster.objId 
+        noOutput: true
+
+      #select bd name and lif ip 
+      - type: expression
+        name: allip
+        label: allip
+        dbConfig:
+          name: AIQUMSQL
+          type: mysql
+        hide: true
+        query: select network_failover_group.name as bd,network_lif.address as addr 
+                from netapp_model_view.network_lif,netapp_model_view.network_failover_group 
+                where network_lif.failoverGroupId=network_failover_group.objid 
+        noOutput: true
+        
+      #select ports 
+      - type: expression
+        name: ports
+        label: ports
+        dbConfig:
+          name: AIQUMSQL
+          type: mysql
+        hide: true
+        query: select cluster.name as cluster,node.name as node, network_port.name as port,network_port_broadcast_domain.name as bd 
+                from netapp_model_view.network_port,netapp_model_view.network_port_broadcast_domain,netapp_model_view.cluster, netapp_model_view.node
+                where network_port_broadcast_domain.objid=network_port.networkPortBroadcastDomainId and network_port.clusterId=cluster.objid 
+                  and network_port.nodeId=node.objid and network_port.linkStatus='UP' and network_port_broadcast_domain.name != 'Cluster'
+                  order by network_port.name
+        noOutput: true
+        group: Production    
+
       ############################################################################################################################
       # filter service, environment, company, location
       ############################################################################################################################
@@ -1408,20 +1456,6 @@ forms:
         expression: fnc.fnIpRangeToList('$(iprange)')
         noOutput: true
         group: Production    
- 
-      #select bd name and lif ip 
-      - type: expression
-        name: allip
-        label: allip
-        dbConfig:
-          name: AIQUMSQL
-          type: mysql
-        hide: true
-        query: select network_failover_group.name as bd,network_lif.address as addr 
-                from netapp_model_view.network_lif,netapp_model_view.network_failover_group 
-                where network_lif.failoverGroupId=network_failover_group.objid 
-        noOutput: true
-        group: Production    
       
       #create array with all used ip within the bd 
       - type: expression
@@ -1439,21 +1473,6 @@ forms:
         hide: true
         runLocal: true
         expression: (($(iplist)).filter(x=>!~($(usedip)).indexOf(x)).slice(0,$(lifcount)).length<$(lifcount))?[]:($(iplist)).filter(x=>!~($(usedip)).indexOf(x)).slice(0,$(lifcount))
-        noOutput: true
-        group: Production    
-
-      #select bd name and lif ip 
-      - type: expression
-        name: ports
-        label: ports
-        dbConfig:
-          name: AIQUMSQL
-          type: mysql
-        hide: true
-        query: select cluster.name as cluster,node.name as node, network_port.name as port,network_port_broadcast_domain.name as bd 
-                from netapp_model_view.network_port,netapp_model_view.network_port_broadcast_domain,netapp_model_view.cluster, netapp_model_view.node
-                where network_port_broadcast_domain.objid=network_port.networkPortBroadcastDomainId and network_port.clusterId=cluster.objid 
-                  and network_port.nodeId=node.objid and network_port.linkStatus='UP' and network_port_broadcast_domain.name != 'Cluster'
         noOutput: true
         group: Production    
 
@@ -1479,13 +1498,13 @@ forms:
           description: requirments are not satisfied          
         group: Production
             
-
+      #consolidate selected ports info, ip and netmask into one object 
       - type: expression
         name: lifs
         label: lifs
         hide: true
         runLocal: true
-        expression: new function(){var ports = $(selectedports);var ip = $(availableip); ip.forEach(function(x,i){ports[i].ip=x;ports[i].subnet='$(subnetmask)'});return ports}()
+        expression: $(selectedports).map((x,i)=>({...x,ip:$(availableip)[i],netmask:'$(subnetmask)'}))
         model: prod.lifs
         group: Production    
 
@@ -1526,7 +1545,48 @@ forms:
         - name: dr1
           values:
           - true  
-        model: dr1.cluster  
+        model: dr1.cluster          
+
+      #dr1 list of avaialble sources 
+      - type: expression
+        name: dr1_source_copy
+        label: dr1_source_copy
+        hide: true
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr1|.source|.copy')"
+        group: DR1
+        dependencies:         
+        - name: dr1
+          values:
+          - true  
+        model: dr1.sourcecopy
+
+      #dr1 source cluster 
+      - type: expression
+        name: dr1_source_cluster
+        label: dr1_source_cluster
+        runLocal: true
+        hide: true
+        expression: "'$(dr1_source_copy)'==='prod'?'$(cluster)':'$(dr1_source_copy)'==='dr1'?'$(dr1_cluster)':'$(dr1_source_copy)'==='dr2'?'$(dr2_cluster)':'$(dr1_source_copy)'==='b2d1'?'$(b2d1_cluster)':'$(dr1_source_copy)'==='b2d2'?'$(b2d2_cluster)':''"
+        #expression: "'$(dr1_source_copy)'==='prod'?'$(cluster)':''"
+        group: DR1
+        dependencies:         
+        - name: dr1
+          values:
+          - true  
+        model: dr1.sourcecluster 
+
+      #dr1 validate there is peer between clusters
+      - type: expression
+        name: dr1_cluster_peer
+        label: dr1_cluster_peer
+        expression: "fn.fnJq($(clusterpeers),'.[]| select (.src==\"$(dr1_cluster)\" and .dst==\"$(dr1_source_cluster)\" and .status==\"AVAILABLE\")|.dst')"
+        hide: true
+        noOutput: true
+        group: DR1
+        dependencies:         
+        - name: dr1
+          values:
+          - true
 
       #dr1 svm suffix
       - type: expression
@@ -1682,31 +1742,13 @@ forms:
         - name: dr1
           values:
           - true      
- 
-      #select bd name and lif ip 
-      - type: expression
-        name: dr1_allip
-        label: dr1_allip
-        dbConfig:
-          name: aiqumSQL
-          type: mysql
-        hide: true
-        query: select network_failover_group.name as bd,network_lif.address as addr 
-                from netapp_model_view.network_lif,netapp_model_view.network_failover_group 
-                where network_lif.failoverGroupId=network_failover_group.objid 
-        noOutput: true
-        group: DR1
-        dependencies:         
-        - name: dr1
-          values:
-          - true      
-      
+          
       #create array with all used ip within the bd 
       - type: expression
         name: dr1_usedip
         label: dr1_usedip
         hide: true
-        expression: fn.fnJq($(dr1_allip),'[.[]|select (.bd==\"$(dr1_netname)\")|.addr]')
+        expression: fn.fnJq($(allip),'[.[]|select (.bd==\"$(dr1_netname)\")|.addr]')
         noOutput: true
         group: DR1
         dependencies:         
@@ -1728,31 +1770,12 @@ forms:
           values:
           - true      
 
-      #select bd name and lif ip 
-      - type: expression
-        name: dr1_ports
-        label: dr1_ports
-        dbConfig:
-          name: aiqumSQL
-          type: mysql
-        hide: true
-        query: select cluster.name as cluster,node.name as node, network_port.name as port,network_port_broadcast_domain.name as bd 
-                from netapp_model_view.network_port,netapp_model_view.network_port_broadcast_domain,netapp_model_view.cluster, netapp_model_view.node
-                where network_port_broadcast_domain.objid=network_port.networkPortBroadcastDomainId and network_port.clusterId=cluster.objid 
-                  and network_port.nodeId=node.objid and network_port.linkStatus='UP' and network_port_broadcast_domain.name != 'Cluster'
-        noOutput: true
-        group: DR1
-        dependencies:         
-        - name: dr1
-          values:
-          - true      
-
       #select ports for the ip addresses
       - type: expression
         name: dr1_selectedports
         label: dr1_selectedports
         hide: true
-        expression: fn.fnJq($(dr1_ports),'[.[]|select (.cluster==\"$(dr1_cluster)\" and .bd==\"$(dr1_netname)\")] | .[:$(dr1_lifcount)]')
+        expression: fn.fnJq($(ports),'[.[]|select (.cluster==\"$(dr1_cluster)\" and .bd==\"$(dr1_netname)\")] | .[:$(dr1_lifcount)]')
         noOutput: true
         group: DR1
         dependencies:         
@@ -1765,7 +1788,7 @@ forms:
         name: dr1_allocationstatus
         label: IP/Port allocation status
         hide: false
-        expression: ($(dr1_availableip).length<$(dr1_lifcount))?'Not enough IP addresses avaialble':(($(dr1_selectedports).length<$(dr1_lifcount))?'Not enought ports to host requested IP addresses':'IP and port requirements are satisfied')
+        expression: ($(dr1_availableip)).length<$(dr1_lifcount)?'Not enough IP addresses avaialble':($(dr1_selectedports)).length<$(dr1_lifcount)?'Not enought ports to host requested IP addresses':'$(dr1_cluster_peer)'==''&&'$(dr1_cluster)'!='$(dr1_source_cluster)'?'Cluster peer to $(dr1_source_cluster) is missing or not healthy':'IP, ports and cluster peer requirements are satisfied'
         runLocal: true 
         noOutput: true
         regex:
@@ -1783,7 +1806,7 @@ forms:
         label: dr1_lifs
         hide: true
         runLocal: true
-        expression: new function(){var ports = $(dr1_selectedports);var ip = $(dr1_availableip); ip.forEach(function(x,i){ports[i].ip=x;ports[i].subnet='$(dr1_subnetmask)'});return ports}()
+        expression: $(dr1_selectedports).map((x,i)=>({...x,ip:$(dr1_availableip)[i],netmask:'$(dr1_subnetmask)'}))
         model: dr1.lifs
         group: DR1
         dependencies:         
@@ -1791,7 +1814,920 @@ forms:
           values:
           - true      
 
+      ############################################################################################################################
+      # create dr2 copy if required
+      ############################################################################################################################      
 
+      #cluster enum 
+      - type: query
+        name: dr2_cluster_list
+        label: Select cluster
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
+        columns:
+        - Name
+        - Version
+        - Location
+        - Contact
+        - "Total Capacity"
+        - "Available Capacity"
+        required: true
+        default: __auto__  
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true  
+        outputObject: false
+        noOutput: false
+        model: dr2.cluster
+
+      - type: expression       
+        name: dr2_cluster
+        label: dr2_cluster
+        expression: "'$(dr2_cluster_list)'"
+        hide: true
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true  
+        model: dr2.cluster          
+
+      #dr2 list of avaialble sources 
+      - type: expression
+        name: dr2_source_copy
+        label: dr2_source_copy
+        hide: true
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr2|.source|.copy')"
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true  
+        model: dr2.sourcecopy
+
+      #dr2 source cluster 
+      - type: expression
+        name: dr2_source_cluster
+        label: dr2_source_cluster
+        runLocal: true
+        hide: true
+        expression: "'$(dr2_source_copy)'==='prod'?'$(cluster)':'$(dr2_source_copy)'==='dr1'?'$(dr1_cluster)':'$(dr2_source_copy)'==='dr2'?'$(dr2_cluster)':'$(dr2_source_copy)'==='b2d1'?'$(b2d1_cluster)':'$(dr2_source_copy)'==='b2d2'?'$(b2d2_cluster)':''"
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true  
+        model: dr2.sourcecluster 
+
+      #dr2 validate there is peer between clusters
+      - type: expression
+        name: dr2_cluster_peer
+        label: dr2_cluster_peer
+        expression: "fn.fnJq($(clusterpeers),'.[]| select (.src==\"$(dr2_cluster)\" and .dst==\"$(dr2_source_cluster)\" and .status==\"AVAILABLE\")|.dst')"
+        hide: true
+        noOutput: true
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true
+
+      #dr2 svm suffix
+      - type: expression
+        name: dr2_svmsuffix
+        label: dr2_svmsuffix
+        hide: true
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr2|.newsvm|.suffix')"
+        group: DR2
+        noOutput: true
+        dependencies:         
+        - name: dr2
+          values:
+          - true 
+
+      #list of existing svm in the dr + prod svm
+      - type: expression
+        name: dr2_existingsvms
+        label: dr2_existingsvms
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(dr2_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|. +=[\"$(svm)\"]','','')"
+        hide: true
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true  
+        noOutput: true    
+
+      #dr2 svm name
+      - type: expression
+        name: dr2_svm
+        label: SVM Name
+        hide: false
+        runLocal: true
+        expression: "'$(dr2_svmsuffix)'=='null' || '$(dr2_svmsuffix)'=='' ? '$(svm)'+'_dr2' : '$(svm)'+'$(dr2_svmsuffix)'"
+        group: DR2
+        model: dr2.svm
+        dependencies:         
+        - name: dr2
+          values:
+          - true 
+        editable: true        
+        regex: 
+          expression: ^[a-z0-9_]*$
+          description: Invalid SVM Name         
+        notIn:
+          field: "dr2_existingsvms"
+          description: SVM already exists or duplicate    
+        icon: user    
+
+      #network details 
+      - type: expression
+        name: dr2_netdetails
+        label: dr2_netdetails
+        hide: true        
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.dr2|.newsvm|.network')"
+        model: dr2.netdetails
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true  
+
+      #iprange for relevant network
+      - type: expression
+        name: dr2_netname
+        label: dr2_netname
+        expression: "($(dr2_netdetails)).name"
+        hide: true
+        runLocal: true
+        noOutput: true
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true  
+
+      #lif count
+      - type: expression
+        name: dr2_lifcount
+        label: dr2_lifcount
+        expression: "($(dr2_netdetails)).lifcount"
+        hide: true
+        runLocal: true        
+        noOutput: true
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true  
+
+      #domain name
+      - type: expression
+        name: dr2_domain
+        label: dr2_domain
+        expression: "($(dr2_netdetails)).domain"
+        hide: true
+        runLocal: true 
+        noOutput: true   
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true      
+
+      #domain details 
+      - type: expression
+        name: dr2_domaindetails
+        label: dr2_domaindetails
+        hide: true        
+        expression: "fn.fnJq($(settings),'.domains|.\"$(dr2_domain)\"')"
+        model: dr2.domaindetails
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true  
+
+      #subnet mask 
+      - type: expression
+        name: dr2_subnetmask
+        label: dr2_subnetmask
+        expression: "fn.fnJq($(settings),'.networks|.\"$(dr2_netname)\"|.subnetmask')"
+        hide: true
+        noOutput: true
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true      
+
+      #iprange for relevant network
+      - type: expression
+        name: dr2_iprange
+        label: dr2_iprange
+        expression: "fn.fnJq($(settings),'.networks|.\"$(dr2_netname)\"|.iprange')"
+        hide: true
+        noOutput: true
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true      
+
+      #create ip list from ip range 
+      - type: expression
+        name: dr2_iplist
+        label: dr2_iplist
+        hide: true
+        expression: fnc.fnIpRangeToList('$(dr2_iprange)')
+        noOutput: true
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true      
+          
+      #create array with all used ip within the bd 
+      - type: expression
+        name: dr2_usedip
+        label: dr2_usedip
+        hide: true
+        expression: fn.fnJq($(allip),'[.[]|select (.bd==\"$(dr2_netname)\")|.addr]')
+        noOutput: true
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true      
+
+      # create new array that removes all usedip from iplist 
+      - type: expression
+        name: dr2_availableip
+        label: dr2_avaialbleip
+        hide: true
+        runLocal: true
+        expression: (($(dr2_iplist)).filter(x=>!~($(dr2_usedip)).indexOf(x)).slice(0,$(dr2_lifcount)).length<$(dr2_lifcount))?[]:($(dr2_iplist)).filter(x=>!~($(dr2_usedip)).indexOf(x)).slice(0,$(dr2_lifcount))
+        noOutput: true
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true      
+
+      #select ports for the ip addresses
+      - type: expression
+        name: dr2_selectedports
+        label: dr2_selectedports
+        hide: true
+        expression: fn.fnJq($(ports),'[.[]|select (.cluster==\"$(dr2_cluster)\" and .bd==\"$(dr2_netname)\")] | .[:$(dr2_lifcount)]')
+        noOutput: true
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true  
+
+      #display ip/port allocation result
+      - type: expression
+        name: dr2_allocationstatus
+        label: IP/Port allocation status
+        hide: false
+        expression: ($(dr2_availableip)).length<$(dr2_lifcount)?'Not enough IP addresses avaialble':($(dr2_selectedports)).length<$(dr2_lifcount)?'Not enought ports to host requested IP addresses':'$(dr2_cluster_peer)'==''&&'$(dr2_cluster)'!='$(dr2_source_cluster)'?'Cluster peer to $(dr2_source_cluster) is missing or not healthy':'IP, ports and cluster peer requirements are satisfied'
+        runLocal: true 
+        noOutput: true
+        regex:
+          expression: satisfied
+          description: requirments are not satisfied          
+        ignoreIncomplete: false
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true      
+
+      - type: expression
+        name: dr2_lifs
+        label: dr2_lifs
+        hide: true
+        runLocal: true
+        expression: $(dr2_selectedports).map((x,i)=>({...x,ip:$(dr2_availableip)[i],netmask:'$(dr2_subnetmask)'}))
+        model: dr2.lifs
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true      
+
+      ############################################################################################################################
+      # create b2d1 copy if required
+      ############################################################################################################################      
+
+      #cluster enum 
+      - type: query
+        name: b2d1_cluster_list
+        label: Select cluster
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
+        columns:
+        - Name
+        - Version
+        - Location
+        - Contact
+        - "Total Capacity"
+        - "Available Capacity"
+        required: true
+        default: __auto__  
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+        outputObject: false
+        noOutput: false
+        model: b2d1.cluster
+
+      - type: expression       
+        name: b2d1_cluster
+        label: b2d1_cluster
+        expression: "'$(b2d1_cluster_list)'"
+        hide: true
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+        model: b2d1.cluster          
+
+      #b2d1 list of avaialble sources 
+      - type: expression
+        name: b2d1_source_copy
+        label: b2d1_source_copy
+        hide: true
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d1|.source|.copy')"
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+        model: b2d1.sourcecopy
+
+      #b2d1 source cluster 
+      - type: expression
+        name: b2d1_source_cluster
+        label: b2d1_source_cluster
+        runLocal: true
+        hide: true
+        expression: "'$(b2d1_source_copy)'==='prod'?'$(cluster)':'$(b2d1_source_copy)'==='dr1'?'$(dr1_cluster)':'$(b2d1_source_copy)'==='dr2'?'$(dr2_cluster)':'$(b2d1_source_copy)'==='b2d1'?'$(b2d1_cluster)':'$(b2d1_source_copy)'==='b2d2'?'$(b2d2_cluster)':''"
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+        model: b2d1.sourcecluster 
+
+      #b2d1 validate there is peer between clusters
+      - type: expression
+        name: b2d1_cluster_peer
+        label: b2d1_cluster_peer
+        expression: "fn.fnJq($(clusterpeers),'.[]| select (.src==\"$(b2d1_cluster)\" and .dst==\"$(b2d1_source_cluster)\" and .status==\"AVAILABLE\")|.dst')"
+        hide: true
+        noOutput: true
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true
+
+      #b2d1 svm suffix
+      - type: expression
+        name: b2d1_svmsuffix
+        label: b2d1_svmsuffix
+        hide: true
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d1|.newsvm|.suffix')"
+        group: B2D1
+        noOutput: true
+        dependencies:         
+        - name: b2d1
+          values:
+          - true 
+
+      #list of existing svm in the dr + prod svm
+      - type: expression
+        name: b2d1_existingsvms
+        label: b2d1_existingsvms
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(b2d1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|. +=[\"$(svm)\"]','','')"
+        hide: true
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+        noOutput: true    
+
+      #b2d1 svm name
+      - type: expression
+        name: b2d1_svm
+        label: SVM Name
+        hide: false
+        runLocal: true
+        expression: "'$(b2d1_svmsuffix)'=='null' || '$(b2d1_svmsuffix)'=='' ? '$(svm)'+'_b2d1' : '$(svm)'+'$(b2d1_svmsuffix)'"
+        group: B2D1
+        model: b2d1.svm
+        dependencies:         
+        - name: b2d1
+          values:
+          - true 
+        editable: true        
+        regex: 
+          expression: ^[a-z0-9_]*$
+          description: Invalid SVM Name         
+        notIn:
+          field: "b2d1_existingsvms"
+          description: SVM already exists or duplicate    
+        icon: user    
+
+      #network details 
+      - type: expression
+        name: b2d1_netdetails
+        label: b2d1_netdetails
+        hide: true        
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d1|.newsvm|.network')"
+        model: b2d1.netdetails
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+
+      #iprange for relevant network
+      - type: expression
+        name: b2d1_netname
+        label: b2d1_netname
+        expression: "($(b2d1_netdetails)).name"
+        hide: true
+        runLocal: true
+        noOutput: true
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+
+      #lif count
+      - type: expression
+        name: b2d1_lifcount
+        label: b2d1_lifcount
+        expression: "($(b2d1_netdetails)).lifcount"
+        hide: true
+        runLocal: true        
+        noOutput: true
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+
+      #domain name
+      - type: expression
+        name: b2d1_domain
+        label: b2d1_domain
+        expression: "($(b2d1_netdetails)).domain"
+        hide: true
+        runLocal: true 
+        noOutput: true   
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true      
+
+      #domain details 
+      - type: expression
+        name: b2d1_domaindetails
+        label: b2d1_domaindetails
+        hide: true        
+        expression: "fn.fnJq($(settings),'.domains|.\"$(b2d1_domain)\"')"
+        model: b2d1.domaindetails
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+
+      #subnet mask 
+      - type: expression
+        name: b2d1_subnetmask
+        label: b2d1_subnetmask
+        expression: "fn.fnJq($(settings),'.networks|.\"$(b2d1_netname)\"|.subnetmask')"
+        hide: true
+        noOutput: true
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true      
+
+      #iprange for relevant network
+      - type: expression
+        name: b2d1_iprange
+        label: b2d1_iprange
+        expression: "fn.fnJq($(settings),'.networks|.\"$(b2d1_netname)\"|.iprange')"
+        hide: true
+        noOutput: true
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true      
+
+      #create ip list from ip range 
+      - type: expression
+        name: b2d1_iplist
+        label: b2d1_iplist
+        hide: true
+        expression: fnc.fnIpRangeToList('$(b2d1_iprange)')
+        noOutput: true
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true      
+          
+      #create array with all used ip within the bd 
+      - type: expression
+        name: b2d1_usedip
+        label: b2d1_usedip
+        hide: true
+        expression: fn.fnJq($(allip),'[.[]|select (.bd==\"$(b2d1_netname)\")|.addr]')
+        noOutput: true
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true      
+
+      # create new array that removes all usedip from iplist 
+      - type: expression
+        name: b2d1_availableip
+        label: b2d1_avaialbleip
+        hide: true
+        runLocal: true
+        expression: (($(b2d1_iplist)).filter(x=>!~($(b2d1_usedip)).indexOf(x)).slice(0,$(b2d1_lifcount)).length<$(b2d1_lifcount))?[]:($(b2d1_iplist)).filter(x=>!~($(b2d1_usedip)).indexOf(x)).slice(0,$(b2d1_lifcount))
+        noOutput: true
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true      
+
+      #select ports for the ip addresses
+      - type: expression
+        name: b2d1_selectedports
+        label: b2d1_selectedports
+        hide: true
+        expression: fn.fnJq($(ports),'[.[]|select (.cluster==\"$(b2d1_cluster)\" and .bd==\"$(b2d1_netname)\")] | .[:$(b2d1_lifcount)]')
+        noOutput: true
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+
+      #display ip/port allocation result
+      - type: expression
+        name: b2d1_allocationstatus
+        label: IP/Port allocation status
+        hide: false
+        expression: ($(b2d1_availableip)).length<$(b2d1_lifcount)?'Not enough IP addresses avaialble':($(b2d1_selectedports)).length<$(b2d1_lifcount)?'Not enought ports to host requested IP addresses':'$(b2d1_cluster_peer)'==''&&'$(b2d1_cluster)'!='$(b2d1_source_cluster)'?'Cluster peer to $(b2d1_source_cluster) is missing or not healthy':'IP, ports and cluster peer requirements are satisfied'
+        runLocal: true 
+        noOutput: true
+        regex:
+          expression: satisfied
+          description: requirments are not satisfied          
+        ignoreIncomplete: false
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true      
+
+      - type: expression
+        name: b2d1_lifs
+        label: b2d1_lifs
+        hide: true
+        runLocal: true
+        expression: $(b2d1_selectedports).map((x,i)=>({...x,ip:$(b2d1_availableip)[i],netmask:'$(b2d1_subnetmask)'}))
+        model: b2d1.lifs
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true      
+
+      ############################################################################################################################
+      # create b2d2 copy if required
+      ############################################################################################################################      
+
+      #cluster enum 
+      - type: query
+        name: b2d2_cluster_list
+        label: Select cluster
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|tostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))}+{Location: .location}+{Contact:.contact}+{\"Total Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailRaw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
+        columns:
+        - Name
+        - Version
+        - Location
+        - Contact
+        - "Total Capacity"
+        - "Available Capacity"
+        required: true
+        default: __auto__  
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+        outputObject: false
+        noOutput: false
+        model: b2d2.cluster
+
+      - type: expression       
+        name: b2d2_cluster
+        label: b2d2_cluster
+        expression: "'$(b2d2_cluster_list)'"
+        hide: true
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+        model: b2d2.cluster          
+
+      #b2d2 list of avaialble sources 
+      - type: expression
+        name: b2d2_source_copy
+        label: b2d2_source_copy
+        hide: true
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d2|.source|.copy')"
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+        model: b2d2.sourcecopy
+
+      #b2d2 source cluster 
+      - type: expression
+        name: b2d2_source_cluster
+        label: b2d2_source_cluster
+        runLocal: true
+        hide: true
+        expression: "'$(b2d2_source_copy)'==='prod'?'$(cluster)':'$(b2d2_source_copy)'==='dr1'?'$(dr1_cluster)':'$(b2d2_source_copy)'==='dr2'?'$(dr2_cluster)':'$(b2d2_source_copy)'==='b2d1'?'$(b2d1_cluster)':'$(b2d2_source_copy)'==='b2d2'?'$(b2d2_cluster)':''"
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+        model: b2d2.sourcecluster 
+
+      #b2d2 validate there is peer between clusters
+      - type: expression
+        name: b2d2_cluster_peer
+        label: b2d2_cluster_peer
+        expression: "fn.fnJq($(clusterpeers),'.[]| select (.src==\"$(b2d2_cluster)\" and .dst==\"$(b2d2_source_cluster)\" and .status==\"AVAILABLE\")|.dst')"
+        hide: true
+        noOutput: true
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true
+
+      #b2d2 svm suffix
+      - type: expression
+        name: b2d2_svmsuffix
+        label: b2d2_svmsuffix
+        hide: true
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d2|.newsvm|.suffix')"
+        group: B2D2
+        noOutput: true
+        dependencies:         
+        - name: b2d2
+          values:
+          - true 
+
+      #list of existing svm in the dr + prod svm
+      - type: expression
+        name: b2d2_existingsvms
+        label: b2d2_existingsvms
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(b2d2_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|. +=[\"$(svm)\"]','','')"
+        hide: true
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+        noOutput: true    
+
+      #b2d2 svm name
+      - type: expression
+        name: b2d2_svm
+        label: SVM Name
+        hide: false
+        runLocal: true
+        expression: "'$(b2d2_svmsuffix)'=='null' || '$(b2d2_svmsuffix)'=='' ? '$(svm)'+'_b2d2' : '$(svm)'+'$(b2d2_svmsuffix)'"
+        group: B2D2
+        model: b2d2.svm
+        dependencies:         
+        - name: b2d2
+          values:
+          - true 
+        editable: true        
+        regex: 
+          expression: ^[a-z0-9_]*$
+          description: Invalid SVM Name         
+        notIn:
+          field: "b2d2_existingsvms"
+          description: SVM already exists or duplicate    
+        icon: user    
+
+      #network details 
+      - type: expression
+        name: b2d2_netdetails
+        label: b2d2_netdetails
+        hide: true        
+        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.b2d2|.newsvm|.network')"
+        model: b2d2.netdetails
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+
+      #iprange for relevant network
+      - type: expression
+        name: b2d2_netname
+        label: b2d2_netname
+        expression: "($(b2d2_netdetails)).name"
+        hide: true
+        runLocal: true
+        noOutput: true
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+
+      #lif count
+      - type: expression
+        name: b2d2_lifcount
+        label: b2d2_lifcount
+        expression: "($(b2d2_netdetails)).lifcount"
+        hide: true
+        runLocal: true        
+        noOutput: true
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+
+      #domain name
+      - type: expression
+        name: b2d2_domain
+        label: b2d2_domain
+        expression: "($(b2d2_netdetails)).domain"
+        hide: true
+        runLocal: true 
+        noOutput: true   
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true      
+
+      #domain details 
+      - type: expression
+        name: b2d2_domaindetails
+        label: b2d2_domaindetails
+        hide: true        
+        expression: "fn.fnJq($(settings),'.domains|.\"$(b2d2_domain)\"')"
+        model: b2d2.domaindetails
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+
+      #subnet mask 
+      - type: expression
+        name: b2d2_subnetmask
+        label: b2d2_subnetmask
+        expression: "fn.fnJq($(settings),'.networks|.\"$(b2d2_netname)\"|.subnetmask')"
+        hide: true
+        noOutput: true
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true      
+
+      #iprange for relevant network
+      - type: expression
+        name: b2d2_iprange
+        label: b2d2_iprange
+        expression: "fn.fnJq($(settings),'.networks|.\"$(b2d2_netname)\"|.iprange')"
+        hide: true
+        noOutput: true
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true      
+
+      #create ip list from ip range 
+      - type: expression
+        name: b2d2_iplist
+        label: b2d2_iplist
+        hide: true
+        expression: fnc.fnIpRangeToList('$(b2d2_iprange)')
+        noOutput: true
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true      
+          
+      #create array with all used ip within the bd 
+      - type: expression
+        name: b2d2_usedip
+        label: b2d2_usedip
+        hide: true
+        expression: fn.fnJq($(allip),'[.[]|select (.bd==\"$(b2d2_netname)\")|.addr]')
+        noOutput: true
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true      
+
+      # create new array that removes all usedip from iplist 
+      - type: expression
+        name: b2d2_availableip
+        label: b2d2_avaialbleip
+        hide: true
+        runLocal: true
+        expression: (($(b2d2_iplist)).filter(x=>!~($(b2d2_usedip)).indexOf(x)).slice(0,$(b2d2_lifcount)).length<$(b2d2_lifcount))?[]:($(b2d2_iplist)).filter(x=>!~($(b2d2_usedip)).indexOf(x)).slice(0,$(b2d2_lifcount))
+        noOutput: true
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true      
+
+      #select ports for the ip addresses
+      - type: expression
+        name: b2d2_selectedports
+        label: b2d2_selectedports
+        hide: true
+        expression: fn.fnJq($(ports),'[.[]|select (.cluster==\"$(b2d2_cluster)\" and .bd==\"$(b2d2_netname)\")] | .[:$(b2d2_lifcount)]')
+        noOutput: true
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+
+      #display ip/port allocation result
+      - type: expression
+        name: b2d2_allocationstatus
+        label: IP/Port allocation status
+        hide: false
+        expression: ($(b2d2_availableip)).length<$(b2d2_lifcount)?'Not enough IP addresses avaialble':($(b2d2_selectedports)).length<$(b2d2_lifcount)?'Not enought ports to host requested IP addresses':'$(b2d2_cluster_peer)'==''&&'$(b2d2_cluster)'!='$(b2d2_source_cluster)'?'Cluster peer to $(b2d2_source_cluster) is missing or not healthy':'IP, ports and cluster peer requirements are satisfied'
+        runLocal: true 
+        noOutput: true
+        regex:
+          expression: satisfied
+          description: requirments are not satisfied          
+        ignoreIncomplete: false
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true      
+
+      - type: expression
+        name: b2d2_lifs
+        label: b2d2_lifs
+        hide: true
+        runLocal: true
+        expression: $(b2d2_selectedports).map((x,i)=>({...x,ip:$(b2d2_availableip)[i],netmask:'$(b2d2_subnetmask)'}))
+        model: b2d2.lifs
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true      
 
 
   - name: Debug 
@@ -2024,5 +2960,7 @@ forms:
         runLocal: true
         expression: new function(){var ports = $(selectedports);var ip = $(availableip); ip.forEach(function(x,i){ports[i].ip=x;ports[i].subnet='$(subnetmask)'});return ports}()
         model: lifs
+
+
 
 

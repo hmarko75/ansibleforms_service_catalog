@@ -72,11 +72,11 @@ services:
               volnamesuffix: "_dr1"
 
               newsvm:
-                suffix: "_dr1koko"
+                suffix: "_dr1"
                 network: 
                   name: vlan-2
                   domain: demo.netapp.com 
-                  lifcount: 12
+                  lifcount: 2
                   dnszone: true
 
                 protocols:
@@ -101,6 +101,7 @@ services:
               clusters:
                 - cluster1: [svm1]
                   cluster2: [svm4]
+              
               source:
                 copy: prod
                 policy: 
@@ -111,6 +112,29 @@ services:
             dr2: #optional dr copy 
               sizeratio: 1.5
               volnamesuffix: "_dr2"
+
+              newsvm:
+                suffix: "_dr2"
+                network: 
+                  name: vlan-2
+                  domain: demo.netapp.com 
+                  lifcount: 2
+                  dnszone: true
+
+                protocols:
+                  cifs:
+                    enabled: true 
+                    domain: demo.netapp.com
+                  nfs:
+                    enabled: true 
+                    v3.0: true 
+                    v4.0: true 
+                    v4.1: true 
+                  iscsi:
+                    enabled: false
+                  fcp:
+                    enabled: false
+
               fixed_relationship_for_prod:
                 cluster1_nas1: 
                   cluster: cluster1
@@ -127,6 +151,29 @@ services:
             b2d1:  #optional b2d copy 
               sizeratio: 2.5
               volnamesuffix: ""    
+
+              newsvm:
+                suffix: "_b2d1"
+                network: 
+                  name: vlan-2
+                  domain: demo.netapp.com 
+                  lifcount: 2
+                  dnszone: true
+
+                protocols:
+                  cifs:
+                    enabled: true 
+                    domain: demo.netapp.com
+                  nfs:
+                    enabled: true 
+                    v3.0: true 
+                    v4.0: true 
+                    v4.1: true 
+                  iscsi:
+                    enabled: false
+                  fcp:
+                    enabled: false
+
               fixed_relationship_for_prod:
                 cluster1_nas1: 
                   cluster: cluster1
@@ -146,6 +193,29 @@ services:
             b2d2:   #optional b2d copy
               sizeratio: 2.5
               volnamesuffix: ""
+
+              newsvm:
+                suffix: "_b2d2"
+                network: 
+                  name: vlan-3
+                  domain: demo.netapp.com 
+                  lifcount: 2
+                  dnszone: true
+
+                protocols:
+                  cifs:
+                    enabled: true 
+                    domain: demo.netapp.com
+                  nfs:
+                    enabled: true 
+                    v3.0: true 
+                    v4.0: true 
+                    v4.1: true 
+                  iscsi:
+                    enabled: false
+                  fcp:
+                    enabled: false
+
               fixed_relationship_for_prod:
                 cluster1_nas1: 
                   cluster: cluster1
@@ -171,7 +241,7 @@ VolumeDefaults:
     percent_snapshot_space: 0
 
     dynamic:
-      #total nu, for dynamic scheules 
+      #total num for dynamic scheules 
       total_schedules: 10
       #for dynamic policies choose random suffix requires schedules to be created on all involved clusters 
       prod_snapshot_policy_range_start: 5
