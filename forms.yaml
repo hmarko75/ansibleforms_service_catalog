@@ -1567,7 +1567,6 @@ forms:
         runLocal: true
         hide: true
         expression: "'$(dr1_source_copy)'==='prod'?'$(cluster)':'$(dr1_source_copy)'==='dr1'?'$(dr1_cluster)':'$(dr1_source_copy)'==='dr2'?'$(dr2_cluster)':'$(dr1_source_copy)'==='b2d1'?'$(b2d1_cluster)':'$(dr1_source_copy)'==='b2d2'?'$(b2d2_cluster)':''"
-        #expression: "'$(dr1_source_copy)'==='prod'?'$(cluster)':''"
         group: DR1
         dependencies:         
         - name: dr1
@@ -1735,7 +1734,7 @@ forms:
         name: dr1_iplist
         label: dr1_iplist
         hide: true
-        expression: fnc.fnIpRangeToList('$(dr1_iprange)')
+        expression: fnc.fnIpRangeToList('$(dr1_iprange)',$(availableip)||[]) #second argument remove production selected ip from the range 
         noOutput: true
         group: DR1
         dependencies:         
@@ -1904,13 +1903,13 @@ forms:
         dependencies:         
         - name: dr2
           values:
-          - true 
+          - true          
 
-      #list of existing svm in the dr + prod svm
+      #list of existing svm in the dr + prod svm + dr1 svm
       - type: expression
         name: dr2_existingsvms
         label: dr2_existingsvms
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(dr2_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|. +=[\"$(svm)\"]','','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(dr2_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|. +=[\"$(svm)\"]|. +=[\"$(dr1_svm)\"]','','')"
         hide: true
         group: DR2
         dependencies:         
@@ -2035,12 +2034,26 @@ forms:
           values:
           - true      
 
+      #create list of already used ip  
+      - type: expression
+        name: dr2_already_used_ip
+        label: dr2_already_used_ip
+        hide: true
+        runLocal: true 
+        expression: $(availableip).concat($(dr1_availableip))
+        noOutput: true
+        group: DR2
+        dependencies:         
+        - name: dr2
+          values:
+          - true
+
       #create ip list from ip range 
       - type: expression
         name: dr2_iplist
         label: dr2_iplist
         hide: true
-        expression: fnc.fnIpRangeToList('$(dr2_iprange)')
+        expression: fnc.fnIpRangeToList('$(dr2_iprange)',$(dr2_already_used_ip))
         noOutput: true
         group: DR2
         dependencies:         
@@ -2215,7 +2228,7 @@ forms:
       - type: expression
         name: b2d1_existingsvms
         label: b2d1_existingsvms
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(b2d1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|. +=[\"$(svm)\"]','','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(b2d1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|. +=[\"$(svm)\"] |. +=[\"$(dr1_svm)\"]|. +=[\"$(dr2_svm)\"]','','')"
         hide: true
         group: B2D1
         dependencies:         
@@ -2340,12 +2353,26 @@ forms:
           values:
           - true      
 
+      #create list of already used ip  
+      - type: expression
+        name: b2d1_already_used_ip
+        label: b2d1_already_used_ip
+        hide: true
+        runLocal: true 
+        expression: $(availableip).concat($(dr1_availableip),$(dr2_availableip))
+        noOutput: true
+        group: B2D1
+        dependencies:         
+        - name: b2d1
+          values:
+          - true
+
       #create ip list from ip range 
       - type: expression
         name: b2d1_iplist
         label: b2d1_iplist
         hide: true
-        expression: fnc.fnIpRangeToList('$(b2d1_iprange)')
+        expression: fnc.fnIpRangeToList('$(b2d1_iprange)',$(b2d1_already_used_ip))
         noOutput: true
         group: B2D1
         dependencies:         
@@ -2520,7 +2547,7 @@ forms:
       - type: expression
         name: b2d2_existingsvms
         label: b2d2_existingsvms
-        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(b2d2_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|. +=[\"$(svm)\"]','','')"
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(b2d2_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|. +=[\"$(svm)\"]|. +=[\"$(dr1_svm)\"]|. +=[\"$(dr2_svm)\"]|. +=[\"$(b2d1_svm)\"]','','')"
         hide: true
         group: B2D2
         dependencies:         
@@ -2645,12 +2672,26 @@ forms:
           values:
           - true      
 
+      #create list of already used ip  
+      - type: expression
+        name: b2d2_already_used_ip
+        label: b2d2_already_used_ip
+        hide: true
+        runLocal: true 
+        expression: $(availableip).concat($(dr1_availableip),$(dr2_availableip),$(b2d1_availableip))
+        noOutput: true
+        group: B2D2
+        dependencies:         
+        - name: b2d2
+          values:
+          - true
+
       #create ip list from ip range 
       - type: expression
         name: b2d2_iplist
         label: b2d2_iplist
         hide: true
-        expression: fnc.fnIpRangeToList('$(b2d2_iprange)')
+        expression: fnc.fnIpRangeToList('$(b2d2_iprange)',$(b2d2_already_used_ip))
         noOutput: true
         group: B2D2
         dependencies:         
@@ -2815,152 +2856,4 @@ forms:
         required: true
         default: __auto__
         model: general.location
-
-      #cluster name 
-      - type: expression
-        name: cluster
-        label: cluster
-        hide: true        
-        expression: "'cluster1'"
-        noOutput: true
-
-      #network details 
-      - type: expression
-        name: netdetails
-        label: netdetails
-        hide: true        
-        expression: "fn.fnJq($(settings),'.services[]|.\"$(service)\"[]|.\"$(company)\"[]|.\"$(environment)\"[]|.\"$(location)\"[]|.prod|.newsvm|.network')"
-
-      #iprange for relevant network
-      - type: expression
-        name: netname
-        label: netname
-        expression: "($(netdetails)).name"
-        hide: true
-        runLocal: true
-        noOutput: true
-      
-      #lif count
-      - type: expression
-        name: lifcount
-        label: lifcount
-        expression: "($(netdetails)).lifcount"
-        hide: true
-        runLocal: true        
-        noOutput: true
-
-      #domain count
-      - type: expression
-        name: domain
-        label: domain
-        expression: "($(netdetails)).domain"
-        hide: false
-        runLocal: true 
-        noOutput: true       
-
-      #domain details 
-      - type: expression
-        name: domaindetails
-        label: domaindetails
-        hide: true        
-        expression: "fn.fnJq($(settings),'.domains|.\"$(domain)\"')"
-
-      #subnet mask 
-      - type: expression
-        name: subnetmask
-        label: subnetmask
-        expression: "fn.fnJq($(settings),'.networks|.\"$(netname)\"|.subnetmask')"
-        hide: true
-        noOutput: true
-
-      #iprange for relevant network
-      - type: expression
-        name: iprange
-        label: iprange
-        expression: "fn.fnJq($(settings),'.networks|.\"$(netname)\"|.iprange')"
-        hide: true
-        noOutput: true
-
-      #create ip list from ip range 
-      - type: expression
-        name: iplist
-        label: iplist
-        hide: true
-        expression: fnc.fnIpRangeToList('$(iprange)')
-        noOutput: true
- 
-      #select bd name and lif ip 
-      - type: expression
-        name: allip
-        label: allip
-        dbConfig:
-          name: AIQUMSQL
-          type: mysql
-        hide: true
-        query: select network_failover_group.name as bd,network_lif.address as addr 
-                from netapp_model_view.network_lif,netapp_model_view.network_failover_group 
-                where network_lif.failoverGroupId=network_failover_group.objid 
-        noOutput: true
-      
-      #create array with all used ip within the bd 
-      - type: expression
-        name: usedip
-        label: usedip
-        hide: true
-        expression: fn.fnJq($(allip),'[.[]|select (.bd==\"$(netname)\")|.addr]')
-        noOutput: true
-
-      # create new array that removes all usedip from iplist 
-      - type: expression
-        name: availableip
-        label: avaialbleip
-        hide: true
-        runLocal: true
-        expression: (($(iplist)).filter(x=>!~($(usedip)).indexOf(x)).slice(0,$(lifcount)).length<$(lifcount))?[]:($(iplist)).filter(x=>!~($(usedip)).indexOf(x)).slice(0,$(lifcount))
-        noOutput: true
-
-      #select bd name and lif ip 
-      - type: expression
-        name: ports
-        label: ports
-        dbConfig:
-          name: AIQUMSQL
-          type: mysql
-        hide: true
-        query: select cluster.name as cluster,node.name as node, network_port.name as port,network_port_broadcast_domain.name as bd 
-                from netapp_model_view.network_port,netapp_model_view.network_port_broadcast_domain,netapp_model_view.cluster, netapp_model_view.node
-                where network_port_broadcast_domain.objid=network_port.networkPortBroadcastDomainId and network_port.clusterId=cluster.objid 
-                  and network_port.nodeId=node.objid and network_port.linkStatus='UP' and network_port_broadcast_domain.name != 'Cluster'
-        noOutput: true
-
-      #select ports for the ip addresses
-      - type: expression
-        name: selectedports
-        label: selectedports
-        hide: true
-        expression: fn.fnJq($(ports),'[.[]|select (.cluster==\"$(cluster)\" and .bd==\"$(netname)\")] | .[:$(lifcount)]')
-        noOutput: true
-
-      #display ip/port allocation result
-      - type: expression
-        name: allocationstatus
-        label: IP/Port allocation status
-        hide: false
-        expression: ($(availableip).length<$(lifcount))?'Not enough IP addresses avaialble':(($(selectedports).length<$(lifcount))?'Not enought ports to host requested IP addresses':'IP and port requirements are satisfied')
-        runLocal: true 
-        noOutput: true
-        regex:
-          expression: satisfied
-          description: requirments are not satisfied          
-
-      - type: expression
-        name: lifs
-        label: lifs
-        hide: true
-        runLocal: true
-        expression: new function(){var ports = $(selectedports);var ip = $(availableip); ip.forEach(function(x,i){ports[i].ip=x;ports[i].subnet='$(subnetmask)'});return ports}()
-        model: lifs
-
-
-
 

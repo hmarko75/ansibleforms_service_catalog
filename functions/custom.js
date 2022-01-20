@@ -13,10 +13,10 @@ exports.fnMultiply = function(a,b) {
   return a*b
 };
 
-exports.fnIpRangeToList = function (data) {
+exports.fnIpRangeToList = function (data, arrtoremove=[]) {
   //const data = '10.5.15.[22-25],10.5.16.[35-37],10.5.17.20';
   // Placeholder for the final result
-  const result = [];
+  var result = [];
   
   // Use the split function to get all your Ips in an array
   const ips = data.split(',');
@@ -38,8 +38,16 @@ exports.fnIpRangeToList = function (data) {
       result.push(ip);
     }
   })
+  
+  //remove items from result if arrremove is provided 
+  if (arrtoremove.length > 0) {
+    logger.debug("[cfnIpRangetoList] removing:"+arrtoremove+" from list:"+result);   
+    result = result.filter(el=>!arrtoremove.includes(el));
+  }
+
+  
   //console.log(result);
-  logger.debug("[fnIpRangetoList] translated iprange:"+data+" to list:"+result);   
+  logger.debug("[cfnIpRangetoList] translated iprange:"+data+" to list:"+result);   
   return(result);
 };
      

@@ -3,7 +3,8 @@ general:
 
 networks:
   vlan-1: #should correlate to the name of broadcast domain names on the controllers 
-    iprange: 192.168.0.[30-100],192.168.0.101,192.168.0.112,192.168.0.141,192.168.0.192,192.168.0.[111-115]
+    #iprange: 192.168.0.[30-100],192.168.0.101,192.168.0.112,192.168.0.141,192.168.0.192,192.168.0.[111-115]
+    iprange: 1.1.1.[1-20]
     subnetmask: 255.255.255.0
     gateway: 192.168.0.1
   
@@ -29,7 +30,7 @@ services:
                 network: 
                   name: vlan-1
                   domain: demo.netapp.com 
-                  lifcount: 3
+                  lifcount: 4
                   dnszone: true
                 protocols:
                   cifs:
@@ -74,9 +75,9 @@ services:
               newsvm:
                 suffix: "_dr1"
                 network: 
-                  name: vlan-2
+                  name: vlan-1
                   domain: demo.netapp.com 
-                  lifcount: 2
+                  lifcount: 4
                   dnszone: true
 
                 protocols:
@@ -116,9 +117,9 @@ services:
               newsvm:
                 suffix: "_dr2"
                 network: 
-                  name: vlan-2
+                  name: vlan-1
                   domain: demo.netapp.com 
-                  lifcount: 2
+                  lifcount: 4
                   dnszone: true
 
                 protocols:
@@ -155,9 +156,9 @@ services:
               newsvm:
                 suffix: "_b2d1"
                 network: 
-                  name: vlan-2
+                  name: vlan-1
                   domain: demo.netapp.com 
-                  lifcount: 2
+                  lifcount: 4
                   dnszone: true
 
                 protocols:
@@ -197,9 +198,9 @@ services:
               newsvm:
                 suffix: "_b2d2"
                 network: 
-                  name: vlan-3
+                  name: vlan-1
                   domain: demo.netapp.com 
-                  lifcount: 2
+                  lifcount: 4
                   dnszone: true
 
                 protocols:
