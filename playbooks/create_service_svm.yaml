@@ -9,3 +9,22 @@
   import_playbook: create_svm.yaml
   vars:
     copy: 'dr1'  
+  when: dr1 is defined
+
+- name: Create SVM on dr2
+  import_playbook: create_svm.yaml
+  vars:
+    copy: 'dr2'  
+  when: dr2 is defined
+
+- name: Create SVM on b2d1
+  import_playbook: create_svm.yaml
+  vars:
+    copy: 'b2d1'  
+  when: b2d1 is defined
+
+- name: Create SVM on b2d2
+  import_playbook: create_svm.yaml
+  vars:
+    copy: 'b2d2'  
+  when: b2d2 is defined

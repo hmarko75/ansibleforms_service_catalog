@@ -5,9 +5,9 @@
   gather_facts: no
   vars:
     cluster: "{{ vars[copy].cluster }}"
-    svm: "{{ vars[copy].svm | vars[copy].standard_svm || vars[copy].custom_svm }}"
-    network: "{{ vars[copy].network }}"
-    iplist: "{{ vars[copy].iplist }}"
+    svm: "{{ vars[copy].svm }}"
+    lifs: "{{ vars[copy].lifs }}"
+    newsvm: "{{ services[general.service][general.company][general.environment][general.location][copy]['newsvm'] }}"
 
     clusterauth:  &login
       hostname: "{{ cluster }}"
@@ -15,7 +15,7 @@
       password: "{{ login.password }}"
       https: true
       validate_certs: false
-  
+
   vars_files:
   #- volume_variables.yaml
   - ../globals.yaml
@@ -24,19 +24,39 @@
   - netapp.ontap  
 
   tasks:
-    # - name: "Test if the ip address is already online."
-    #   command: "ping -q -c 1 -W 1 {{ item }}"
-    #   register: res
-    #   loop: "{{ iplist }}" 
 
-    - name: Test reachability to iplist
-      ansible.netcommon.net_ping:
-        dest: "{{ item }}" 
-      register: res
-      loop: "{{ iplist }}"            
-      
-
-    - name: debug
+    # log  infomration 
+    - name: svm creation info
       ansible.builtin.debug:
-        msg: 
-        - "{{ res }}"      
+        msg:
+        - "creating svm:{{ cluster }}:{{ svm }} copy:{{ copy }}"  
+
+    - name: Create SVM
+      netapp.ontap.na_ontap_svm:
+        state: present
+        name: "{{ svm }}"
+        #set svm allowed protocols 
+        allowed_protocols: "{{ newsvm.allowed_protocols | default(omit) }}"           
+        #set SVM lanaguage 
+        language: "{{ newsvm.language | default(omit) }}"
+        #root volume security style 
+        root_volume_security_style: "{{ newsvm.root_volume_security_style | default(omit) }}"
+        <<: *login
+
+    - name: Create data interface  -> loop
+      netapp.ontap.na_ontap_interface:
+        state: present
+        role: data
+        interface_name: "{{ svm }}_data_lif_{{ idx + 1 }}"
+        home_port: "{{ item.port }}"
+        home_node: "{{ item.node }}"
+        admin_status: up
+        is_auto_revert: true
+        interface_type: ip
+        address: "{{ item.ip }}"
+        netmask: "{{ item.netmask }}"
+        vserver: "{{ svm }}"
+        <<: *login
+      loop: "{{ lifs }}" 
+      loop_control:
+        index_var: idx  
