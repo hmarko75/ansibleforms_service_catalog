@@ -52,3 +52,48 @@ exports.fnIpRangeToList = function (data, arrtoremove=[]) {
 };
      
 //console.log(exports.fnIpRangeToList('10.5.15.[22-25],10.5.16.[35-37],10.5.17.20')); 
+
+exports.fnSaveArg = function(sessionId,key,data) {
+  var path = '/app/dist/persistent/';
+  var sessionfile = path + 'session_info.'+sessionId.toString();
+
+  var fs = require('fs');
+  var obj = {};
+
+  
+  if (fs.existsSync(sessionfile)) {
+    exsitingdata = fs.readFileSync(sessionfile, {encoding:'utf8', flag:'r'});
+    obj = JSON.parse(exsitingdata);
+  } else {
+    console.log("The file does not exist");
+  }
+  obj[key] = data;
+  logger.debug("[fnSaveArg] save for:"+key+" value:"+obj[key]); 
+  var jsonout = JSON.stringify(obj);
+
+  fs.writeFileSync(sessionfile, jsonout);
+  return (data)
+}
+
+exports.fnGetArg = function(sessionId,key,defaultValue) {
+  var path = '/tmp/';
+  var sessionfile = path + 'session_info.'+sessionId.toString();
+
+  var fs = require('fs');
+  var obj = {};
+
+  if (fs.existsSync(sessionfile)) {
+    exsitingdata = fs.readFileSync(sessionfile, {encoding:'utf8', flag:'r'});
+    obj = JSON.parse(exsitingdata);
+  } else {
+    return (defaultValue);
+  } 
+
+  logger.debug("[cfnGetArg] return for:"+key+" value:"+(key in obj) ? obj[key] : defaultValue);  
+  return ((key in obj) ? obj[key] : defaultValue)
+}
+
+// console.log(exports.fnSaveArg(21321,"arr4",[1,2,3,4]));
+// console.log(exports.fnGetArg(21321,"arr1",[]));
+
+// //console.log(exports.fnSaveArg(21321,"arr2",[1,2,3,4,5]));

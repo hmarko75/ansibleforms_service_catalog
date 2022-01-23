@@ -25,12 +25,13 @@
 
   tasks:
 
-    # log  infomration 
+    # log infomration 
     - name: svm creation info
       ansible.builtin.debug:
         msg:
         - "creating svm:{{ cluster }}:{{ svm }} copy:{{ copy }}"  
 
+    # create the SVM 
     - name: Create SVM
       netapp.ontap.na_ontap_svm:
         state: present
@@ -43,20 +44,44 @@
         root_volume_security_style: "{{ newsvm.root_volume_security_style | default(omit) }}"
         <<: *login
 
+    # create the lifs 
     - name: Create data interface  -> loop
       netapp.ontap.na_ontap_interface:
         state: present
         role: data
+        vserver: "{{ svm }}"
         interface_name: "{{ svm }}_data_lif_{{ idx + 1 }}"
         home_port: "{{ item.port }}"
         home_node: "{{ item.node }}"
         admin_status: up
-        is_auto_revert: true
+        is_auto_revert: "{{ newsvm.network.lif_auto_revert | default(omit) }}" 
         interface_type: ip
         address: "{{ item.ip }}"
         netmask: "{{ item.netmask }}"
-        vserver: "{{ svm }}"
+        dns_domain_name: "{{ (svm+'.cdot-'+svm+'.'+newsvm.network.domain) | replace('_','-') if newsvm.network.dnszone == True else default(omit) | default(omit) }}"
+        listen_for_dns_query: "{{ 'yes' if newsvm.network.dnszone == True else default(omit) }}"
         <<: *login
       loop: "{{ lifs }}" 
       loop_control:
         index_var: idx  
+
+    - name: create default gw route
+      netapp.ontap.na_ontap_net_routes:
+        state: present
+        vserver: "{{ svm }}"
+        destination: 0.0.0.0/0
+        gateway: "{{ vars.networks[newsvm.network.name].gateway }}"
+        metric: 30
+        <<: *login
+      when: vars.networks[newsvm.network.name].gateway is defined
+
+    - name: create DNS
+      na_ontap_dns:
+        state: present
+        vserver:  "{{ svm }}"
+        domains: "{{ newsvm.network.domain }}"
+        nameservers: "{{ vars.domains[newsvm.network.domain]['dnsservers'] }}"
+        skip_validation: true
+        <<: *login
+      when: vars.domains[newsvm.network.domain]['dnsservers'] is defined 
+      

@@ -31,6 +31,7 @@ services:
                 name: vlan-1
                 domain: demo.netapp.com 
                 lifcount: 4
+                lif_auto_revert: true
                 dnszone: true
               allowed_protocols: ['cifs','nfs','iscsi','nvme']
               protocols:
@@ -146,7 +147,7 @@ services:
             clusters:
               - cluster2: [svm3]              
             source:
-              copy: dr1
+              copy: prod
               policy: 
                 name: MirrorAllSnapshots
               dynamicschedule: true
@@ -203,7 +204,7 @@ services:
               network: 
                 name: vlan-1
                 domain: demo.netapp.com 
-                lifcount: 4
+                lifcount: 2
                 dnszone: true
 
               protocols:
@@ -225,9 +226,10 @@ services:
                 cluster: cluster1
                 svm: nas1_b2d2                   
             clusters:
-              - cluster2: [svm10]              
+              - cluster2: [svm10]     
+
             source:
-              copy: b2d1
+              copy: prod
               policy:
                 name: 120daily
                 snapmirror_label: ['daily']
