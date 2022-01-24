@@ -1,0 +1,126 @@
+---
+- name: create svm  
+  hosts: "localhost"
+  become: no 
+  gather_facts: no
+  vars:
+    cluster: "{{ vars[copy].cluster }}"
+    svm: "{{ vars[copy].svm }}"
+    lifs: "{{ vars[copy].lifs }}"
+    newsvm: "{{ services[general.service][general.company][general.environment][general.location][copy]['newsvm'] }}"
+
+  tasks:
+  - name: Read globals.yaml file 
+    ansible.builtin.slurp:
+      path: ../globals.yaml
+    register: globalsbase64
+
+  - name: extract the data
+    set_fact:
+      globals: "{{ globalsbase64['content'] | b64decode | from_yaml }}"
+
+  - name: set general params
+    set_fact:
+      prod_cluster: "{{ vars.prod.cluster }}"      
+      prod_svm: "{{ vars.prod.svm }}"
+
+  # update cluster/svm list for prod   
+  - name: set prod cluster
+    set_fact:
+      prod_cluster_arr_current: "{{ globals['services'][general.service][general.company][general.environment][general.location]['prod']['clusters'][prod_cluster] }} + ['{{ prod_svm }}'] "    
+    when: globals['services'][general.service][general.company][general.environment][general.location]['prod']['clusters'][prod_cluster] is defined
+
+  - name: set prod cluster
+    set_fact:
+      prod_cluster_arr_current: "{{ [prod_svm] }}"    
+    when: globals['services'][general.service][general.company][general.environment][general.location]['prod']['clusters'][prod_cluster] is not defined   
+    
+  - name: set prod_svm_arr
+    set_fact:
+      prod_svm_arr: "{{ {'services': {general.service: {general.company: {general.environment: {general.location: {'prod': {'clusters': {prod_cluster: prod_cluster_arr_current }}}}}}}} }}"    
+    when: prod is defined 
+
+  - name: update globals with prod fixed 
+    set_fact:
+      globals: "{{ globals|combine(prod_svm_arr, recursive=true) }}"    
+    when: prod is defined 
+
+  # update fixed relationshot for dr1 
+  - name: set required params for dr1
+    set_fact:
+      dr1_cluster: "{{ vars.dr1.cluster }}"
+      dr1_svm: "{{ vars.dr1.svm }}" 
+    when: dr1 is defined     
+  
+  - name: set dr1_fixed_relationship 
+    set_fact:
+      dr1_fixed_relationship: "{{ {'services': {general.service: {general.company: {general.environment: {general.location: {'dr1': {'fixed_relationship_for_prod': {prod_cluster+'_'+prod_svm: {'cluster': dr1_cluster, 'svm': dr1_svm}}}}}}}}} }}"    
+    when: dr1 is defined 
+
+  - name: update globals with dr1 fixed 
+    set_fact:
+      globals: "{{ globals|combine(dr1_fixed_relationship, recursive=true) }}"    
+    when: dr1 is defined 
+
+  # update fixed relationshot for dr2
+  - name: set required params for dr2
+    set_fact:
+      dr2_cluster: "{{ vars.dr2.cluster }}"
+      dr2_svm: "{{ vars.dr2.svm }}" 
+    when: dr2 is defined     
+  
+  - name: set dr2_fixed_relationship 
+    set_fact:
+      dr2_fixed_relationship: "{{ {'services': {general.service: {general.company: {general.environment: {general.location: {'dr2': {'fixed_relationship_for_prod': {prod_cluster+'_'+prod_svm: {'cluster': dr2_cluster, 'svm': dr2_svm}}}}}}}}} }}"    
+    when: dr2 is defined 
+
+  - name: update globals with dr2 fixed 
+    set_fact:
+      globals: "{{ globals|combine(dr2_fixed_relationship, recursive=true) }}"    
+    when: dr2 is defined     
+
+  # update fixed relationshot for b2d1
+  - name: set required params for b2d1
+    set_fact:
+      b2d1_cluster: "{{ vars.b2d1.cluster }}"
+      b2d1_svm: "{{ vars.b2d1.svm }}" 
+    when: b2d1 is defined     
+  
+  - name: set b2d1_fixed_relationship 
+    set_fact:
+      b2d1_fixed_relationship: "{{ {'services': {general.service: {general.company: {general.environment: {general.location: {'b2d1': {'fixed_relationship_for_prod': {prod_cluster+'_'+prod_svm: {'cluster': b2d1_cluster, 'svm': b2d1_svm}}}}}}}}} }}"    
+    when: b2d1 is defined 
+
+  - name: update globals with b2d1 fixed 
+    set_fact:
+      globals: "{{ globals|combine(b2d1_fixed_relationship, recursive=true) }}"    
+    when: b2d1 is defined     
+
+  # update fixed relationshot for b2d2
+  - name: set required params for b2d2
+    set_fact:
+      b2d2_cluster: "{{ vars.b2d2.cluster }}"
+      b2d2_svm: "{{ vars.b2d2.svm }}" 
+    when: b2d2 is defined     
+  
+  - name: set b2d2_fixed_relationship 
+    set_fact:
+      b2d2_fixed_relationship: "{{ {'services': {general.service: {general.company: {general.environment: {general.location: {'b2d2': {'fixed_relationship_for_prod': {prod_cluster+'_'+prod_svm: {'cluster': b2d2_cluster, 'svm': b2d2_svm}}}}}}}}} }}"    
+    when: b2d2 is defined 
+
+  - name: update globals with b2d2 fixed 
+    set_fact:
+      globals: "{{ globals|combine(b2d2_fixed_relationship, recursive=true) }}"    
+    when: b2d2 is defined     
+
+  - name: backup current globals.yaml 
+    copy:
+      src: ../globals.yaml
+      dest: "../globals.{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}.yaml"
+
+  - local_action: copy content={{ globals|to_nice_yaml }} dest=../myfile.yaml 
+
+  - name: Write updated globals.yaml
+    copy:
+      content: '{{ globals | to_nice_yaml }}'
+      dest: ../globals.yaml            

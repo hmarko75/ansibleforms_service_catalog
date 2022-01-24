@@ -28,3 +28,10 @@
   vars:
     copy: 'b2d2'  
   when: b2d2 is defined
+
+  #############################################################################################################################
+  # update globals.yaml file 
+  #############################################################################################################################
+
+- name: Update globals YAML file with new topology
+  import_playbook: update_globals_with_new_topology.yaml

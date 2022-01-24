@@ -84,4 +84,30 @@
         skip_validation: true
         <<: *login
       when: vars.domains[newsvm.network.domain]['dnsservers'] is defined 
-      
+
+    - name: create NFS server
+      na_ontap_nfs:
+        state: present
+        service_state: "{{ newsvm.protocols.nfs.state | default(omit) }}"
+        vserver: "{{ svm }}"
+        nfsv3: "{{ newsvm.protocols.nfs.nfsv3 | default(omit) }}"
+        nfsv4: "{{ newsvm.protocols.nfs.nfsv4 | default(omit) }}"
+        nfsv41: "{{ newsvm.protocols.nfs.nfs41 | default(omit) }}"
+        vstorage_state: "{{ newsvm.protocols.nfs.vstorage_state | default(omit) }}"
+        nfsv4_id_domain: "{{ newsvm.protocols.nfs.nfsv4_id_domain | default(omit) }}"
+        showmount: "{{ newsvm.protocols.nfs.showmount | default(omit) }}"
+        <<: *login
+      when: newsvm.protocols.nfs is defined
+
+
+    - name: create CIFS server 
+      netapp.ontap.na_ontap_cifs_server:
+        state: present
+        name: "{{ svm }}"
+        vserver: "{{ svm }}"
+        domain: "{{  newsvm.protocols.cifs.domain }}"
+        ou: "{{ vars.domains[newsvm.network.domain]['ou'] | default(omit) }}"
+        admin_user_name: "{{ adlogin.user }}"
+        admin_password: "{{ adlogin.password }}"
+        <<: *login
+      when: newsvm.protocols.cifs is defined and newsvm.protocols.cifs.enabled == True 

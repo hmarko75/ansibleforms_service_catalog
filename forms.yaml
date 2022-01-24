@@ -287,7 +287,7 @@ forms:
         name: aggr_filter_jq 
         label: aggr_filter_jq
         hide: true
-        expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|.\"$(company)\"|.\"$(environment)\"|.\"$(location)\"|.prod|.clusters[]|keys|join(\"%7C\")')"
+        expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|.\"$(company)\"|.\"$(environment)\"|.\"$(location)\"|.prod|.clusters|keys|join(\"%7C\")')"
         group: Production
         noOutput: true
 
@@ -330,7 +330,7 @@ forms:
         name: svm_filter_jq
         label: svm_filter_jq
         hide: true
-        expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|.\"$(company)\"|.\"$(environment)\"|.\"$(location)\"|.prod|.clusters[]|.$(cluster)|join(\"%7C\")')"
+        expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|.\"$(company)\"|.\"$(environment)\"|.\"$(location)\"|.prod|.clusters|.$(cluster)|join(\"%7C\")')"
         group: Production
         noOutput: true
 
@@ -467,7 +467,7 @@ forms:
         name: dr1_aggr_filter_jq
         label: dr1_aggr_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(dr1_dedicated_cluster)\" != \"null\" then \"$(dr1_dedicated_cluster)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.clusters[]|keys|join(\"%7C\") end')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(dr1_dedicated_cluster)\" != \"null\" then \"$(dr1_dedicated_cluster)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.clusters|keys|join(\"%7C\") end')"
         group: DR1
         noOutput: true
         dependencies:         
@@ -527,7 +527,7 @@ forms:
         name: dr1_svm_filter_jq
         label: dr1_svm_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(dr1_dedicated_svm)\" != \"null\" then \"$(dr1_dedicated_svm)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.clusters[]|.$(dr1_cluster)|join(\"%7C\") end')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(dr1_dedicated_svm)\" != \"null\" then \"$(dr1_dedicated_svm)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr1\")|.clusters|.$(dr1_cluster)|join(\"%7C\") end')"
         group: DR1
         noOutput: true
         dependencies:         
@@ -652,7 +652,7 @@ forms:
         name: dr2_aggr_filter_jq 
         label: dr2_aggr_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(dr2_dedicated_cluster)\" != \"null\" then \"$(dr2_dedicated_cluster)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.clusters[]|keys|join(\"%7C\") end')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(dr2_dedicated_cluster)\" != \"null\" then \"$(dr2_dedicated_cluster)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.clusters|keys|join(\"%7C\") end')"
         group: DR2
         noOutput: true
         dependencies:         
@@ -712,7 +712,7 @@ forms:
         name: dr2_svm_filter_jq
         label: dr2_svm_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(dr2_dedicated_svm)\" != \"null\" then \"$(dr2_dedicated_svm)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.clusters[]|.$(dr2_cluster)|join(\"%7C\") end')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(dr2_dedicated_svm)\" != \"null\" then \"$(dr2_dedicated_svm)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"dr2\")|.clusters|.$(dr2_cluster)|join(\"%7C\") end')"
         group: DR2
         noOutput: true
         dependencies:         
@@ -836,7 +836,7 @@ forms:
         name: b2d1_aggr_filter_jq 
         label: b2d1_aggr_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(b2d1_dedicated_cluster)\" != \"null\" then \"$(b2d1_dedicated_cluster)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.clusters[]|keys|join(\"%7C\") end')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(b2d1_dedicated_cluster)\" != \"null\" then \"$(b2d1_dedicated_cluster)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.clusters|keys|join(\"%7C\") end')"
         group: B2D1
         noOutput: true
         dependencies:         
@@ -895,7 +895,7 @@ forms:
         name: b2d1_svm_filter_jq
         label: b2d1_svm_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(b2d1_dedicated_svm)\" != \"null\" then \"$(b2d1_dedicated_svm)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.clusters[]|.$(b2d1_cluster)|join(\"%7C\") end')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(b2d1_dedicated_svm)\" != \"null\" then \"$(b2d1_dedicated_svm)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d1\")|.clusters|.$(b2d1_cluster)|join(\"%7C\") end')"
         group: B2D1
         noOutput: true
         dependencies:         
@@ -1019,7 +1019,7 @@ forms:
         name: b2d2_aggr_filter_jq 
         label: b2d2_aggr_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(b2d2_dedicated_cluster)\" != \"null\" then \"$(b2d2_dedicated_cluster)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.clusters[]|keys|join(\"%7C\") end')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(b2d2_dedicated_cluster)\" != \"null\" then \"$(b2d2_dedicated_cluster)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.clusters|keys|join(\"%7C\") end')"
         group: B2D2
         noOutput: true
         dependencies:         
@@ -1078,7 +1078,7 @@ forms:
         name: b2d2_svm_filter_jq
         label: b2d2_svm_filter_jq
         hide: true
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(b2d2_dedicated_svm)\" != \"null\" then \"$(b2d2_dedicated_svm)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.clusters[]|.$(b2d2_cluster)|join(\"%7C\") end')"
+        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if \"$(b2d2_dedicated_svm)\" != \"null\" then \"$(b2d2_dedicated_svm)\" else .services | select (.name==\"$(service.name)\")|.combinations[]| select(.company==\"$(company.name)\" and .environment==\"$(environment.name)\" and .location==\"$(location.name)\")|.copies[]|select(.type==\"b2d2\")|.clusters|.$(b2d2_cluster)|join(\"%7C\") end')"
         group: B2D2
         noOutput: true
         dependencies:         
@@ -1190,10 +1190,18 @@ forms:
       #ontap credentials to use in ansible 
       - type: expression         # readonly
         name: login
+        label: login        
         expression: "'ONTAP'" 
-        label: login
         asCredential: true
         hide: true   
+
+      #AD credentials to use in ansible 
+      - type: expression         # readonly
+        name: adlogin
+        label: login
+        expression: "'AD'" 
+        asCredential: true
+        hide: true         
 
 
       ############################################################################################################################
