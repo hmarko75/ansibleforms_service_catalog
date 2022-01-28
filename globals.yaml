@@ -51,8 +51,8 @@ services:
                 Site A:
                     b2d1:
                         clusters:
-                          cluster2:
-                          - svm9
+                            cluster2:
+                            - svm9
                         fixed_relationship_for_prod:
                             cluster1_ddd1:
                                 cluster: cluster1
@@ -60,7 +60,11 @@ services:
                             cluster1_nas1:
                                 cluster: cluster1
                                 svm: nas1_b2d1
+                            cluster1_nunu:
+                                cluster: cluster1
+                                svm: nunu_b2d1
                         newsvm:
+                            language: he.utf_8                        
                             network:
                                 dnszone: true
                                 domain: demo.netapp.com
@@ -97,7 +101,7 @@ services:
                         volnamesuffix: ''
                     b2d2:
                         clusters:
-                          cluster2:
+                            cluster2:
                             - svm10
                         fixed_relationship_for_prod:
                             cluster1_ddd1:
@@ -106,7 +110,11 @@ services:
                             cluster1_nas1:
                                 cluster: cluster1
                                 svm: nas1_b2d2
+                            cluster1_nunu:
+                                cluster: cluster1
+                                svm: nunu_b2d2
                         newsvm:
+                            language: he.utf_8                        
                             network:
                                 dnszone: true
                                 domain: demo.netapp.com
@@ -143,8 +151,8 @@ services:
                         volnamesuffix: ''
                     dr2:
                         clusters:
-                          cluster2:
-                          - svm3
+                            cluster2:
+                            - svm3
                         fixed_relationship_for_prod:
                             cluster1_ddd1:
                                 cluster: cluster1
@@ -152,7 +160,11 @@ services:
                             cluster1_nas1:
                                 cluster: cluster1
                                 svm: nas1_dr2
+                            cluster1_nunu:
+                                cluster: cluster1
+                                svm: nunu_dr2
                         newsvm:
+                            language: he.utf_8                        
                             network:
                                 dnszone: true
                                 domain: demo.netapp.com
@@ -189,6 +201,7 @@ services:
                         clusters:
                             cluster1:
                             - ddd1
+                            - nunu
                         efficiency:
                             duration: 3
                             dynamicschedule: true
@@ -200,12 +213,12 @@ services:
                             enable_inline_dedupe: true
                             schedule: daily
                         newsvm:
+                            language: he.utf_8                        
                             allowed_protocols:
                             - cifs
                             - nfs
                             - iscsi
                             - nvme
-                            language: he.utf_8
                             network:
                                 dnszone: true
                                 domain: demo.netapp.com
