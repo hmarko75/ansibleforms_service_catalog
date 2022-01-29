@@ -1,16 +1,35 @@
 VolumeDefaults:
     auto_size:
-        grow_threshold_percent: 95
-        mode: grow_shrink
-        shrink_threshold_percent: 85
-        vol_max_size_ratio: 1.2
-        vol_min_size_ratio: 1
-    auto_size_b2d:
-        grow_threshold_percent: 95
-        mode: grow_shrink
-        shrink_threshold_percent: 85
-        vol_max_size_ratio: 2
-        vol_min_size_ratio: 1
+        prod:
+            grow_threshold_percent: 95
+            mode: grow_shrink
+            shrink_threshold_percent: 85
+            vol_max_size_ratio: 1.2
+            vol_min_size_ratio: 1
+        dr1:
+            grow_threshold_percent: 95
+            mode: grow_shrink
+            shrink_threshold_percent: 85
+            vol_max_size_ratio: 1.2
+            vol_min_size_ratio: 1        
+        dr2:
+            grow_threshold_percent: 95
+            mode: grow_shrink
+            shrink_threshold_percent: 85
+            vol_max_size_ratio: 1.2
+            vol_min_size_ratio: 1                
+        b2d1:
+            grow_threshold_percent: 95
+            mode: grow_shrink
+            shrink_threshold_percent: 85
+            vol_max_size_ratio: 2
+            vol_min_size_ratio: 1
+        b2d2:
+            grow_threshold_percent: 95
+            mode: grow_shrink
+            shrink_threshold_percent: 85
+            vol_max_size_ratio: 2
+            vol_min_size_ratio: 1        
     cifsaccess:
         access: full_control
         user_or_group: DEMO\administrator

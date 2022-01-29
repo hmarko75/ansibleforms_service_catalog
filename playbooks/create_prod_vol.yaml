@@ -167,11 +167,11 @@
       na_ontap_volume_autosize:
         vserver: "{{ svm }}"
         volume: "{{ volname }}"
-        mode: "{{ VolumeDefaults.auto_size.mode | default(omit) }}"
-        grow_threshold_percent: "{{ VolumeDefaults.auto_size.grow_threshold_percent | default(omit) }}"
-        shrink_threshold_percent: "{{ VolumeDefaults.auto_size.shrink_threshold_percent | default(omit) }}"
-        maximum_size: "{{ ((VolumeDefaults.auto_size.vol_max_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
-        minimum_size: "{{ ((VolumeDefaults.auto_size.vol_min_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
+        mode: "{{ VolumeDefaults.auto_size[copy].mode | default(omit) }}"
+        grow_threshold_percent: "{{ VolumeDefaults.auto_size[copy].grow_threshold_percent | default(omit) }}"
+        shrink_threshold_percent: "{{ VolumeDefaults.auto_size[copy].shrink_threshold_percent | default(omit) }}"
+        maximum_size: "{{ ((VolumeDefaults.auto_size[copy].vol_max_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
+        minimum_size: "{{ ((VolumeDefaults.auto_size[copy].vol_min_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
         <<: *login
 
     - name: Create CIFS share

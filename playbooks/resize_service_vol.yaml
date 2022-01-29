@@ -1,0 +1,30 @@
+---
+
+- name: Resize volume on prod
+  import_playbook: resize_vol.yaml
+  vars:
+    copy: 'prod'
+
+- name: Resize volume on dr1
+  import_playbook: resize_vol.yaml
+  vars:
+    copy: 'dr1'
+  when: dr1 is defined
+
+- name: Resize volume on dr2
+  import_playbook: resize_vol.yaml
+  vars:
+    copy: 'dr2'
+  when: dr2 is defined
+
+- name: Resize volume on b2d1
+  import_playbook: resize_vol.yaml
+  vars:
+    copy: 'b2d1'
+  when: b2d1 is defined
+
+- name: Resize volume on b2d2
+  import_playbook: resize_vol.yaml
+  vars:
+    copy: 'b2d2'
+  when: b2d2 is defined    

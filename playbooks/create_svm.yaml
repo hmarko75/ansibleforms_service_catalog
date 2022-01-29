@@ -111,3 +111,5 @@
         admin_password: "{{ adlogin.password }}"
         <<: *login
       when: newsvm.protocols.cifs is defined and newsvm.protocols.cifs.enabled == True 
+
+      

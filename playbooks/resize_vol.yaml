@@ -1,0 +1,55 @@
+---
+- name: "resize {{ copy }} volume"
+  hosts: "localhost"
+  become: no 
+  gather_facts: no
+  vars:
+    cluster: "{{ vars[copy].cluster }}"
+    svm: "{{ vars[copy].svm }}"
+    volname: "{{ vars[copy].volume }}"
+    sizeinc: "{{ vars.prod.sizeinc }}"
+    size: "{{ vars[copy].size }}"
+    
+    clusterauth:  &login
+      hostname: "{{ cluster }}"
+      username: "{{ login.user }}"
+      password: "{{ login.password }}"
+      https: true
+      validate_certs: false
+  vars_files:
+  - ../globals.yaml
+  collections:
+  - netapp.ontap  
+  tasks:
+
+    # display log 
+    - name: vol resize info
+      ansible.builtin.debug:
+        msg:
+        - "resizing volume: {{ cluster }}:{{ svm }}:{{ volname }} to:{{ size }}G"
+
+    # resize 
+    - name: resize volume 
+      na_ontap_volume:
+        state: present
+        name: "{{ volname }}"
+        vserver: "{{ svm }}"
+        size: "{{ size | int }}"
+        <<: *login 
+
+    # set dp volume autosize 
+    - name: Modify volume autosize
+      na_ontap_volume_autosize:
+        vserver: "{{ svm }}"
+        volume: "{{ volname }}"
+        mode: "{{ VolumeDefaults.auto_size[copy].mode | default(omit) }}"
+        grow_threshold_percent: "{{ VolumeDefaults.auto_size[copy].grow_threshold_percent | default(omit) }}"
+        shrink_threshold_percent: "{{ VolumeDefaults.auto_size[copy].shrink_threshold_percent | default(omit) }}"
+        maximum_size: "{{ ((VolumeDefaults.auto_size[copy].vol_max_size_ratio*(size|float))|int|string)+'g' | default(omit) }}"
+        minimum_size: "{{ ((VolumeDefaults.auto_size[copy].vol_min_size_ratio*(size|float))|int|string)+'g' | default(omit) }}"
+        <<: *login
+
+
+      
+        
+

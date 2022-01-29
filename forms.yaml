@@ -2802,19 +2802,19 @@ forms:
           - true      
 
 
-  - name: Debug 
+  - name: Resize Existing Service Volume 
     help:
-      Debug  
+      This is used to resize volume. Positive numbers will increase the size negative will decrease 
     roles:
       - Provision
-    description: Debug
+    description: Resize existing volume
     categories:
       - Provision
     icon: scroll
-    playbook: debug.yaml
+    playbook: resize_service_vol.yaml
     inventory: hosts
     type: ansible
-    fields:        
+    fields:       
 
       ############################################################################################################################
       # environment General configuration
@@ -2837,57 +2837,12 @@ forms:
         noOutput: true
 
       #ontap credentials to use in ansible 
-      - type: expression         # readonly
+      - type: expression
         name: login
         expression: "'ONTAP'" 
         label: login
         asCredential: true
-        hide: true 
-
-      #ontap credentials to use in ansible 
-      - type: expression         # readonly
-        name: adlogin
-        label: adlogin
-        expression: "'AD'" 
-        asCredential: true
-        hide: true         
-
-      # # ############################################################################################################################
-      # # # filter service, environment, company, location
-      # # ############################################################################################################################
-
-      # - type: query
-      #   name: service
-      #   label: Service
-      #   expression: "fn.fnJq($(settings),'.services|keys')"
-      #   required: true
-      #   default: __auto__
-      #   model: general.service
-
-      # - type: query
-      #   name: company
-      #   label: Company
-      #   expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|keys')"
-      #   required: true
-      #   default: __auto__
-      #   model: general.company
-
-      # - type: query
-      #   name: environment
-      #   label: Environment
-      #   expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|.\"$(company)\"|keys')"
-      #   required: true
-      #   default: __auto__     
-      #   model: general.environment
-
-      # - type: query
-      #   name: location
-      #   label: Location
-      #   expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|.\"$(company)\"|.\"$(environment)\"|keys')"
-      #   required: true
-      #   default: __auto__
-      #   model: general.location
-
+        hide: true       
 
       #select volume names 
       - type: query
@@ -2897,7 +2852,8 @@ forms:
           name: AIQUMSQL
           type: mysql
         query: select CONCAT(cluster.name,':',vserver.name,':',volume.name) as 'Cluster:SVM:Volume', 
-                CONCAT(format(round(volume.size/1024/1024/1024,0),'T0'),'G') as Size, 
+                CONCAT(format(round(volume.size/1024/1024/1024,0),'T0'),'G') as Size,
+                round(volume.size/1024/1024/1024,0) as sizeg,
                 CONCAT(format(round(volume.sizeUsed/1024/1024/1024,0),'T0'),'G') as Used, volume.sizeUsed/volume.size as Utilization, 
                 cluster.name as cluster, vserver.name as svm, volume.name as volume
               from netapp_model_view.cluster, netapp_model_view.vserver, netapp_model_view.volume 
@@ -3008,7 +2964,7 @@ forms:
         model: general.location
 
 
-      #volume2service mapping haim
+      #volume2service mapping 
       - type: expression
         name: volume2servicestatus
         label: Volume to Service Mapping
@@ -3019,28 +2975,42 @@ forms:
         runLocal: true 
         noOutput: true
         isHtml: true
-        regex:
-          expression: SERVICE
-          description: Cannot map volume's SVM to service 
+        # regex:
+        #   expression: SERVICE
+        #   description: Cannot map volume's SVM to service 
 
-      #current volume sized  
+      #current volume size
       - type: expression
         name: currvolsize
-        label: Current Volume size
+        label: Current Volume size (G)
         expression: "'$(selectedvolume.Size)'"
         runLocal: true 
         hide: false
         noOutput: true           
 
+      #Increment volume 
       - type: number
         name: volsizeincsize
         label: Increase Volume Size (G) By
         default: 100
         required: true
-        minValue: 10
-        maxValue: 90000
+        minValue: -80000
+        maxValue: 80000
         icon: user
         model: prod.sizeinc
+
+      #new volume size
+      - type: expression
+        name: size
+        label: New size (G)
+        expression: $(selectedvolume.sizeg)+$(volsizeincsize)<1 || $(selectedvolume.sizeg)+$(volsizeincsize) > 1000000000 ?'Invalid volume size':$(selectedvolume.sizeg)+$(volsizeincsize)
+        runLocal: true 
+        hide: false
+        model: prod.size
+        regex:
+          expression: ^\d+$
+          description: invalid volume size  
+
 
       ############################################################################################################################
       # check which copies are needed 
@@ -3089,17 +3059,16 @@ forms:
         expression: "$(copy_types_jq).includes('b2d2')"
         noOutput: true              
 
-
       ############################################################################################################################
       # extract cluster svm and vol name for dr1
-      ############################################################################################################################
+      ############################################################################################################################                      
 
       # extract dr1 cluster name 
       - type: expression
         name: dr1_cluster
         label: dr1_cluster
         expression: "fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains(\"$(service)^$(company)^$(environment)^$(location)^dr1^fixed_relationship_for_prod^$(cluster)_$(svm)^cluster\")))[]')"
-        hide: false
+        hide: true
         noOutput: false
         model: dr1.cluster
         dependencies:         
@@ -3112,7 +3081,7 @@ forms:
         name: dr1_svm
         label: dr1_svm
         expression: "fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains(\"$(service)^$(company)^$(environment)^$(location)^dr1^fixed_relationship_for_prod^$(cluster)_$(svm)^svm\")))[]')"
-        hide: false
+        hide: true
         noOutput: false    
         model: dr1.svm   
         dependencies:         
@@ -3126,7 +3095,7 @@ forms:
         label: dr1_source_copy
         expression: "fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains(\"$(service)^$(company)^$(environment)^$(location)^dr1^source^copy\")))[]')"
         noOutput: true
-        hide: false
+        hide: true
         dependencies:         
         - name: dr1
           values:
@@ -3136,9 +3105,9 @@ forms:
       - type: expression
         name: dr1_source_cluster
         label: dr1_source_cluster
-        expression: "'$(cluster)"
+        expression: "'$(dr1_source_copy)'=='prod'?'$(cluster)':''"
         runLocal: true
-        hide: false
+        hide: true
         noOutput: true
         dependencies:         
         - name: dr1
@@ -3149,9 +3118,9 @@ forms:
       - type: expression
         name: dr1_source_svm
         label: dr1_source_svm
-        expression: "'$(svm)'"
+        expression: "'$(dr1_source_copy)'=='prod'?'$(svm)':''"
         runLocal: true
-        hide: false
+        hide: true
         noOutput: true
         dependencies:         
         - name: dr1
@@ -3162,9 +3131,9 @@ forms:
       - type: expression
         name: dr1_source_vol
         label: dr1_source_vol
-        expression: "'$(volname)'"
+        expression: "'$(dr1_source_copy)'=='prod'?'$(volname)':''"
         runLocal: true
-        hide: false
+        hide: true
         noOutput: true
         dependencies:         
         - name: dr1
@@ -3178,7 +3147,7 @@ forms:
         dbConfig:
           name: AIQUMSQL
           type: mysql
-        hide: false
+        hide: true
         noOutput: True
         default: []
         query: "SELECT 
@@ -3187,12 +3156,12 @@ forms:
                 volume_src.name as src_volume_name,
                 cluster_dst.name as dst_cluster_name,
                 vserver_dst.name as dst_vserver_name,
-                volume_dst.name as dst_volume_name,
-                snap_mirror.mirrorStateRaw AS mirror_state,     
-                CASE         
-                  WHEN snap_mirror.isHealthy=1 THEN 'Healthy'         
-                  ELSE 'Not Healthy'         
-                  END AS mirror_health
+                volume_dst.name as dst_volume_name, 
+                snap_mirror.mirrorStateRaw AS mirror_state,
+                CASE 
+                    WHEN snap_mirror.isHealthy=1 THEN 'Yes' 
+                    ELSE 'No' 
+                    END AS mirror_health
               FROM 
                 netapp_model_view.snap_mirror
                 INNER JOIN 
@@ -3214,9 +3183,9 @@ forms:
                   netapp_model_view.volume volume_dst
                     ON snap_mirror.destinationVolumeId  = volume_dst.objId   
               WHERE 
-                  cluster_src.name = '$(cluster)' 
-                  AND vserver_src.name='$(svm)'
-                  AND volume_src.name = '$(volname)'
+                  cluster_src.name = '$(dr1_source_cluster)' 
+                  AND vserver_src.name='$(dr1_source_svm)'
+                  AND volume_src.name = '$(dr1_source_vol)'
                   AND cluster_dst.name = '$(dr1_cluster)'
                   AND vserver_dst.name = '$(dr1_svm)'"
 
@@ -3226,13 +3195,83 @@ forms:
         label: dr1_volname
         expression: "($(dr1_relationship))[0]['dst_volume_name']"
         runLocal: true
-        hide: false
+        hide: true
         model: dr1.volume
         dependencies:         
         - name: dr1
           values:
           - true   
-                  
+
+      #dr1 size ratio
+      - type: expression
+        name: dr1_sizeratio
+        label: dr1_sizeratio
+        hide: true
+        expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|.\"$(company)\"|.\"$(environment)\"|.\"$(location)\"|.dr1|.sizeratio')"
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true  
+
+      #calculare dr1 sizw 
+      - type: expression
+        name: dr1_volsize
+        label: dr1_volsize
+        expression: $(size)*$(dr1_sizeratio)>0?$(size)*$(dr1_sizeratio):$(size)
+        runLocal: true
+        hide: true
+        model: dr1.size
+        dependencies:         
+        - name: dr1
+          values:
+          - true            
+
+      #extract dr1 state
+      - type: expression
+        name: dr1_mirror_state
+        label: dr1_mirror_state
+        expression: "($(dr1_relationship))[0]['mirror_state']"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true  
+
+      #extract dr1 health
+      - type: expression
+        name: dr1_mirror_health
+        label: dr1_mirror_health
+        expression: "($(dr1_relationship))[0]['mirror_health']"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true             
+
+
+      #dr1 volume information 
+      - type: expression
+        name: dr1_volume information 
+        label: DR1
+        hide: false
+        expression: "'$(dr1_volname)'==''?'could not identify dr1 volume':
+                     '<p style=\"color:green;\">SOURCE:&nbsp</p>$(dr1_source_copy)&nbsp;<p style=\"color:green;\">CLUSTER:&nbsp</p>$(dr1_cluster)&nbsp;
+                      <p style=\"color:green;\">SVM:&nbsp</p>$(dr1_svm)&nbsp;<p style=\"color:green;\">VOLUME:&nbsp</p>$(dr1_volname)&nbsp;
+                      <p style=\"color:green;\">STATE:&nbsp</p>$(dr1_mirror_state)&nbsp;
+                      <p style=\"color:green;\">HEALTHY:&nbsp</p>$(dr1_mirror_health)&nbsp;'"
+        runLocal: true 
+        noOutput: true
+        isHtml: true
+        dependencies:         
+        - name: dr1
+          values:
+          - true                    
+
 
       ############################################################################################################################
       # extract cluster svm and vol name for dr2
@@ -3331,7 +3370,12 @@ forms:
                 volume_src.name as src_volume_name,
                 cluster_dst.name as dst_cluster_name,
                 vserver_dst.name as dst_vserver_name,
-                volume_dst.name as dst_volume_name 
+                volume_dst.name as dst_volume_name, 
+                snap_mirror.mirrorStateRaw AS mirror_state,
+                CASE 
+                    WHEN snap_mirror.isHealthy=1 THEN 'Yes' 
+                    ELSE 'No' 
+                    END AS mirror_health
               FROM 
                 netapp_model_view.snap_mirror
                 INNER JOIN 
@@ -3372,23 +3416,500 @@ forms:
           values:
           - true   
 
+      #dr2 size ratio
+      - type: expression
+        name: dr2_sizeratio
+        label: dr2_sizeratio
+        hide: true
+        expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|.\"$(company)\"|.\"$(environment)\"|.\"$(location)\"|.dr2|.sizeratio')"
+        noOutput: true
+        dependencies:         
+        - name: dr2
+          values:
+          - true  
+
+      #calculare dr2 sizw 
+      - type: expression
+        name: dr2_volsize
+        label: dr2_volsize
+        expression: $(dr2_sizeratio)>0?$(size)*$(dr2_sizeratio):$(size)
+        runLocal: true
+        hide: true
+        model: dr2.size
+        dependencies:         
+        - name: dr2
+          values:
+          - true            
+
+      #extract dr2 state
+      - type: expression
+        name: dr2_mirror_state
+        label: dr2_mirror_state
+        expression: "($(dr2_relationship))[0]['mirror_state']"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: dr2
+          values:
+          - true  
+
+      #extract dr2 health
+      - type: expression
+        name: dr2_mirror_health
+        label: dr2_mirror_health
+        expression: "($(dr2_relationship))[0]['mirror_health']"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: dr2
+          values:
+          - true             
+
+
       #dr2 volume information 
       - type: expression
         name: dr2_volume information 
         label: DR2
         hide: false
         expression: "'$(dr2_volname)'==''?'could not identify dr2 volume':
-                      '<p style=\"color:green;\">CLUSTER:&nbsp</p>$(dr2_cluster)&nbsp;
-                      <p style=\"color:green;\">SVM:&nbsp</p>$(dr2_svm)&nbsp;<p style=\"color:green;\">VOLUME:&nbsp</p>$(dr2_volname)'"
+                     '<p style=\"color:green;\">SOURCE:&nbsp</p>$(dr2_source_copy)&nbsp;<p style=\"color:green;\">CLUSTER:&nbsp</p>$(dr2_cluster)&nbsp;
+                      <p style=\"color:green;\">SVM:&nbsp</p>$(dr2_svm)&nbsp;<p style=\"color:green;\">VOLUME:&nbsp</p>$(dr2_volname)&nbsp;
+                      <p style=\"color:green;\">STATE:&nbsp</p>$(dr2_mirror_state)&nbsp;
+                      <p style=\"color:green;\">HEALTHY:&nbsp</p>$(dr2_mirror_health)&nbsp;'"
         runLocal: true 
         noOutput: true
         isHtml: true
         dependencies:         
         - name: dr2
           values:
+          - true   
+
+      ############################################################################################################################
+      # extract cluster svm and vol name for b2d1
+      ############################################################################################################################                      
+
+      # extract b2d1 cluster name 
+      - type: expression
+        name: b2d1_cluster
+        label: b2d1_cluster
+        expression: "fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains(\"$(service)^$(company)^$(environment)^$(location)^b2d1^fixed_relationship_for_prod^$(cluster)_$(svm)^cluster\")))[]')"
+        hide: true
+        noOutput: false
+        model: b2d1.cluster
+        dependencies:         
+        - name: b2d1
+          values:
+          - true          
+
+      #extract b2d1 svm name
+      - type: expression
+        name: b2d1_svm
+        label: b2d1_svm
+        expression: "fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains(\"$(service)^$(company)^$(environment)^$(location)^b2d1^fixed_relationship_for_prod^$(cluster)_$(svm)^svm\")))[]')"
+        hide: true
+        noOutput: false    
+        model: b2d1.svm   
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+
+      #extract b2d1 source copy
+      - type: expression
+        name: b2d1_source_copy
+        label: b2d1_source_copy
+        expression: "fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains(\"$(service)^$(company)^$(environment)^$(location)^b2d1^source^copy\")))[]')"
+        noOutput: true
+        hide: true
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+
+      #extract b2d1 source cluster
+      - type: expression
+        name: b2d1_source_cluster
+        label: b2d1_source_cluster
+        expression: "'$(b2d1_source_copy)'=='prod'?'$(cluster)':'$(b2d1_source_copy)'=='dr1'?'$(dr1_relationship)[0][dst_cluster_name]':'$(b2d1_source_copy)'=='dr2'?'$(dr2_relationship)[0][dst_cluster_name]':''"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: b2d1
+          values:
+          - true            
+
+      #extract b2d1 source svm
+      - type: expression
+        name: b2d1_source_svm
+        label: b2d1_source_svm
+        expression: "'$(b2d1_source_copy)'=='prod'?'$(svm)':'$(b2d1_source_copy)'=='dr1'?'$(dr1_relationship)[0][dst_vserver_name]':'$(b2d1_source_copy)'=='dr2'?'$(dr2_relationship)[0][dst_vserver_name]':''"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: b2d1
+          values:
+          - true     
+
+      #extract b2d1 source vol
+      - type: expression
+        name: b2d1_source_vol
+        label: b2d1_source_vol
+        expression: "'$(b2d1_source_copy)'=='prod'?'$(volname)':'$(b2d1_source_copy)'=='dr1'?'$(dr1_relationship)[0][dst_volume_name]':'$(b2d1_source_copy)'=='dr2'?'$(dr2_relationship)[0][dst_volume_name]':''"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: b2d1
+          values:
+          - true     
+
+      #select snapmirror relationsips to b2d1 svm from soruce svm/volume 
+      - type: expression
+        name: b2d1_relationship
+        label: b2d1_relationship
+        dbConfig:
+          name: AIQUMSQL
+          type: mysql
+        hide: true
+        noOutput: True
+        default: []
+        query: "SELECT 
+                cluster_src.name as src_cluster_name,
+                vserver_src.name as src_vserver_name,     
+                volume_src.name as src_volume_name,
+                cluster_dst.name as dst_cluster_name,
+                vserver_dst.name as dst_vserver_name,
+                volume_dst.name as dst_volume_name, 
+                snap_mirror.mirrorStateRaw AS mirror_state,
+                CASE 
+                    WHEN snap_mirror.isHealthy=1 THEN 'Yes' 
+                    ELSE 'No' 
+                    END AS mirror_health
+              FROM 
+                netapp_model_view.snap_mirror
+                INNER JOIN 
+                  netapp_model_view.cluster cluster_src
+                    ON snap_mirror.sourceClusterId = cluster_src.objId
+                INNER JOIN 
+                  netapp_model_view.vserver vserver_src
+                    ON snap_mirror.sourceVserverId = vserver_src.objId
+                INNER JOIN 
+                  netapp_model_view.volume volume_src
+                    ON snap_mirror.sourceVolumeId  = volume_src.objId
+                INNER JOIN 
+                  netapp_model_view.cluster cluster_dst
+                    ON snap_mirror.destinationClusterId = cluster_dst.objId
+                INNER JOIN 
+                  netapp_model_view.vserver vserver_dst
+                    ON snap_mirror.destinationVserverId = vserver_dst.objId
+                INNER JOIN 
+                  netapp_model_view.volume volume_dst
+                    ON snap_mirror.destinationVolumeId  = volume_dst.objId   
+              WHERE 
+                  cluster_src.name = '$(b2d1_source_cluster)' 
+                  AND vserver_src.name='$(b2d1_source_svm)'
+                  AND volume_src.name = '$(b2d1_source_vol)'
+                  AND cluster_dst.name = '$(b2d1_cluster)'
+                  AND vserver_dst.name = '$(b2d1_svm)'"
+
+      #extract b2d1 source vol
+      - type: expression
+        name: b2d1_volname
+        label: b2d1_volname
+        expression: "($(b2d1_relationship))[0]['dst_volume_name']"
+        runLocal: true
+        hide: true
+        model: b2d1.volume
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+
+      #b2d1 size ratio
+      - type: expression
+        name: b2d1_sizeratio
+        label: b2d1_sizeratio
+        hide: true
+        expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|.\"$(company)\"|.\"$(environment)\"|.\"$(location)\"|.b2d1|.sizeratio')"
+        noOutput: true
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+
+      #calculare b2d1 sizw 
+      - type: expression
+        name: b2d1_volsize
+        label: b2d1_volsize
+        expression: $(size)*$(b2d1_sizeratio)>0?$(size)*$(b2d1_sizeratio):$(size)
+        runLocal: true
+        hide: true
+        model: b2d1.size
+        dependencies:         
+        - name: b2d1
+          values:
+          - true             
+
+      #extract b2d1 state
+      - type: expression
+        name: b2d1_mirror_state
+        label: b2d1_mirror_state
+        expression: "($(b2d1_relationship))[0]['mirror_state']"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: b2d1
+          values:
+          - true  
+
+      #extract b2d1 health
+      - type: expression
+        name: b2d1_mirror_health
+        label: b2d1_mirror_health
+        expression: "($(b2d1_relationship))[0]['mirror_health']"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: b2d1
+          values:
+          - true             
+
+
+      #b2d1 volume information 
+      - type: expression
+        name: b2d1_volume information 
+        label: B2D1
+        hide: false
+        expression: "'$(b2d1_volname)'==''?'could not identify b2d1 volume':
+                     '<p style=\"color:green;\">SOURCE:&nbsp</p>$(b2d1_source_copy)&nbsp;<p style=\"color:green;\">CLUSTER:&nbsp</p>$(b2d1_cluster)&nbsp;
+                      <p style=\"color:green;\">SVM:&nbsp</p>$(b2d1_svm)&nbsp;<p style=\"color:green;\">VOLUME:&nbsp</p>$(b2d1_volname)&nbsp;
+                      <p style=\"color:green;\">STATE:&nbsp</p>$(b2d1_mirror_state)&nbsp;
+                      <p style=\"color:green;\">HEALTHY:&nbsp</p>$(b2d1_mirror_health)&nbsp;'"
+        runLocal: true 
+        noOutput: true
+        isHtml: true
+        dependencies:         
+        - name: b2d1
+          values:
           - true           
 
 
+      ############################################################################################################################
+      # extract cluster svm and vol name for b2d2
+      ############################################################################################################################                      
+
+      # extract b2d2 cluster name 
+      - type: expression
+        name: b2d2_cluster
+        label: b2d2_cluster
+        expression: "fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains(\"$(service)^$(company)^$(environment)^$(location)^b2d2^fixed_relationship_for_prod^$(cluster)_$(svm)^cluster\")))[]')"
+        hide: true
+        noOutput: false
+        model: b2d2.cluster
+        dependencies:         
+        - name: b2d2
+          values:
+          - true          
+
+      #extract b2d2 svm name
+      - type: expression
+        name: b2d2_svm
+        label: b2d2_svm
+        expression: "fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains(\"$(service)^$(company)^$(environment)^$(location)^b2d2^fixed_relationship_for_prod^$(cluster)_$(svm)^svm\")))[]')"
+        hide: true
+        noOutput: false    
+        model: b2d2.svm   
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+
+      #extract b2d2 source copy
+      - type: expression
+        name: b2d2_source_copy
+        label: b2d2_source_copy
+        expression: "fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains(\"$(service)^$(company)^$(environment)^$(location)^b2d2^source^copy\")))[]')"
+        noOutput: true
+        hide: true
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+
+      #extract b2d2 source cluster
+      - type: expression
+        name: b2d2_source_cluster
+        label: b2d2_source_cluster
+        expression: "'$(b2d2_source_copy)'=='prod'?'$(cluster)':'$(b2d2_source_copy)'=='dr1'?'$(dr1_relationship)[0][dst_cluster_name]':'$(b2d2_source_copy)'=='dr2'?'$(dr2_relationship)[0][dst_cluster_name]':'$(b2d2_source_copy)'=='b2d1'?'$(b2d1_relationship)[0][dst_cluster_name]':''"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: b2d2
+          values:
+          - true            
+
+      #extract b2d2 source svm
+      - type: expression
+        name: b2d2_source_svm
+        label: b2d2_source_svm
+        expression: "'$(b2d2_source_copy)'=='prod'?'$(svm)':'$(b2d2_source_copy)'=='dr1'?'$(dr1_relationship)[0][dst_vserver_name]':'$(b2d2_source_copy)'=='dr2'?'$(dr2_relationship)[0][dst_vserver_name]':'$(b2d2_source_copy)'=='b2d1'?'$(b2d1_relationship)[0][dst_vserver_name]':''"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: b2d2
+          values:
+          - true     
+
+      #extract b2d2 source vol
+      - type: expression
+        name: b2d2_source_vol
+        label: b2d2_source_vol
+        expression: "'$(b2d2_source_copy)'=='prod'?'$(volname)':'$(b2d2_source_copy)'=='dr1'?'$(dr1_relationship)[0][dst_volume_name]':'$(b2d2_source_copy)'=='dr2'?'$(dr2_relationship)[0][dst_volume_name]':'$(b2d2_source_copy)'=='b2d1'?'$(b2d1_relationship)[0][dst_volume_name]':''"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: b2d2
+          values:
+          - true     
+
+      #select snapmirror relationsips to b2d2 svm from soruce svm/volume 
+      - type: expression
+        name: b2d2_relationship
+        label: b2d2_relationship
+        dbConfig:
+          name: AIQUMSQL
+          type: mysql
+        hide: true
+        noOutput: True
+        default: []
+        query: "SELECT 
+                cluster_src.name as src_cluster_name,
+                vserver_src.name as src_vserver_name,     
+                volume_src.name as src_volume_name,
+                cluster_dst.name as dst_cluster_name,
+                vserver_dst.name as dst_vserver_name,
+                volume_dst.name as dst_volume_name, 
+                snap_mirror.mirrorStateRaw AS mirror_state,
+                CASE 
+                    WHEN snap_mirror.isHealthy=1 THEN 'Yes' 
+                    ELSE 'No' 
+                    END AS mirror_health
+              FROM 
+                netapp_model_view.snap_mirror
+                INNER JOIN 
+                  netapp_model_view.cluster cluster_src
+                    ON snap_mirror.sourceClusterId = cluster_src.objId
+                INNER JOIN 
+                  netapp_model_view.vserver vserver_src
+                    ON snap_mirror.sourceVserverId = vserver_src.objId
+                INNER JOIN 
+                  netapp_model_view.volume volume_src
+                    ON snap_mirror.sourceVolumeId  = volume_src.objId
+                INNER JOIN 
+                  netapp_model_view.cluster cluster_dst
+                    ON snap_mirror.destinationClusterId = cluster_dst.objId
+                INNER JOIN 
+                  netapp_model_view.vserver vserver_dst
+                    ON snap_mirror.destinationVserverId = vserver_dst.objId
+                INNER JOIN 
+                  netapp_model_view.volume volume_dst
+                    ON snap_mirror.destinationVolumeId  = volume_dst.objId   
+              WHERE 
+                  cluster_src.name = '$(b2d2_source_cluster)' 
+                  AND vserver_src.name='$(b2d2_source_svm)'
+                  AND volume_src.name = '$(b2d2_source_vol)'
+                  AND cluster_dst.name = '$(b2d2_cluster)'
+                  AND vserver_dst.name = '$(b2d2_svm)'"
+
+      #extract b2d2 source vol
+      - type: expression
+        name: b2d2_volname
+        label: b2d2_volname
+        expression: "($(b2d2_relationship))[0]['dst_volume_name']"
+        runLocal: true
+        hide: true
+        model: b2d2.volume
+        dependencies:         
+        - name: b2d2
+          values:
+          - true 
+
+      #b2d2 size ratio
+      - type: expression
+        name: b2d2_sizeratio
+        label: b2d2_sizeratio
+        hide: true
+        expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|.\"$(company)\"|.\"$(environment)\"|.\"$(location)\"|.b2d2|.sizeratio')"
+        noOutput: true
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+
+      #calculare b2d2 sizw 
+      - type: expression
+        name: b2d2_volsize
+        label: b2d2_volsize
+        expression: $(size)*$(b2d2_sizeratio)>0?$(size)*$(b2d2_sizeratio):$(size)
+        runLocal: true
+        hide: true
+        model: b2d2.size
+        dependencies:         
+        - name: b2d2
+          values:
+          - true              
+
+      #extract b2d2 state
+      - type: expression
+        name: b2d2_mirror_state
+        label: b2d2_mirror_state
+        expression: "($(b2d2_relationship))[0]['mirror_state']"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: b2d2
+          values:
+          - true  
+
+      #extract b2d2 health
+      - type: expression
+        name: b2d2_mirror_health
+        label: b2d2_mirror_health
+        expression: "($(b2d2_relationship))[0]['mirror_health']"
+        runLocal: true
+        hide: true
+        noOutput: true
+        dependencies:         
+        - name: b2d2
+          values:
+          - true             
 
 
+      #b2d2 volume information 
+      - type: expression
+        name: b2d2_volume information 
+        label: B2D2
+        hide: false
+        expression: "'$(b2d2_volname)'==''?'could not identify b2d2 volume':
+                     '<p style=\"color:green;\">SOURCE:&nbsp</p>$(b2d2_source_copy)&nbsp;<p style=\"color:green;\">CLUSTER:&nbsp</p>$(b2d2_cluster)&nbsp;
+                      <p style=\"color:green;\">SVM:&nbsp</p>$(b2d2_svm)&nbsp;<p style=\"color:green;\">VOLUME:&nbsp</p>$(b2d2_volname)&nbsp;
+                      <p style=\"color:green;\">STATE:&nbsp</p>$(b2d2_mirror_state)&nbsp;
+                      <p style=\"color:green;\">HEALTHY:&nbsp</p>$(b2d2_mirror_health)&nbsp;'"
+        runLocal: true 
+        noOutput: true
+        isHtml: true
+        dependencies:         
+        - name: b2d2
+          values:
+          - true           
 

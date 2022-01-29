@@ -77,15 +77,14 @@
 
     # set dp volume autosize 
     - name: Modify volume autosize
-      when: copy.startswith('b2d')
       na_ontap_volume_autosize:
         vserver: "{{ svm }}"
         volume: "{{ volname }}"
-        mode: "{{ VolumeDefaults.auto_size_b2d.mode | default(omit) }}"
-        grow_threshold_percent: "{{ VolumeDefaults.auto_size_b2d.grow_threshold_percent | default(omit) }}"
-        shrink_threshold_percent: "{{ VolumeDefaults.auto_size_b2d.shrink_threshold_percent | default(omit) }}"
-        maximum_size: "{{ ((VolumeDefaults.auto_size_b2d.vol_max_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
-        minimum_size: "{{ ((VolumeDefaults.auto_size_b2d.vol_min_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
+        mode: "{{ VolumeDefaults.auto_size[copy].mode | default(omit) }}"
+        grow_threshold_percent: "{{ VolumeDefaults.auto_size[copy].grow_threshold_percent | default(omit) }}"
+        shrink_threshold_percent: "{{ VolumeDefaults.auto_size[copy].shrink_threshold_percent | default(omit) }}"
+        maximum_size: "{{ ((VolumeDefaults.auto_size[copy].vol_max_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
+        minimum_size: "{{ ((VolumeDefaults.auto_size[copy].vol_min_size_ratio*(volsize|float))|int|string)+'g' | default(omit) }}"
         <<: *login
 
     # create vserver peer 
