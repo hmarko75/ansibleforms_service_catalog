@@ -1,0 +1,22 @@
+---
+
+- name: Rediscover cluster 
+  hosts: "localhost"
+  become: no 
+  gather_facts: no
+  tasks:
+    # display log 
+    - name: datasource redescover info
+      ansible.builtin.debug:
+        msg:
+        - "rediscover cluster datasource in aiqum:{{ aiqumlogin.host }} cluster:{{cluster}} uuid:{{ cluster_key }}"
+
+    - name: Issue AIQUM rest for rediscover 
+      uri:
+        url: https://{{aiqumlogin.host}}/api/management-server/admin/datasources/{{cluster_key}}/discover
+        user: "{{aiqumlogin.user}}"
+        password: "{{aiqumlogin.password}}"
+        method: POST
+        force_basic_auth: yes
+        validate_certs: no
+        

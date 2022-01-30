@@ -112,4 +112,8 @@
         <<: *login
       when: newsvm.protocols.cifs is defined and newsvm.protocols.cifs.enabled == True 
 
-      
+- name: Rediscover cluster in AIQUM
+  import_playbook: aiqum_rediscover_cluster.yaml
+  vars:
+    cluster: "{{ vars[copy].cluster }}"
+    cluster_key: "{{ vars[copy].clusterkey }}"
