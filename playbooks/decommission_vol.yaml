@@ -1,0 +1,66 @@
+---
+- name: "decommission {{ copy }} volume"
+  hosts: "localhost"
+  become: no 
+  gather_facts: no
+  vars:
+    cluster: "{{ vars[copy].cluster }}"
+    svm: "{{ vars[copy].svm }}"
+    volname: "{{ vars[copy].volume }}"
+    suffixed_volume: "{{ vars[copy].suffixed_volume }}"
+    
+    clusterauth:  &login
+      hostname: "{{ cluster }}"
+      username: "{{ login.user }}"
+      password: "{{ login.password }}"
+      https: true
+      validate_certs: false
+  vars_files:
+  - ../globals.yaml
+  collections:
+  - netapp.ontap  
+  tasks:
+
+    # display log 
+    - name: vol decommission info
+      ansible.builtin.debug:
+        msg:
+        - "Decommissioning volume: {{ cluster }}:{{ svm }}:{{ volname }}"
+
+    # remove snapmirror relationship is exists 
+    - name: delete snapmirror and release source
+      na_ontap_snapmirror:
+        state: absent
+        source_path:
+          cluster: "{{ vars[copy].source_cluster }}"
+          path: "{{ vars[copy].source_svm+':'+vars[copy].source_vol }}"         
+        destination_path:
+          cluster: "{{ cluster }}"
+          path: "{{ svm+':'+volname }}"        
+        source_hostname: "{{ vars[copy].source_cluster }}"
+        relationship_info_only: yes
+        <<: *login     
+      when: copy != 'prod'   
+
+    - name: rename volume to old 
+      na_ontap_volume:
+        state: present
+        vserver: "{{svm}}"
+        name: "{{ suffixed_volume }}"
+        from_name: "{{ volname }}"
+        <<: *login 
+
+    - name: offline volume 
+      na_ontap_volume:
+        state: present
+        vserver: "{{svm}}"
+        name: "{{ suffixed_volume }}"
+        is_online: False
+        <<: *login     
+
+
+
+
+      
+        
+

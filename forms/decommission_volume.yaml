@@ -1,13 +1,13 @@
-name: Resize Existing Service Volume
-help: This is used to resize volume. Positive numbers will increase the size
-  negative will decrease
+name: Decommission Existing Service Volume
+help: This is used to decommission volume. Selected volumes will be renamed and
+  taken offline
 roles:
   - Provision
-description: Resize existing volume
+description: Decommission existing volume
 categories:
   - Provision
 icon: scroll
-playbook: resize_service_vol.yaml
+playbook: decommission_service_vol.yaml
 inventory: hosts
 type: ansible
 fields:
@@ -54,7 +54,7 @@ fields:
     pctColumns:
       - Utilization
     required: true
-    default: __auto__
+    #default: __auto__
     outputObject: true
     noOutput: true
   - type: expression
@@ -73,8 +73,49 @@ fields:
     name: volname
     label: volname
     expression: "'$(selectedvolume.volume)'"
+    default: ''
     hide: true
     model: prod.volume
+  - type: number
+    name: offline_period_days
+    label: Decomission days until delete
+    help: Decomissioned volumes will be kept offline
+      for the specified number of days
+    default: 10
+    required: true
+    minValue: 4
+    maxValue: 20
+    icon: user
+    noOutput: true
+  - type: expression
+    name: vol_suffix
+    label: vol_suffix
+    expression: "'_to_be_deleted_after_'+(new
+      Date(Date.now()+86400000*$(offline_period_days))).getDate()+'_'+((new
+      Date(Date.now()+86400000*$(offline_period_days))).getMonth()+1)+'_'+(new
+      Date(Date.now()+86400000*$(offline_period_days))).getFullYear()"
+    runLocal: true
+    hide: true
+    noOutput: true
+
+  - type: expression
+    name: offline_period_time
+    label: "Volumes can be deleted after:"
+    expression: "'$(volname)'!=''?(new
+      Date(Date.now()+86400000*$(offline_period_days))).getDate()+' '+((new
+      Date(Date.now()+86400000*$(offline_period_days))).toLocaleString('default',{month:'short'}))+' '+(new
+      Date(Date.now()+86400000*$(offline_period_days))).getFullYear():''"
+    runLocal: true
+    hide: false
+    noOutput: true
+
+  - type: expression
+    name: suffixed_volname
+    label: suffixed_volname
+    expression: "'$(volname)'+'$(vol_suffix)'"
+    runLocal: true
+    hide: true
+    model: prod.suffixed_volume
   - type: expression
     name: flat_service_info
     label: flat_service_info
@@ -149,34 +190,6 @@ fields:
     noOutput: true
     isHtml: true
   - type: expression
-    name: currvolsize
-    label: Current Volume size (G)
-    expression: "'$(selectedvolume.Size)'"
-    runLocal: true
-    hide: false
-    noOutput: true
-  - type: number
-    name: volsizeincsize
-    label: Increase Volume Size (G) By
-    default: 100
-    required: true
-    minValue: -80000
-    maxValue: 80000
-    icon: user
-    model: prod.sizeinc
-  - type: expression
-    name: size
-    label: New size (G)
-    expression: $(selectedvolume.sizeg)+$(volsizeincsize)<1 ||
-      $(selectedvolume.sizeg)+$(volsizeincsize) > 1000000000 ?'Invalid volume
-      size':$(selectedvolume.sizeg)+$(volsizeincsize)
-    runLocal: true
-    hide: false
-    model: prod.size
-    regex:
-      expression: ^\d+$
-      description: invalid volume size
-  - type: expression
     name: copy_types_jq
     label: copy_types_jq
     hide: true
@@ -248,7 +261,7 @@ fields:
     expression: "'$(dr1_source_copy)'=='prod'?'$(cluster)':''"
     runLocal: true
     hide: true
-    noOutput: true
+    model: dr1.source_cluster
     dependencies:
       - name: dr1
         values:
@@ -259,7 +272,7 @@ fields:
     expression: "'$(dr1_source_copy)'=='prod'?'$(svm)':''"
     runLocal: true
     hide: true
-    noOutput: true
+    model: dr1.source_svm
     dependencies:
       - name: dr1
         values:
@@ -270,7 +283,7 @@ fields:
     expression: "'$(dr1_source_copy)'=='prod'?'$(volname)':''"
     runLocal: true
     hide: true
-    noOutput: true
+    model: dr1.source_vol
     dependencies:
       - name: dr1
         values:
@@ -314,22 +327,22 @@ fields:
         values:
           - true
   - type: expression
+    name: dr1_suffixed_volname
+    label: dr1_suffixed_volname
+    expression: "'$(dr1_volname)'+'$(vol_suffix)'"
+    runLocal: true
+    hide: true
+    model: dr1.suffixed_volume
+    dependencies:
+      - name: dr1
+        values:
+          - true          
+  - type: expression
     name: dr1_sizeratio
     label: dr1_sizeratio
     hide: true
     expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr1|.sizeratio')
     noOutput: true
-    dependencies:
-      - name: dr1
-        values:
-          - true
-  - type: expression
-    name: dr1_volsize
-    label: dr1_volsize
-    expression: $(size)*$(dr1_sizeratio)>0?$(size)*$(dr1_sizeratio):$(size)
-    runLocal: true
-    hide: true
-    model: dr1.size
     dependencies:
       - name: dr1
         values:
@@ -413,7 +426,7 @@ fields:
       r1'?'$(dr1_relationship)[0][dst_cluster_name]':''"
     runLocal: true
     hide: true
-    noOutput: true
+    model: dr2.source_cluster
     dependencies:
       - name: dr2
         values:
@@ -425,7 +438,7 @@ fields:
       '$(dr1_relationship)[0][dst_vserver_name]':''"
     runLocal: true
     hide: true
-    noOutput: true
+    model: dr2.source_svm
     dependencies:
       - name: dr2
         values:
@@ -437,7 +450,7 @@ fields:
       r1'?'$(dr1_relationship)[0][dst_volume_name]':''"
     runLocal: true
     hide: true
-    noOutput: true
+    model: dr2.source_vol
     dependencies:
       - name: dr2
         values:
@@ -481,22 +494,22 @@ fields:
         values:
           - true
   - type: expression
+    name: dr2_suffixed_volname
+    label: dr2_suffixed_volname
+    expression: "'$(dr2_volname)'+'$(vol_suffix)'"
+    runLocal: true
+    hide: true
+    model: dr2.suffixed_volume
+    dependencies:
+      - name: dr2
+        values:
+          - true          
+  - type: expression
     name: dr2_sizeratio
     label: dr2_sizeratio
     hide: true
     expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.sizeratio')
     noOutput: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_volsize
-    label: dr2_volsize
-    expression: $(dr2_sizeratio)>0?$(size)*$(dr2_sizeratio):$(size)
-    runLocal: true
-    hide: true
-    model: dr2.size
     dependencies:
       - name: dr2
         values:
@@ -581,7 +594,7 @@ fields:
       dr2'?'$(dr2_relationship)[0][dst_cluster_name]':''"
     runLocal: true
     hide: true
-    noOutput: true
+    model: b2d1.source_cluster
     dependencies:
       - name: b2d1
         values:
@@ -594,7 +607,7 @@ fields:
       ?'$(dr2_relationship)[0][dst_vserver_name]':''"
     runLocal: true
     hide: true
-    noOutput: true
+    model: b2d1.source_svm
     dependencies:
       - name: b2d1
         values:
@@ -607,7 +620,7 @@ fields:
       r2'?'$(dr2_relationship)[0][dst_volume_name]':''"
     runLocal: true
     hide: true
-    noOutput: true
+    model: b2d1.source_vol
     dependencies:
       - name: b2d1
         values:
@@ -651,22 +664,22 @@ fields:
         values:
           - true
   - type: expression
+    name: b2d1_suffixed_volname
+    label: b2d1_suffixed_volname
+    expression: "'$(b2d1_volname)'+'$(vol_suffix)'"
+    runLocal: true
+    hide: true
+    model: b2d1.suffixed_volume
+    dependencies:
+      - name: b2d1
+        values:
+          - true          
+  - type: expression
     name: b2d1_sizeratio
     label: b2d1_sizeratio
     hide: true
     expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d1|.sizeratio')
     noOutput: true
-    dependencies:
-      - name: b2d1
-        values:
-          - true
-  - type: expression
-    name: b2d1_volsize
-    label: b2d1_volsize
-    expression: $(size)*$(b2d1_sizeratio)>0?$(size)*$(b2d1_sizeratio):$(size)
-    runLocal: true
-    hide: true
-    model: b2d1.size
     dependencies:
       - name: b2d1
         values:
@@ -752,7 +765,7 @@ fields:
       2d1'?'$(b2d1_relationship)[0][dst_cluster_name]':''"
     runLocal: true
     hide: true
-    noOutput: true
+    model: b2d2.source_cluster
     dependencies:
       - name: b2d2
         values:
@@ -766,7 +779,7 @@ fields:
       ?'$(b2d1_relationship)[0][dst_vserver_name]':''"
     runLocal: true
     hide: true
-    noOutput: true
+    model: b2d2.source_svm
     dependencies:
       - name: b2d2
         values:
@@ -780,7 +793,7 @@ fields:
       1'?'$(b2d1_relationship)[0][dst_volume_name]':''"
     runLocal: true
     hide: true
-    noOutput: true
+    model: b2d2.source_vol
     dependencies:
       - name: b2d2
         values:
@@ -824,22 +837,22 @@ fields:
         values:
           - true
   - type: expression
+    name: b2d2_suffixed_volname
+    label: b2d2_suffixed_volname
+    expression: "'$(b2d2_volname)'+'$(vol_suffix)'"
+    runLocal: true
+    hide: true
+    model: b2d2.suffixed_volume
+    dependencies:
+      - name: b2d2
+        values:
+          - true          
+  - type: expression
     name: b2d2_sizeratio
     label: b2d2_sizeratio
     hide: true
     expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d2|.sizeratio')
     noOutput: true
-    dependencies:
-      - name: b2d2
-        values:
-          - true
-  - type: expression
-    name: b2d2_volsize
-    label: b2d2_volsize
-    expression: $(size)*$(b2d2_sizeratio)>0?$(size)*$(b2d2_sizeratio):$(size)
-    runLocal: true
-    hide: true
-    model: b2d2.size
     dependencies:
       - name: b2d2
         values:
@@ -884,4 +897,4 @@ fields:
       - name: b2d2
         values:
           - true
-source: resize_volume.yaml
+source: decommission_volume.yaml

@@ -105,6 +105,7 @@
         state: present
         name: "{{ svm }}"
         vserver: "{{ svm }}"
+        service_state: started
         domain: "{{  newsvm.protocols.cifs.domain }}"
         ou: "{{ vars.domains[newsvm.network.domain]['ou'] | default(omit) }}"
         admin_user_name: "{{ adlogin.user }}"

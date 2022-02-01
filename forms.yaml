@@ -2,9 +2,9 @@ categories:
   - name: Default
     icon: bars
   - name: Provision
-    icon: bath  
+    icon: bath
   - name: Maintenance
-    icon: bath             
+    icon: bath
 roles:
   - name: admin
     groups:
@@ -20,9 +20,8 @@ roles:
     groups: []
   - name: Provision
     groups:
-      - local/Provision Admins  
+      - local/Provision Admins
 forms:
-
   - name: Cleanup Ansibleforms Jobs
     showHelp: true
     help: |
@@ -62,68 +61,47 @@ forms:
           - name: areyousure
             values:
               - true
-
-  - name: Debug 
-    help:
-      Debug  
+  - name: Debug
+    help: Debug
     roles:
       - Provision
-    description: Debug 
+    description: Debug
     categories:
       - Provision
     icon: scroll
     playbook: debug.yaml
     inventory: hosts
     type: ansible
-    fields:       
-      ############################################################################################################################
-      # environment General configuration
-      ############################################################################################################################    
-
-      #settings
+    fields:
       - type: expression
         name: settings
         label: settings
-        expression: "fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','')"
-        noOutput: true 
+        expression: fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','')
+        noOutput: true
         hide: true
-
-      #aiqum server 
       - type: expression
         name: aiqum
         label: aiqum
-        expression: "fn.fnJq($(settings),'.general.aiqum')" 
-        hide: true 
-        #model: general.aiqum 
-
-      #ontap credentials to use in ansible 
-      - type: expression       
+        expression: fn.fnJq($(settings),'.general.aiqum')
+        hide: true
+      - type: expression
         name: aiqumlogin
         label: aiqumlogin
-        expression: "'AIQUM'" 
+        expression: "'AIQUM'"
         asCredential: true
-        hide: true            
-
-      #cluster enum 
+        hide: true
       - type: expression
         name: clusters_info
         label: clusters_info
         expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/admin/datasources/clusters','','AIQUM','[.records[]|{name:.name}+{key:.key}]','','')
         hide: false
-
-      #cluster enum 
       - type: expression
         name: cluster
         label: cluster
         expression: "'cluster2'"
         hide: false
-      
-      #cluster uuid  
       - type: expression
         name: cluster_key
         label: cluster_key
-        expression: "fn.fnJq($(clusters_info),'.[]|select(.name==\"$(cluster)\")|.key')" 
-        hide: false 
-
-
-     
+        expression: fn.fnJq($(clusters_info),'.[]|select(.name=="$(cluster)")|.key')
+        hide: false

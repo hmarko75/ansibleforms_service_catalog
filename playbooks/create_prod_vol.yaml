@@ -177,32 +177,32 @@
     - name: Create CIFS share
       netapp.ontap.na_ontap_cifs:
         state: present
-        share_name: "{{ volname }}"
+        share_name: "{{ volname + vars[copy].cifsaccess.share_suffix|default('') }}"
         path: "{{ VolumeDefaults.defualt_junction_path + volname if VolumeDefaults.defualt_junction_path is defined else '/'+volname }}"
         vserver: "{{ svm }}"
         <<: *login
       when:
-        cifsaccess == true
+        vars[copy].cifsaccess is defined 
 
     #Remove everyone 
     - name: Create CIFS share ACL 
       netapp.ontap.na_ontap_cifs_acl:
         state: absent
-        share_name: "{{ volname }}"
+        share_name: "{{ volname + vars[copy].cifsaccess.share_suffix|default('') }}"
         vserver: "{{ svm }}"
         user_or_group: everyone
         <<: *login
       when:
-        cifsaccess == true
+        vars[copy].cifsaccess is defined 
     
     #set user from volume defaults 
     - name: Create CIFS share ACL 
       netapp.ontap.na_ontap_cifs_acl:
         state: present
-        share_name: "{{ volname }}"
+        share_name: "{{ volname + vars[copy].cifsaccess.share_suffix|default('') }}"
         vserver: "{{ svm }}"
-        user_or_group: "{{ VolumeDefaults.cifsaccess.user_or_group }}"
-        permission: "{{ VolumeDefaults.cifsaccess.access }}"
+        user_or_group: "{{ vars[copy].cifsaccess.user_or_group | default('everyone') }}"
+        permission: "{{ vars[copy].cifsaccess.access | default('full_control') }}"
         <<: *login
       when:
-        cifsaccess == true       
+        vars[copy].cifsaccess is defined 

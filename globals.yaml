@@ -30,9 +30,6 @@ VolumeDefaults:
             shrink_threshold_percent: 85
             vol_max_size_ratio: 1.2
             vol_min_size_ratio: 1
-    cifsaccess:
-        access: full_control
-        user_or_group: DEMO\administrator
     defualt_junction_path: /
     dynamic:
         prod_efficiency_policy_duation: 3
@@ -85,9 +82,15 @@ services:
                             cluster1_nunu:
                                 cluster: cluster1
                                 svm: nunu_b2d1
+                            cluster1_test2:
+                                cluster: cluster1
+                                svm: test2_b2d1
                             cluster2_live:
                                 cluster: cluster2
                                 svm: live_b2d1
+                            cluster2_test:
+                                cluster: cluster2
+                                svm: test_b2d1
                         newsvm:
                             language: he.utf_8
                             network:
@@ -113,7 +116,7 @@ services:
                             suffix: _b2d1
                         sizeratio: 2.5
                         source:
-                            copy: prod
+                            copy: dr2
                             dynamicschedule: true
                             policy:
                                 keep:
@@ -141,9 +144,15 @@ services:
                             cluster1_nunu:
                                 cluster: cluster1
                                 svm: nunu_b2d2
+                            cluster1_test2:
+                                cluster: cluster1
+                                svm: test2_b2d2
                             cluster2_live:
                                 cluster: cluster1
                                 svm: live_b2d2
+                            cluster2_test:
+                                cluster: cluster1
+                                svm: test_b2d2
                         newsvm:
                             language: he.utf_8
                             network:
@@ -169,7 +178,7 @@ services:
                             suffix: _b2d2
                         sizeratio: 2.5
                         source:
-                            copy: prod
+                            copy: b2d1
                             dynamicschedule: true
                             policy:
                                 keep:
@@ -197,9 +206,15 @@ services:
                             cluster1_nunu:
                                 cluster: cluster1
                                 svm: nunu_dr2
+                            cluster1_test2:
+                                cluster: cluster1
+                                svm: test2_dr2
                             cluster2_live:
                                 cluster: cluster1
                                 svm: live_dr2
+                            cluster2_test:
+                                cluster: cluster1
+                                svm: test_dr2
                         newsvm:
                             language: he.utf_8
                             network:
@@ -234,15 +249,21 @@ services:
                             schedule: daily
                         volnamesuffix: _dr2
                     prod:
-                        cifsaccess: false
+                        cifsaccess:
+                            share_suffix: "$"
+                            access: full_control
+                            user_or_group: DEMO\administrator                        
                         clusters:
                             cluster1:
                             - ddd1
                             - nunu
                             - iiii
+                            - test2
+                            - test2
                             cluster2:
                             - live
                             - live
+                            - test
                         efficiency:
                             duration: 3
                             dynamicschedule: true
@@ -302,7 +323,6 @@ services:
             Test:
                 Site B:
                     prod:
-                        cifsaccess: false
                         clusters:
                             cluster1:
                             - mirko1
