@@ -189,6 +189,44 @@ services:
                                 - daily
                             schedule: daily
                         volnamesuffix: ''
+                    # dr1:
+                    #     clusters:
+                    #         cluster2:
+                    #         - svm3
+                    #     fixed_relationship_for_prod:
+                    #     newsvm:
+                    #         language: he.utf_8
+                    #         network:
+                    #             dnszone: true
+                    #             domain: demo.netapp.com
+                    #             lifcount: 1
+                    #             name: vlan-1
+                    #         protocols:
+                    #             cifs:
+                    #                 domain: demo.netapp.com
+                    #                 enabled: true
+                    #             fcp:
+                    #                 enabled: false
+                    #             iscsi:
+                    #                 enabled: false
+                    #             nfs:
+                    #                 nfsv3: enabled
+                    #                 nfsv4: enabled
+                    #                 nfsv41: enabled
+                    #                 nfsv4_id_domain: demo.com
+                    #                 service_state: started
+                    #                 tcp: disabled
+                    #                 udp: disabled
+                    #                 vstorage_state: enabled
+                    #         suffix: _dr1
+                    #     sizeratio: 1.5
+                    #     source:
+                    #         copy: prod
+                    #         dynamicschedule: true
+                    #         policy:
+                    #             name: MirrorAllSnapshots
+                    #         schedule: daily
+                    #     volnamesuffix: _dr1
                     dr2:
                         clusters:
                             cluster2:

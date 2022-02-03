@@ -139,8 +139,8 @@ fields:
     name: volume2servicestatus
     label: Volume to Service Mapping
     hide: false
-    expression: "$(prod_svm_count)>1?'SVM is configured for more than one
-      service':$(prod_svm_count)<1?'SVM is not configured for a service': '<p
+    expression: "$(prod_svm_count)>1?'Containing SVM is configured for more than one
+      service':$(prod_svm_count)<1?'Containing SVM is not configured for a service': '<p
       style=\"color:green;\">SERVICE:&nbsp</p> $(service) &nbsp;<p
       style=\"color:green;\">COMPANY:&nbsp</p>$(company)&nbsp; <p
       style=\"color:green;\">ENVIRONMENT:&nbsp</p>$(environment)&nbsp;<p
@@ -180,7 +180,7 @@ fields:
     name: copy_types_jq
     label: copy_types_jq
     hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|keys')
+    expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|.\"$(company)\"|.\"$(environment)\"|.\"$(location)\"|keys')"
     noOutput: true
   - type: expression
     name: dr1
@@ -305,7 +305,7 @@ fields:
   - type: expression
     name: dr1_volname
     label: dr1_volname
-    expression: ($(dr1_relationship))[0]['dst_volume_name']
+    expression: ($(dr1_relationship))[0][\"dst_volume_name\"]
     runLocal: true
     hide: true
     model: dr1.volume
@@ -409,8 +409,8 @@ fields:
   - type: expression
     name: dr2_source_cluster
     label: dr2_source_cluster
-    expression: "'$(dr2_source_copy)'=='prod'?'$(cluster)':'$(dr2_source_copy)'=='d\
-      r1'?'$(dr1_relationship)[0][dst_cluster_name]':''"
+    expression: "'$(dr2_source_copy)'=='prod'?'$(cluster)':\
+                  '$(dr2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_cluster_name\"]:''"
     runLocal: true
     hide: true
     noOutput: true
@@ -421,8 +421,8 @@ fields:
   - type: expression
     name: dr2_source_svm
     label: dr2_source_svm
-    expression: "'$(dr2_source_copy)'=='prod'?'$(svm)':'$(dr2_source_copy)'=='dr1'?\
-      '$(dr1_relationship)[0][dst_vserver_name]':''"
+    expression: "'$(dr2_source_copy)'=='prod'?'$(svm)':\
+                  '$(dr2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_vserver_name\"]:''"
     runLocal: true
     hide: true
     noOutput: true
@@ -433,8 +433,8 @@ fields:
   - type: expression
     name: dr2_source_vol
     label: dr2_source_vol
-    expression: "'$(dr2_source_copy)'=='prod'?'$(volname)':'$(dr2_source_copy)'=='d\
-      r1'?'$(dr1_relationship)[0][dst_volume_name]':''"
+    expression: "'$(dr2_source_copy)'=='prod'?'$(volname)':\
+                  '$(dr2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_volume_name\"]:''"
     runLocal: true
     hide: true
     noOutput: true
@@ -472,7 +472,7 @@ fields:
   - type: expression
     name: dr2_volname
     label: dr2_volname
-    expression: ($(dr2_relationship))[0]['dst_volume_name']
+    expression: "$(dr2_relationship)[0][\"dst_volume_name\"]"
     runLocal: true
     hide: true
     model: dr2.volume
@@ -576,9 +576,9 @@ fields:
   - type: expression
     name: b2d1_source_cluster
     label: b2d1_source_cluster
-    expression: "'$(b2d1_source_copy)'=='prod'?'$(cluster)':'$(b2d1_source_copy)'==\
-      'dr1'?'$(dr1_relationship)[0][dst_cluster_name]':'$(b2d1_source_copy)'=='\
-      dr2'?'$(dr2_relationship)[0][dst_cluster_name]':''"
+    expression: "'$(b2d1_source_copy)'=='prod'?'$(cluster)':\
+                  '$(b2d1_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_cluster_name\"]:\
+                  '$(b2d1_source_copy)'=='dr2'?$(dr2_relationship)[0][\"dst_cluster_name\"]:''"
     runLocal: true
     hide: true
     noOutput: true
@@ -589,9 +589,9 @@ fields:
   - type: expression
     name: b2d1_source_svm
     label: b2d1_source_svm
-    expression: "'$(b2d1_source_copy)'=='prod'?'$(svm)':'$(b2d1_source_copy)'=='dr1\
-      '?'$(dr1_relationship)[0][dst_vserver_name]':'$(b2d1_source_copy)'=='dr2'\
-      ?'$(dr2_relationship)[0][dst_vserver_name]':''"
+    expression: "'$(b2d1_source_copy)'=='prod'?'$(svm)':\
+                  '$(b2d1_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_vserver_name\"]:\
+                  '$(b2d1_source_copy)'=='dr2'?$(dr2_relationship)[0][\"dst_vserver_name\"]:''"
     runLocal: true
     hide: true
     noOutput: true
@@ -602,9 +602,9 @@ fields:
   - type: expression
     name: b2d1_source_vol
     label: b2d1_source_vol
-    expression: "'$(b2d1_source_copy)'=='prod'?'$(volname)':'$(b2d1_source_copy)'==\
-      'dr1'?'$(dr1_relationship)[0][dst_volume_name]':'$(b2d1_source_copy)'=='d\
-      r2'?'$(dr2_relationship)[0][dst_volume_name]':''"
+    expression: "'$(b2d1_source_copy)'=='prod'?'$(volname)':\
+                  '$(b2d1_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_volume_name\"]:\
+                  '$(b2d1_source_copy)'=='dr2'?$(dr2_relationship)[0][\"dst_volume_name\"]:''"
     runLocal: true
     hide: true
     noOutput: true
@@ -621,7 +621,7 @@ fields:
     hide: true
     noOutput: true
     default: []
-    query: SELECT cluster_src.name as src_cluster_name, vserver_src.name as
+    query: "SELECT cluster_src.name as src_cluster_name, vserver_src.name as
       src_vserver_name, volume_src.name as src_volume_name, cluster_dst.name as
       dst_cluster_name, vserver_dst.name as dst_vserver_name, volume_dst.name as
       dst_volume_name, snap_mirror.mirrorStateRaw AS mirror_state, CASE WHEN
@@ -638,11 +638,11 @@ fields:
       volume_dst.objId WHERE cluster_src.name = '$(b2d1_source_cluster)' AND
       vserver_src.name='$(b2d1_source_svm)' AND volume_src.name =
       '$(b2d1_source_vol)' AND cluster_dst.name = '$(b2d1_cluster)' AND
-      vserver_dst.name = '$(b2d1_svm)'
+      vserver_dst.name = '$(b2d1_svm)'"
   - type: expression
     name: b2d1_volname
     label: b2d1_volname
-    expression: ($(b2d1_relationship))[0]['dst_volume_name']
+    expression: "$(b2d1_relationship)[0][\"dst_volume_name\"]"
     runLocal: true
     hide: true
     model: b2d1.volume
@@ -746,10 +746,10 @@ fields:
   - type: expression
     name: b2d2_source_cluster
     label: b2d2_source_cluster
-    expression: "'$(b2d2_source_copy)'=='prod'?'$(cluster)':'$(b2d2_source_copy)'==\
-      'dr1'?'$(dr1_relationship)[0][dst_cluster_name]':'$(b2d2_source_copy)'=='\
-      dr2'?'$(dr2_relationship)[0][dst_cluster_name]':'$(b2d2_source_copy)'=='b\
-      2d1'?'$(b2d1_relationship)[0][dst_cluster_name]':''"
+    expression: "'$(b2d2_source_copy)'=='prod'?'$(cluster)':\
+                  '$(b2d2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_cluster_name\"]:\
+                  '$(b2d2_source_copy)'=='dr2'?$(dr2_relationship)[0][\"dst_cluster_name\"]:\
+                  '$(b2d2_source_copy)'=='b2d1'?$(b2d1_relationship)[0][\"dst_cluster_name\"]:''"
     runLocal: true
     hide: true
     noOutput: true
@@ -760,10 +760,10 @@ fields:
   - type: expression
     name: b2d2_source_svm
     label: b2d2_source_svm
-    expression: "'$(b2d2_source_copy)'=='prod'?'$(svm)':'$(b2d2_source_copy)'=='dr1\
-      '?'$(dr1_relationship)[0][dst_vserver_name]':'$(b2d2_source_copy)'=='dr2'\
-      ?'$(dr2_relationship)[0][dst_vserver_name]':'$(b2d2_source_copy)'=='b2d1'\
-      ?'$(b2d1_relationship)[0][dst_vserver_name]':''"
+    expression: "'$(b2d2_source_copy)'=='prod'?'$(svm)':\
+                  '$(b2d2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_vserver_name\"]:\
+                  '$(b2d2_source_copy)'=='dr2'?$(dr2_relationship)[0][\"dst_vserver_name\"]:\
+                  '$(b2d2_source_copy)'=='b2d1'?$(b2d1_relationship)[0][\"dst_vserver_name\"]:''"
     runLocal: true
     hide: true
     noOutput: true
@@ -774,10 +774,10 @@ fields:
   - type: expression
     name: b2d2_source_vol
     label: b2d2_source_vol
-    expression: "'$(b2d2_source_copy)'=='prod'?'$(volname)':'$(b2d2_source_copy)'==\
-      'dr1'?'$(dr1_relationship)[0][dst_volume_name]':'$(b2d2_source_copy)'=='d\
-      r2'?'$(dr2_relationship)[0][dst_volume_name]':'$(b2d2_source_copy)'=='b2d\
-      1'?'$(b2d1_relationship)[0][dst_volume_name]':''"
+    expression: "'$(b2d2_source_copy)'=='prod'?'$(volname)':\
+                  '$(b2d2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_volume_name\"]:\
+                  '$(b2d2_source_copy)'=='dr2'?$(dr2_relationship)[0][\"dst_volume_name\"]:\
+                  '$(b2d2_source_copy)'=='b2d1'?$(b2d1_relationship)[0][\"dst_volume_name\"]:''"
     runLocal: true
     hide: true
     noOutput: true
@@ -815,7 +815,7 @@ fields:
   - type: expression
     name: b2d2_volname
     label: b2d2_volname
-    expression: ($(b2d2_relationship))[0]['dst_volume_name']
+    expression: "$(b2d2_relationship)[0][\"dst_volume_name\"]"
     runLocal: true
     hide: true
     model: b2d2.volume

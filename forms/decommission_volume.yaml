@@ -54,7 +54,7 @@ fields:
     pctColumns:
       - Utilization
     required: true
-    #default: __auto__
+    default: __auto__
     outputObject: true
     noOutput: true
   - type: expression
@@ -73,7 +73,6 @@ fields:
     name: volname
     label: volname
     expression: "'$(selectedvolume.volume)'"
-    default: ''
     hide: true
     model: prod.volume
   - type: number
@@ -83,7 +82,7 @@ fields:
       for the specified number of days
     default: 10
     required: true
-    minValue: 4
+    minValue: 1
     maxValue: 20
     icon: user
     noOutput: true
@@ -116,6 +115,7 @@ fields:
     runLocal: true
     hide: true
     model: prod.suffixed_volume
+
   - type: expression
     name: flat_service_info
     label: flat_service_info
@@ -123,6 +123,7 @@ fields:
       $path | join(\"^\"), \"value\": getpath($path)}]')"
     hide: true
     noOutput: true
+
   - type: expression
     name: prod_service_info
     label: prod_service_info
@@ -131,12 +132,14 @@ fields:
       select(.value == ("$(svm)")))')
     hide: true
     noOutput: true
+
   - type: expression
     name: prod_svm_match_arr
     label: prod_svm_match_arr
     expression: fn.fnJq($(prod_service_info),'[.[]]')
     hide: true
     noOutput: true
+    
   - type: expression
     name: prod_svm_count
     label: prod_svm_count
@@ -180,8 +183,8 @@ fields:
     name: volume2servicestatus
     label: Volume to Service Mapping
     hide: false
-    expression: "$(prod_svm_count)>1?'SVM is configured for more than one
-      service':$(prod_svm_count)<1?'SVM is not configured for a service': '<p
+    expression: "$(prod_svm_count)>1?'Containing SVM is configured for more than one
+      service':$(prod_svm_count)<1?'Containing SVM is not configured for a service': '<p
       style=\"color:green;\">SERVICE:&nbsp</p> $(service) &nbsp;<p
       style=\"color:green;\">COMPANY:&nbsp</p>$(company)&nbsp; <p
       style=\"color:green;\">ENVIRONMENT:&nbsp</p>$(environment)&nbsp;<p
@@ -190,10 +193,38 @@ fields:
     noOutput: true
     isHtml: true
   - type: expression
+    name: currvolsize
+    label: Current Volume size (G)
+    expression: "'$(selectedvolume.Size)'"
+    runLocal: true
+    hide: false
+    noOutput: true
+  - type: number
+    name: volsizeincsize
+    label: Increase Volume Size (G) By
+    default: 100
+    required: true
+    minValue: -80000
+    maxValue: 80000
+    icon: user
+    model: prod.sizeinc
+  - type: expression
+    name: size
+    label: New size (G)
+    expression: $(selectedvolume.sizeg)+$(volsizeincsize)<1 ||
+      $(selectedvolume.sizeg)+$(volsizeincsize) > 1000000000 ?'Invalid volume
+      size':$(selectedvolume.sizeg)+$(volsizeincsize)
+    runLocal: true
+    hide: false
+    model: prod.size
+    regex:
+      expression: ^\d+$
+      description: invalid volume size
+  - type: expression
     name: copy_types_jq
     label: copy_types_jq
     hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|keys')
+    expression: "fn.fnJq($(settings),'.services|.\"$(service)\"|.\"$(company)\"|.\"$(environment)\"|.\"$(location)\"|keys')"
     noOutput: true
   - type: expression
     name: dr1
@@ -318,7 +349,7 @@ fields:
   - type: expression
     name: dr1_volname
     label: dr1_volname
-    expression: ($(dr1_relationship))[0]['dst_volume_name']
+    expression: ($(dr1_relationship))[0][\"dst_volume_name\"]
     runLocal: true
     hide: true
     model: dr1.volume
@@ -336,13 +367,24 @@ fields:
     dependencies:
       - name: dr1
         values:
-          - true          
+          - true            
   - type: expression
     name: dr1_sizeratio
     label: dr1_sizeratio
     hide: true
     expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr1|.sizeratio')
     noOutput: true
+    dependencies:
+      - name: dr1
+        values:
+          - true
+  - type: expression
+    name: dr1_volsize
+    label: dr1_volsize
+    expression: $(size)*$(dr1_sizeratio)>0?$(size)*$(dr1_sizeratio):$(size)
+    runLocal: true
+    hide: true
+    model: dr1.size
     dependencies:
       - name: dr1
         values:
@@ -370,7 +412,7 @@ fields:
         values:
           - true
   - type: expression
-    name: dr1_volume information
+    name: dr1_volume_information
     label: DR1
     hide: false
     expression: "'$(dr1_volname)'==''?'could not identify dr1 volume': '<p
@@ -422,8 +464,8 @@ fields:
   - type: expression
     name: dr2_source_cluster
     label: dr2_source_cluster
-    expression: "'$(dr2_source_copy)'=='prod'?'$(cluster)':'$(dr2_source_copy)'=='d\
-      r1'?'$(dr1_relationship)[0][dst_cluster_name]':''"
+    expression: "'$(dr2_source_copy)'=='prod'?'$(cluster)':\
+                  '$(dr2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_cluster_name\"]:''"
     runLocal: true
     hide: true
     model: dr2.source_cluster
@@ -434,8 +476,8 @@ fields:
   - type: expression
     name: dr2_source_svm
     label: dr2_source_svm
-    expression: "'$(dr2_source_copy)'=='prod'?'$(svm)':'$(dr2_source_copy)'=='dr1'?\
-      '$(dr1_relationship)[0][dst_vserver_name]':''"
+    expression: "'$(dr2_source_copy)'=='prod'?'$(svm)':\
+                  '$(dr2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_vserver_name\"]:''"
     runLocal: true
     hide: true
     model: dr2.source_svm
@@ -446,8 +488,8 @@ fields:
   - type: expression
     name: dr2_source_vol
     label: dr2_source_vol
-    expression: "'$(dr2_source_copy)'=='prod'?'$(volname)':'$(dr2_source_copy)'=='d\
-      r1'?'$(dr1_relationship)[0][dst_volume_name]':''"
+    expression: "'$(dr2_source_copy)'=='prod'?'$(volname)':\
+                  '$(dr2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_volume_name\"]:''"
     runLocal: true
     hide: true
     model: dr2.source_vol
@@ -485,7 +527,7 @@ fields:
   - type: expression
     name: dr2_volname
     label: dr2_volname
-    expression: ($(dr2_relationship))[0]['dst_volume_name']
+    expression: "$(dr2_relationship)[0][\"dst_volume_name\"]"
     runLocal: true
     hide: true
     model: dr2.volume
@@ -515,6 +557,17 @@ fields:
         values:
           - true
   - type: expression
+    name: dr2_volsize
+    label: dr2_volsize
+    expression: $(dr2_sizeratio)>0?$(size)*$(dr2_sizeratio):$(size)
+    runLocal: true
+    hide: true
+    model: dr2.size
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
     name: dr2_mirror_state
     label: dr2_mirror_state
     expression: ($(dr2_relationship))[0]['mirror_state']
@@ -537,7 +590,7 @@ fields:
         values:
           - true
   - type: expression
-    name: dr2_volume information
+    name: dr2_volume_information
     label: DR2
     hide: false
     expression: "'$(dr2_volname)'==''?'could not identify dr2 volume': '<p
@@ -589,9 +642,9 @@ fields:
   - type: expression
     name: b2d1_source_cluster
     label: b2d1_source_cluster
-    expression: "'$(b2d1_source_copy)'=='prod'?'$(cluster)':'$(b2d1_source_copy)'==\
-      'dr1'?'$(dr1_relationship)[0][dst_cluster_name]':'$(b2d1_source_copy)'=='\
-      dr2'?'$(dr2_relationship)[0][dst_cluster_name]':''"
+    expression: "'$(b2d1_source_copy)'=='prod'?'$(cluster)':\
+                  '$(b2d1_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_cluster_name\"]:\
+                  '$(b2d1_source_copy)'=='dr2'?$(dr2_relationship)[0][\"dst_cluster_name\"]:''"
     runLocal: true
     hide: true
     model: b2d1.source_cluster
@@ -602,9 +655,9 @@ fields:
   - type: expression
     name: b2d1_source_svm
     label: b2d1_source_svm
-    expression: "'$(b2d1_source_copy)'=='prod'?'$(svm)':'$(b2d1_source_copy)'=='dr1\
-      '?'$(dr1_relationship)[0][dst_vserver_name]':'$(b2d1_source_copy)'=='dr2'\
-      ?'$(dr2_relationship)[0][dst_vserver_name]':''"
+    expression: "'$(b2d1_source_copy)'=='prod'?'$(svm)':\
+                  '$(b2d1_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_vserver_name\"]:\
+                  '$(b2d1_source_copy)'=='dr2'?$(dr2_relationship)[0][\"dst_vserver_name\"]:''"
     runLocal: true
     hide: true
     model: b2d1.source_svm
@@ -615,9 +668,9 @@ fields:
   - type: expression
     name: b2d1_source_vol
     label: b2d1_source_vol
-    expression: "'$(b2d1_source_copy)'=='prod'?'$(volname)':'$(b2d1_source_copy)'==\
-      'dr1'?'$(dr1_relationship)[0][dst_volume_name]':'$(b2d1_source_copy)'=='d\
-      r2'?'$(dr2_relationship)[0][dst_volume_name]':''"
+    expression: "'$(b2d1_source_copy)'=='prod'?'$(volname)':\
+                  '$(b2d1_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_volume_name\"]:\
+                  '$(b2d1_source_copy)'=='dr2'?$(dr2_relationship)[0][\"dst_volume_name\"]:''"
     runLocal: true
     hide: true
     model: b2d1.source_vol
@@ -634,7 +687,7 @@ fields:
     hide: true
     noOutput: true
     default: []
-    query: SELECT cluster_src.name as src_cluster_name, vserver_src.name as
+    query: "SELECT cluster_src.name as src_cluster_name, vserver_src.name as
       src_vserver_name, volume_src.name as src_volume_name, cluster_dst.name as
       dst_cluster_name, vserver_dst.name as dst_vserver_name, volume_dst.name as
       dst_volume_name, snap_mirror.mirrorStateRaw AS mirror_state, CASE WHEN
@@ -651,11 +704,11 @@ fields:
       volume_dst.objId WHERE cluster_src.name = '$(b2d1_source_cluster)' AND
       vserver_src.name='$(b2d1_source_svm)' AND volume_src.name =
       '$(b2d1_source_vol)' AND cluster_dst.name = '$(b2d1_cluster)' AND
-      vserver_dst.name = '$(b2d1_svm)'
+      vserver_dst.name = '$(b2d1_svm)'"
   - type: expression
     name: b2d1_volname
     label: b2d1_volname
-    expression: ($(b2d1_relationship))[0]['dst_volume_name']
+    expression: "$(b2d1_relationship)[0][\"dst_volume_name\"]"
     runLocal: true
     hide: true
     model: b2d1.volume
@@ -673,13 +726,24 @@ fields:
     dependencies:
       - name: b2d1
         values:
-          - true          
+          - true           
   - type: expression
     name: b2d1_sizeratio
     label: b2d1_sizeratio
     hide: true
     expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d1|.sizeratio')
     noOutput: true
+    dependencies:
+      - name: b2d1
+        values:
+          - true
+  - type: expression
+    name: b2d1_volsize
+    label: b2d1_volsize
+    expression: $(size)*$(b2d1_sizeratio)>0?$(size)*$(b2d1_sizeratio):$(size)
+    runLocal: true
+    hide: true
+    model: b2d1.size
     dependencies:
       - name: b2d1
         values:
@@ -707,7 +771,7 @@ fields:
         values:
           - true
   - type: expression
-    name: b2d1_volume information
+    name: b2d1_volume_information
     label: B2D1
     hide: false
     expression: "'$(b2d1_volname)'==''?'could not identify b2d1 volume': '<p
@@ -759,10 +823,10 @@ fields:
   - type: expression
     name: b2d2_source_cluster
     label: b2d2_source_cluster
-    expression: "'$(b2d2_source_copy)'=='prod'?'$(cluster)':'$(b2d2_source_copy)'==\
-      'dr1'?'$(dr1_relationship)[0][dst_cluster_name]':'$(b2d2_source_copy)'=='\
-      dr2'?'$(dr2_relationship)[0][dst_cluster_name]':'$(b2d2_source_copy)'=='b\
-      2d1'?'$(b2d1_relationship)[0][dst_cluster_name]':''"
+    expression: "'$(b2d2_source_copy)'=='prod'?'$(cluster)':\
+                  '$(b2d2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_cluster_name\"]:\
+                  '$(b2d2_source_copy)'=='dr2'?$(dr2_relationship)[0][\"dst_cluster_name\"]:\
+                  '$(b2d2_source_copy)'=='b2d1'?$(b2d1_relationship)[0][\"dst_cluster_name\"]:''"
     runLocal: true
     hide: true
     model: b2d2.source_cluster
@@ -773,10 +837,10 @@ fields:
   - type: expression
     name: b2d2_source_svm
     label: b2d2_source_svm
-    expression: "'$(b2d2_source_copy)'=='prod'?'$(svm)':'$(b2d2_source_copy)'=='dr1\
-      '?'$(dr1_relationship)[0][dst_vserver_name]':'$(b2d2_source_copy)'=='dr2'\
-      ?'$(dr2_relationship)[0][dst_vserver_name]':'$(b2d2_source_copy)'=='b2d1'\
-      ?'$(b2d1_relationship)[0][dst_vserver_name]':''"
+    expression: "'$(b2d2_source_copy)'=='prod'?'$(svm)':\
+                  '$(b2d2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_vserver_name\"]:\
+                  '$(b2d2_source_copy)'=='dr2'?$(dr2_relationship)[0][\"dst_vserver_name\"]:\
+                  '$(b2d2_source_copy)'=='b2d1'?$(b2d1_relationship)[0][\"dst_vserver_name\"]:''"
     runLocal: true
     hide: true
     model: b2d2.source_svm
@@ -787,10 +851,10 @@ fields:
   - type: expression
     name: b2d2_source_vol
     label: b2d2_source_vol
-    expression: "'$(b2d2_source_copy)'=='prod'?'$(volname)':'$(b2d2_source_copy)'==\
-      'dr1'?'$(dr1_relationship)[0][dst_volume_name]':'$(b2d2_source_copy)'=='d\
-      r2'?'$(dr2_relationship)[0][dst_volume_name]':'$(b2d2_source_copy)'=='b2d\
-      1'?'$(b2d1_relationship)[0][dst_volume_name]':''"
+    expression: "'$(b2d2_source_copy)'=='prod'?'$(volname)':\
+                  '$(b2d2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_volume_name\"]:\
+                  '$(b2d2_source_copy)'=='dr2'?$(dr2_relationship)[0][\"dst_volume_name\"]:\
+                  '$(b2d2_source_copy)'=='b2d1'?$(b2d1_relationship)[0][\"dst_volume_name\"]:''"
     runLocal: true
     hide: true
     model: b2d2.source_vol
@@ -828,7 +892,7 @@ fields:
   - type: expression
     name: b2d2_volname
     label: b2d2_volname
-    expression: ($(b2d2_relationship))[0]['dst_volume_name']
+    expression: "$(b2d2_relationship)[0][\"dst_volume_name\"]"
     runLocal: true
     hide: true
     model: b2d2.volume
@@ -846,13 +910,24 @@ fields:
     dependencies:
       - name: b2d2
         values:
-          - true          
+          - true           
   - type: expression
     name: b2d2_sizeratio
     label: b2d2_sizeratio
     hide: true
     expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d2|.sizeratio')
     noOutput: true
+    dependencies:
+      - name: b2d2
+        values:
+          - true
+  - type: expression
+    name: b2d2_volsize
+    label: b2d2_volsize
+    expression: $(size)*$(b2d2_sizeratio)>0?$(size)*$(b2d2_sizeratio):$(size)
+    runLocal: true
+    hide: true
+    model: b2d2.size
     dependencies:
       - name: b2d2
         values:
@@ -880,7 +955,7 @@ fields:
         values:
           - true
   - type: expression
-    name: b2d2_volume information
+    name: b2d2_volume_information
     label: B2D2
     hide: false
     expression: "'$(b2d2_volname)'==''?'could not identify b2d2 volume': '<p
@@ -897,4 +972,4 @@ fields:
       - name: b2d2
         values:
           - true
-source: decommission_volume.yaml
+source: resize_volume.yaml

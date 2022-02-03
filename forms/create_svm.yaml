@@ -523,7 +523,7 @@ fields:
     name: dr1_iprange
     label: dr1_iprange
     expression: fn.fnJq($(settings),'.networks|."$(dr1_netname)"|.iprange')
-    hide: false
+    hide: true
     noOutput: true
     group: DR1
     dependencies:
