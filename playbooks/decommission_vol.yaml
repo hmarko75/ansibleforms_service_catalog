@@ -31,11 +31,11 @@
     - name: delete snapmirror and release source
       na_ontap_snapmirror:
         state: absent
-        source_path:
+        source_endpoint:
           cluster: "{{ vars[copy].source_cluster }}"
           path: "{{ vars[copy].source_svm+':'+vars[copy].source_vol }}"         
-        destination_path:
-          cluster: "{{ cluster }}"
+        destination_endpoint:
+          cluster: "{{ vars[copy].cluster }}"
           path: "{{ svm+':'+volname }}"        
         source_hostname: "{{ vars[copy].source_cluster }}"
         relationship_info_only: yes

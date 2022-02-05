@@ -106,6 +106,25 @@ fields:
     runLocal: true
     hide: false
     noOutput: true
+  - type: checkbox
+    name: areyousure
+    label: Confirmation
+    default: false
+    placeholder: Are you sure you want to decommision the volume (volume will be taken offline) ?
+    required: true
+  - type: text
+    name: confirmation
+    label: Please type YES to confirm you want to delete
+    placeholder: "YES" 
+    required: true
+    minLength: 1
+    maxLength: 3
+    regex: ^YES$
+    regexDescription: Type YES to confirm
+    dependencies:         
+    - name: areyousure
+      values:
+      - true  
   - type: expression
     name: suffixed_volname
     label: suffixed_volname
@@ -232,7 +251,7 @@ fields:
     hide: false
     expression: "('$(volume_comment)').includes('CR:')? 
                   '<p style=\"color:green;\">Change Request:&nbsp</p> $(cr) &nbsp;
-                  <p style=\"color:green;\">APP:&nbsp</p>$(application)&nbsp; 
+                  <p style=\"color:green;\">Application:&nbsp</p>$(application)&nbsp; 
                   <p style=\"color:green;\">Used For:&nbsp</p>$(used_for)&nbsp;
                   <p style=\"color:green;\">Owner:&nbsp</p>$(owner)&nbsp;
                   <p style=\"color:green;\">Comment:&nbsp</p>$(comment)':
@@ -242,32 +261,11 @@ fields:
     isHtml: true
   - type: expression
     name: currvolsize
-    label: Current Volume size (G)
-    expression: "'$(selectedvolume.Size)'"
+    label: Selected Volume Used (G)
+    expression: "'$(selectedvolume.Used)'"
     runLocal: true
     hide: false
     noOutput: true
-  - type: number
-    name: volsizeincsize
-    label: Increase Volume Size (G) By
-    default: 100
-    required: true
-    minValue: -80000
-    maxValue: 80000
-    icon: user
-    model: prod.sizeinc
-  - type: expression
-    name: size
-    label: New size (G)
-    expression: $(selectedvolume.sizeg)+$(volsizeincsize)<1 ||
-      $(selectedvolume.sizeg)+$(volsizeincsize) > 1000000000 ?'Invalid volume
-      size':$(selectedvolume.sizeg)+$(volsizeincsize)
-    runLocal: true
-    hide: false
-    model: prod.size
-    regex:
-      expression: ^\d+$
-      description: invalid volume size
   - type: expression
     name: copy_types_jq
     label: copy_types_jq
@@ -397,7 +395,7 @@ fields:
   - type: expression
     name: dr1_volname
     label: dr1_volname
-    expression: ($(dr1_relationship))[0][\"dst_volume_name\"]
+    expression: ($(dr1_relationship))[0]["dst_volume_name"]
     runLocal: true
     hide: true
     model: dr1.volume
@@ -412,27 +410,6 @@ fields:
     runLocal: true
     hide: true
     model: dr1.suffixed_volume
-    dependencies:
-      - name: dr1
-        values:
-          - true
-  - type: expression
-    name: dr1_sizeratio
-    label: dr1_sizeratio
-    hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr1|.sizeratio')
-    noOutput: true
-    dependencies:
-      - name: dr1
-        values:
-          - true
-  - type: expression
-    name: dr1_volsize
-    label: dr1_volsize
-    expression: $(size)*$(dr1_sizeratio)>0?$(size)*$(dr1_sizeratio):$(size)
-    runLocal: true
-    hide: true
-    model: dr1.size
     dependencies:
       - name: dr1
         values:
@@ -590,27 +567,6 @@ fields:
     runLocal: true
     hide: true
     model: dr2.suffixed_volume
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_sizeratio
-    label: dr2_sizeratio
-    hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.sizeratio')
-    noOutput: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_volsize
-    label: dr2_volsize
-    expression: $(dr2_sizeratio)>0?$(size)*$(dr2_sizeratio):$(size)
-    runLocal: true
-    hide: true
-    model: dr2.size
     dependencies:
       - name: dr2
         values:
@@ -776,27 +732,6 @@ fields:
         values:
           - true
   - type: expression
-    name: b2d1_sizeratio
-    label: b2d1_sizeratio
-    hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d1|.sizeratio')
-    noOutput: true
-    dependencies:
-      - name: b2d1
-        values:
-          - true
-  - type: expression
-    name: b2d1_volsize
-    label: b2d1_volsize
-    expression: $(size)*$(b2d1_sizeratio)>0?$(size)*$(b2d1_sizeratio):$(size)
-    runLocal: true
-    hide: true
-    model: b2d1.size
-    dependencies:
-      - name: b2d1
-        values:
-          - true
-  - type: expression
     name: b2d1_mirror_state
     label: b2d1_mirror_state
     expression: ($(b2d1_relationship))[0]['mirror_state']
@@ -955,27 +890,6 @@ fields:
     runLocal: true
     hide: true
     model: b2d2.suffixed_volume
-    dependencies:
-      - name: b2d2
-        values:
-          - true
-  - type: expression
-    name: b2d2_sizeratio
-    label: b2d2_sizeratio
-    hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d2|.sizeratio')
-    noOutput: true
-    dependencies:
-      - name: b2d2
-        values:
-          - true
-  - type: expression
-    name: b2d2_volsize
-    label: b2d2_volsize
-    expression: $(size)*$(b2d2_sizeratio)>0?$(size)*$(b2d2_sizeratio):$(size)
-    runLocal: true
-    hide: true
-    model: b2d2.size
     dependencies:
       - name: b2d2
         values:

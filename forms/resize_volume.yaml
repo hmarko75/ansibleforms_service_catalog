@@ -194,7 +194,7 @@ fields:
     hide: false
     expression: "('$(volume_comment)').includes('CR:')? 
                   '<p style=\"color:green;\">Change Request:&nbsp</p> $(cr) &nbsp;
-                  <p style=\"color:green;\">APP:&nbsp</p>$(application)&nbsp; 
+                  <p style=\"color:green;\">Application:&nbsp</p>$(application)&nbsp; 
                   <p style=\"color:green;\">Used For:&nbsp</p>$(used_for)&nbsp;
                   <p style=\"color:green;\">Owner:&nbsp</p>$(owner)&nbsp;
                   <p style=\"color:green;\">Comment:&nbsp</p>$(comment)':
@@ -359,7 +359,7 @@ fields:
   - type: expression
     name: dr1_volname
     label: dr1_volname
-    expression: ($(dr1_relationship))[0][\"dst_volume_name\"]
+    expression: ($(dr1_relationship))[0]["dst_volume_name"]
     runLocal: true
     hide: true
     model: dr1.volume
