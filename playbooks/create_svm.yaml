@@ -42,6 +42,8 @@
         language: "{{ newsvm.language | default(omit) }}"
         #root volume security style 
         root_volume_security_style: "{{ newsvm.root_volume_security_style | default(omit) }}"
+        #set svm comment
+        comment: "{{'SERVICE:'+general.service+' COMPANY:'+general.company+' ENVIRONMENT:'+general.environment+' LOCATION:'+general.location | default(omit)}}"
         <<: *login
 
     # create the lifs 
@@ -110,8 +112,10 @@
         ou: "{{ vars.domains[newsvm.network.domain]['ou'] | default(omit) }}"
         admin_user_name: "{{ adlogin.user }}"
         admin_password: "{{ adlogin.password }}"
+        force: yes
         <<: *login
       when: newsvm.protocols.cifs is defined and newsvm.protocols.cifs.enabled == True 
+      ignore_errors: yes
 
 - name: Rediscover cluster in AIQUM
   import_playbook: aiqum_rediscover_cluster.yaml

@@ -133,7 +133,7 @@
         percent_snapshot_space: "{{ VolumeDefaults.percent_snapshot_space | default(omit) }}"
         volume_security_style: "{{ VolumeDefaults.secstyle | default(omit) }}"
         export_policy: "{{ volname }}"
-        comment: "{{ general.comment }}"
+        comment: "{{ general.comment | default(omit)}}"
         <<: *login
 
     - name: Enable Volume efficiency

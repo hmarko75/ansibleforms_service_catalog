@@ -147,13 +147,26 @@ fields:
     runLocal: true
     expression: $(copy_types_jq).includes('b2d2')
     noOutput: true
+  - type: expression
+    name: cluster_filter_jq
+    label: cluster_filter_jq
+    hide: true
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.prod|.clusters|keys|join("%7C")')
+    group: Production
+    noOutput: true    
+  - type: expression
+    name: cluster_filter
+    label: cluster_filter
+    hide: true
+    expression: "'$(cluster_filter_jq)'==''?'':'?name=$(cluster_filter_jq)'"
+    runLocal: true
+    group: Production
+    noOutput: true        
   - type: query
     name: cluster_list
     label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluste\
-      r/clusters','','AIQUM','def
-      gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
-      roundit: .*100.0 +
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters$(cluster_filter)','','AIQUM',
+      'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
       0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
       ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
       }+{Location: .location}+{Contact:.contact}+{\"Total
@@ -314,12 +327,34 @@ fields:
     expression: $(selectedports).map((x,i)=>({...x,ip:$(availableip)[i],netmask:'$(subnetmask)'}))
     model: prod.lifs
     group: Production
+  - type: expression
+    name: dr1_cluster_filter_jq
+    label: dr1_cluster_filter_jq
+    hide: true
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr1|.clusters|keys|join("%7C")')
+    group: DR1
+    dependencies:
+      - name: dr1
+        values:
+          - true
+    noOutput: true 
+  - type: expression
+    name: dr1_cluster_filter
+    label: dr1_cluster_filter
+    hide: true
+    expression: "'$(dr1_cluster_filter_jq)'==''?'':'?name=$(dr1_cluster_filter_jq)'"
+    runLocal: true
+    group: DR1
+    dependencies:
+      - name: dr1
+        values:
+          - true
+    noOutput: true 
   - type: query
     name: dr1_cluster_list
     label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluste\
-      r/clusters','','AIQUM','def
-      gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters$(dr1_cluster_filter)','',
+      'AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 +
       0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
       ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
@@ -383,10 +418,9 @@ fields:
     label: dr1_source_cluster
     runLocal: true
     hide: true
-    expression: "'$(dr1_source_copy)'==='prod'?'$(cluster)':\
-                  '$(dr1_source_copy)'==='dr2'?'$(dr2_cluster)':\
-                  '$(dr1_source_copy)'==='b2d1'?'$(b2d1_cluster)':\
-                  '$(dr1_source_copy)'==='b2d2'?'$(b2d2_cluster)':''"
+    expression: "'$(dr1_source_copy)'==='prod'?'$(cluster)':'$(dr1_source_copy)'===\
+      'dr2'?'$(dr2_cluster)':'$(dr1_source_copy)'==='b2d1'?'$(b2d1_cluster)':'$\
+      (dr1_source_copy)'==='b2d2'?'$(b2d2_cluster)':''"
     group: DR1
     dependencies:
       - name: dr1
@@ -535,7 +569,7 @@ fields:
     label: dr1_iplist
     hide: true
     expression: fnc.fnIpRangeToList('$(dr1_iprange)',$(availableip))
-    noOutput: false
+    noOutput: true
     group: DR1
     dependencies:
       - name: dr1
@@ -610,11 +644,34 @@ fields:
       - name: dr1
         values:
           - true
+  - type: expression
+    name: dr2_cluster_filter_jq
+    label: dr2_cluster_filter_jq
+    hide: true
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.clusters|keys|join("%7C")')
+    group: DR2
+    dependencies:
+      - name: dr2
+        values:
+          - true
+    noOutput: true 
+  - type: expression
+    name: dr2_cluster_filter
+    label: dr2_cluster_filter
+    hide: true
+    expression: "'$(dr2_cluster_filter_jq)'==''?'':'?name=$(dr2_cluster_filter_jq)'"
+    runLocal: true
+    group: DR2
+    dependencies:
+      - name: dr2
+        values:
+          - true
+    noOutput: true           
   - type: query
     name: dr2_cluster_list
     label: Select cluster
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluste\
-      r/clusters','','AIQUM','def
+      r/clusters$(dr2_cluster_filter)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 +
       0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
@@ -679,10 +736,9 @@ fields:
     label: dr2_source_cluster
     runLocal: true
     hide: true
-    expression: "'$(dr2_source_copy)'==='prod'?'$(cluster)':\
-                  '$(dr2_source_copy)'==='dr1'?'$(dr1_cluster)':\
-                  '$(dr2_source_copy)'==='b2d1'?'$(b2d1_cluster)':\
-                  '$(dr2_source_copy)'==='b2d2'?'$(b2d2_cluster)':''"
+    expression: "'$(dr2_source_copy)'==='prod'?'$(cluster)':'$(dr2_source_copy)'===\
+      'dr1'?'$(dr1_cluster)':'$(dr2_source_copy)'==='b2d1'?'$(b2d1_cluster)':'$\
+      (dr2_source_copy)'==='b2d2'?'$(b2d2_cluster)':''"
     group: DR2
     dependencies:
       - name: dr2
@@ -918,11 +974,34 @@ fields:
       - name: dr2
         values:
           - true
+  - type: expression
+    name: b2d1_cluster_filter_jq
+    label: b2d1_cluster_filter_jq
+    hide: true
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d1|.clusters|keys|join("%7C")')
+    group: B2D1
+    dependencies:
+      - name: b2d1
+        values:
+          - true
+    noOutput: true 
+  - type: expression
+    name: b2d1_cluster_filter
+    label: b2d1_cluster_filter
+    hide: true
+    expression: "'$(b2d1_cluster_filter_jq)'==''?'':'?name=$(b2d1_cluster_filter_jq)'"
+    runLocal: true
+    group: B2D1
+    dependencies:
+      - name: b2d1
+        values:
+          - true
+    noOutput: true           
   - type: query
     name: b2d1_cluster_list
     label: Select cluster
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluste\
-      r/clusters','','AIQUM','def
+      r/clusters$(b2d1_cluster_filter)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 +
       0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
@@ -987,10 +1066,9 @@ fields:
     label: b2d1_source_cluster
     runLocal: true
     hide: true
-    expression: "'$(b2d1_source_copy)'==='prod'?'$(cluster)':\
-                  '$(b2d1_source_copy)'==='dr1'?'$(dr1_cluster)':\
-                  '$(b2d1_source_copy)'==='dr2'?'$(dr2_cluster)':\
-                  '$(b2d1_source_copy)'==='b2d2'?'$(b2d2_cluster)':''"
+    expression: "'$(b2d1_source_copy)'==='prod'?'$(cluster)':'$(b2d1_source_copy)'=\
+      =='dr1'?'$(dr1_cluster)':'$(b2d1_source_copy)'==='dr2'?'$(dr2_cluster)':'\
+      $(b2d1_source_copy)'==='b2d2'?'$(b2d2_cluster)':''"
     group: B2D1
     dependencies:
       - name: b2d1
@@ -1226,11 +1304,34 @@ fields:
       - name: b2d1
         values:
           - true
+  - type: expression
+    name: b2d2_cluster_filter_jq
+    label: b2d2_cluster_filter_jq
+    hide: true
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d2|.clusters|keys|join("%7C")')
+    group: B2D2
+    dependencies:
+      - name: b2d2
+        values:
+          - true
+    noOutput: true 
+  - type: expression
+    name: b2d2_cluster_filter
+    label: b2d2_cluster_filter
+    hide: true
+    expression: "'$(b2d2_cluster_filter_jq)'==''?'':'?name=$(b2d2_cluster_filter_jq)'"
+    runLocal: true
+    group: B2D2
+    dependencies:
+      - name: b2d2
+        values:
+          - true
+    noOutput: true           
   - type: query
     name: b2d2_cluster_list
     label: Select cluster
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluste\
-      r/clusters','','AIQUM','def
+      r/clusters$(b2d2_cluster_filter)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 +
       0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
@@ -1295,10 +1396,9 @@ fields:
     label: b2d2_source_cluster
     runLocal: true
     hide: true
-    expression: "'$(b2d2_source_copy)'==='prod'?'$(cluster)':\
-                  '$(b2d2_source_copy)'==='dr1'?'$(dr1_cluster)':\
-                  '$(b2d2_source_copy)'==='dr2'?'$(dr2_cluster)':\
-                  '$(b2d2_source_copy)'==='b2d1'?'$(b2d1_cluster)':''"
+    expression: "'$(b2d2_source_copy)'==='prod'?'$(cluster)':'$(b2d2_source_copy)'=\
+      =='dr1'?'$(dr1_cluster)':'$(b2d2_source_copy)'==='dr2'?'$(dr2_cluster)':'\
+      $(b2d2_source_copy)'==='b2d1'?'$(b2d1_cluster)':''"
     group: B2D2
     dependencies:
       - name: b2d2

@@ -21,6 +21,7 @@ roles:
   - name: Provision
     groups:
       - local/Provision Admins
+constants: {}
 forms:
   - name: Cleanup Ansibleforms Jobs
     showHelp: true
@@ -91,17 +92,123 @@ forms:
         asCredential: true
         hide: true
       - type: expression
-        name: clusters_info
-        label: clusters_info
-        expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/admin/datasources/clusters','','AIQUM','[.records[]|{name:.name}+{key:.key}]','','')
-        hide: false
+        name: ontaplogin
+        label: ontaplogin
+        expression: "'ONTAP'"
+        asCredential: true
+        hide: true        
+      # - type: expression
+      #   name: clusters_info
+      #   label: clusters_info
+      #   expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/admin/datasources/clusters','','AIQUM','[.records[]|{name:.name}+{key:.key}]','','')
+      #   hide: false
+      # - type: expression
+      #   name: cluster
+      #   label: cluster
+      #   expression: "'cluster2'"
+      #   hide: false
+      # - type: expression
+      #   name: cluster_key
+      #   label: cluster_key
+      #   expression: fn.fnJq($(clusters_info),'.[]|select(.name=="$(cluster)")|.key')
+      #   hide: false
+      - type: query
+        name: selectedvolume
+        label: Select Production Volume
+        dbConfig:
+          name: AIQUMSQL
+          type: mysql
+        query: select CONCAT(cluster.name,':',vserver.name,':',volume.name) as
+          'Cluster:SVM:Volume',
+          CONCAT(format(round(volume.size/1024/1024/1024,0),'T0'),'G') as Size,
+          round(volume.size/1024/1024/1024,0) as sizeg,
+          CONCAT(format(round(volume.sizeUsed/1024/1024/1024,0),'T0'),'G') as Used,
+          volume.sizeUsed/volume.size as Utilization, cluster.name as cluster,
+          vserver.name as svm, volume.name as volume from netapp_model_view.cluster,
+          netapp_model_view.vserver, netapp_model_view.volume where volume.vserverid
+          = vserver.objid and vserver.clusterid = cluster.objid and volume.state =
+          'ONLINE' and volume.isVserverRoot = 0 and volume.volType='RW' and
+          vserver.type='DATA' and vserver.subtype='DEFAULT' order by volume.name
+        columns:
+          - Cluster:SVM:Volume
+          - Size
+          - Used
+          - Utilization
+        pctColumns:
+          - Utilization
+        required: true
+        default: __auto__
+        outputObject: true
+        noOutput: false        
       - type: expression
         name: cluster
         label: cluster
-        expression: "'cluster2'"
-        hide: false
+        expression: "'$(selectedvolume.cluster)'"
+        hide: true
+        model: prod.cluster
       - type: expression
-        name: cluster_key
-        label: cluster_key
-        expression: fn.fnJq($(clusters_info),'.[]|select(.name=="$(cluster)")|.key')
+        name: svm
+        label: svm
+        expression: "'$(selectedvolume.svm)'"
+        hide: true
+        model: prod.svm
+      - type: expression
+        name: volname
+        label: volname
+        expression: "'$(selectedvolume.volume)'"
+        hide: true
+        model: prod.volume
+      - type: expression
+        name: volume_comment
+        label: volume_comment
+        expression: fn.fnRestBasic('get','https://'+'$(cluster)'+'/api/storage/volumes?fields=comment&svm.name=$(svm)&name=$(volname)','','ONTAP','.records[]|.comment','','')
+        hide: true
+      - type: expression
+        name: cr
+        label: cr
+        expression: "('$(volume_comment)').includes('CR:')?('$(volume_comment)').match(/CR:\"([^\"]*)\".*/)[1]:''"
+        runLocal: true 
+        hide: true
+        noOutput: true
+      - type: expression
+        name: application
+        label: application
+        expression: "('$(volume_comment)').includes('APPLICATION:')?('$(volume_comment)').match(/APPLICATION:\"([^\"]*)\".*/)[1]:''"
+        runLocal: true 
+        hide: true
+        noOutput: true               
+      - type: expression
+        name: used_for
+        label: used_for
+        expression: "('$(volume_comment)').includes('USEDFOR:')?('$(volume_comment)').match(/USEDFOR:\"([^\"]*)\".*/)[1]:''"
+        runLocal: true 
+        hide: true
+        noOutput: true
+      - type: expression
+        name: owner
+        label: owner
+        expression: "('$(volume_comment)').includes('OWNER:')?('$(volume_comment)').match(/OWNER:\"([^\"]*)\".*/)[1]:''"
+        runLocal: true 
+        hide: true
+        noOutput: true              
+      - type: expression
+        name: comment
+        label: comment
+        expression: "('$(volume_comment)').includes('COMMENT:')?('$(volume_comment)').match(/COMMENT:\"([^\"]*)\".*/)[1]:''"
+        runLocal: true 
+        hide: true
+        noOutput: true
+      - type: expression
+        name: volumeinfo
+        label: Volume Informaton
         hide: false
+        expression: "('$(volume_comment)').includes('CR:')? 
+                      '<p style=\"color:green;\">Change Request:&nbsp</p> $(cr) &nbsp;
+                      <p style=\"color:green;\">APP:&nbsp</p>$(application)&nbsp; 
+                      <p style=\"color:green;\">Used For:&nbsp</p>$(used_for)&nbsp;
+                      <p style=\"color:green;\">Owner:&nbsp</p>$(owner)&nbsp;
+                      <p style=\"color:green;\">Comment:&nbsp</p>$(comment)':
+                      'Information is not avaialble'"
+        runLocal: true
+        noOutput: true
+        isHtml: true

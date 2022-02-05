@@ -109,7 +109,7 @@ fields:
       (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
       ck_storage.available}+{Available:
       (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
-      (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type:
+      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
       .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
     columns:
       - Resource
@@ -118,6 +118,8 @@ fields:
       - Available
       - Perf
       - Type
+    pctColumns:
+      - Perf
     required: true
     default: __auto__
     group: Production
@@ -239,7 +241,7 @@ fields:
     maxValue: 9999999999
     icon: user
     noOutput: true
-    group: Inofrmation
+    group: Information
   - type: text
     name: application
     label: Application
@@ -252,7 +254,7 @@ fields:
       description: Invalid input
     noOutput: true
     icon: user
-    group: Inofrmation
+    group: Information
   - type: text
     name: usedfor
     label: Used For
@@ -265,7 +267,7 @@ fields:
       description: Invalid input
     noOutput: true
     icon: user
-    group: Inofrmation
+    group: Information
   - type: text
     name: unit
     label: Unit
@@ -278,7 +280,7 @@ fields:
       description: Invalid input
     noOutput: true
     icon: user
-    group: Inofrmation
+    group: Information
   - type: text
     name: owner
     label: Owner
@@ -291,7 +293,7 @@ fields:
       description: Invalid input
     noOutput: true
     icon: user
-    group: Inofrmation
+    group: Information
   - type: text
     name: comment
     label: Comment
@@ -304,16 +306,15 @@ fields:
       description: Invalid input
     noOutput: true
     icon: user
-    group: Inofrmation
+    group: Information
   - type: expression
     name: volcomment
     label: volcomment
     hide: true
-    expression: "'CR:\"$(cr)\" APPLICATION:\"$(application)\" Used
-      For:\"$(usedfor)\" UNIT:\"$(unit)\" OWNER:\"$(owner)\"
-      COMMENT:\"$(comment)\"'"
+    expression: "'CR:\"$(cr)\" APPLICATION:\"$(application)\" USEDFOR:\"$(usedfor)\" UNIT:\"$(unit)\" OWNER:\"$(owner)\" COMMENT:\"$(comment)\"'"
     model: general.comment
-    group: Inofrmation
+    noOutput: false
+    group: Information
   - type: expression
     name: dr1_volnamesuffix
     label: dr1_volnamesuffix
@@ -408,7 +409,7 @@ fields:
       (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
       ck_storage.available}+{Available:
       (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
-      (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type:
+      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
       .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
     columns:
       - Resource
@@ -417,6 +418,8 @@ fields:
       - Available
       - Perf
       - Type
+    pctColumns:
+      - Perf
     noOutput: true
     default: __auto__
     required: true
@@ -583,7 +586,7 @@ fields:
       (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
       ck_storage.available}+{Available:
       (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
-      (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type:
+      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
       .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
     columns:
       - Resource
@@ -592,6 +595,8 @@ fields:
       - Available
       - Perf
       - Type
+    pctColumns:
+      - Perf
     noOutput: true
     default: __auto__
     required: true
@@ -759,7 +764,7 @@ fields:
       (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
       ck_storage.available}+{Available:
       (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
-      (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type:
+      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
       .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
     columns:
       - Resource
@@ -768,6 +773,8 @@ fields:
       - Available
       - Perf
       - Type
+    pctColumns:
+      - Perf
     noOutput: true
     default: __auto__
     required: true
@@ -935,7 +942,7 @@ fields:
       (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
       ck_storage.available}+{Available:
       (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
-      (((.performance_capacity.used*100)|roundit|tostring)+\"%\")}+{Type:
+      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
       .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
     columns:
       - Resource
@@ -944,6 +951,8 @@ fields:
       - Available
       - Perf
       - Type
+    pctColumns:
+      - Perf
     noOutput: true
     default: __auto__
     required: true

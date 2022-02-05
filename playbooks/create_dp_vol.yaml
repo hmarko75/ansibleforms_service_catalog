@@ -72,7 +72,7 @@
         vserver: "{{ svm }}"
         size: "{{ volsize | int }}"
         type: DP
-        comment: "{{ general.comment }}"
+        comment: "{{ general.comment | default(omit) }}"
         <<: *login 
 
     # set dp volume autosize 
