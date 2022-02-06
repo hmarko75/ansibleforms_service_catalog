@@ -42,7 +42,7 @@
         <<: *login     
       when: copy != 'prod'   
 
-    - name: rename volume to old 
+    - name: "rename volume from: {{ volname }} to {{ suffixed_volume }}"
       na_ontap_volume:
         state: present
         vserver: "{{svm}}"

@@ -1,0 +1,32 @@
+---
+- name: "delete decommissioned volumes"
+  hosts: "localhost"
+  become: no 
+  gather_facts: no
+  vars: 
+    clusterauth:  &login
+      username: "{{ login.user }}"
+      password: "{{ login.password }}"
+      https: true
+      validate_certs: false
+  vars_files:
+  - ../globals.yaml
+  collections:
+  - netapp.ontap  
+  tasks: 
+    - name: "delete volume" 
+      na_ontap_volume:
+        state: absent
+        vserver: "{{item.split(':')[1]}}"
+        name: "{{ item.split(':')[2] }}"
+        hostname: "{{ item.split(':')[0] }}"
+        <<: *login 
+      loop: "{{ volumes }}" 
+   
+
+
+
+
+      
+        
+

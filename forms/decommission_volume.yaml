@@ -10,6 +10,7 @@ icon: scroll
 playbook: decommission_service_vol.yaml
 inventory: hosts
 type: ansible
+tileClass: has-background-danger-light
 fields:
   - type: expression
     name: settings
@@ -81,7 +82,7 @@ fields:
     help: Decomissioned volumes will be kept offline for the specified number of days
     default: 10
     required: true
-    minValue: 1
+    minValue: 0
     maxValue: 20
     icon: user
     noOutput: true
@@ -89,9 +90,9 @@ fields:
     name: vol_suffix
     label: vol_suffix
     expression: "'_to_be_deleted_after_'+(new
-      Date(Date.now()+86400000*$(offline_period_days))).getDate()+'_'+((new
-      Date(Date.now()+86400000*$(offline_period_days))).getMonth()+1)+'_'+(new
-      Date(Date.now()+86400000*$(offline_period_days))).getFullYear()"
+      Date(Date.now()+86400000*$(offline_period_days))).getDate()+'_'
+      +((new Date(Date.now()+86400000*$(offline_period_days))).toLocaleString('default',{month:'short'}))+'_'
+      +(new Date(Date.now()+86400000*$(offline_period_days))).getFullYear()"
     runLocal: true
     hide: true
     noOutput: true

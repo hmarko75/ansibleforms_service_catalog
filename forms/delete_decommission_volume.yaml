@@ -1,0 +1,85 @@
+name: Delete Decommissioned Volumes
+help: This is used to delete decommissioned volumes that reached thier expiry date 
+roles:
+  - Provision
+description: Decommission existing volume
+categories:
+  - Provision
+icon: scroll
+playbook: delete_decommission_service_vol.yaml
+inventory: hosts
+type: ansible
+tileClass: has-background-danger-light
+fields:
+  - type: expression
+    name: settings
+    label: settings
+    expression: fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','')
+    noOutput: true
+    hide: true
+  - type: expression
+    name: aiqum
+    expression: fn.fnJq($(settings),'.general.aiqum')
+    label: aiqum
+    hide: true
+    noOutput: true
+  - type: expression
+    name: login
+    expression: "'ONTAP'"
+    label: login
+    asCredential: true
+    hide: true
+  - type: expression
+    name: decomissioned_vols
+    label: decomissioned_vols
+    dbConfig:
+      name: AIQUMSQL
+      type: mysql
+    query: select CONCAT(cluster.name,':',vserver.name,':',volume.name) as 'Cluster:SVM:Volume',
+      CONCAT(format(round(volume.size/1024/1024/1024,0),'T0'),'G') as Size,
+      round(volume.size/1024/1024/1024,0) as sizeg,
+      CONCAT(format(round(volume.sizeUsed/1024/1024/1024,0),'T0'),'G') as Used,
+      volume.sizeUsed/volume.size as Utilization, cluster.name as cluster,
+      vserver.name as svm, volume.name as volume 
+      from netapp_model_view.cluster, netapp_model_view.vserver, netapp_model_view.volume 
+      where volume.vserverid = vserver.objid and vserver.clusterid = cluster.objid and volume.state =
+      'OFFLINE' and volume.isVserverRoot = 0 and vserver.type='DATA' and vserver.subtype='DEFAULT' 
+      and volume.name like "%_to_be_deleted_after_%"
+      order by volume.name
+    hide: true   
+    noOutput: true   
+    
+  - type: query
+    name: expiredvolume
+    label: The following decommissioned volumes are ready to be deleted
+    multiple: true
+    expression: fn.fnJq($(decomissioned_vols),'[.[]|.|=.+{expiry:.volume| sub(".+to_be_deleted_after_";"")|gsub("_";"/")|strptime("%d/%b/%Y")|mktime}+{now:now}+{"Expiry Date":.volume| sub(".+to_be_deleted_after_";"")|gsub("_";"-")}+{"Original Volume":.volume| sub("_to_be_deleted_after_.+";"")}|select(.expiry<now)]')
+    columns:
+      - Cluster:SVM:Volume
+      - Original Volume
+      - Expiry Date
+    required: true
+    default: __none__
+    outputObject: false
+    model: volumes
+    #sticky: true
+    #noOutput: true
+  - type: checkbox
+    name: areyousure
+    label: Confirmation
+    default: false
+    placeholder: Are you sure you want to delete decommissioned volumes (volumes will be deleted permanently) ?
+    required: true
+  - type: text
+    name: confirmation
+    label: Please type YES to confirm you want to delete
+    placeholder: "YES" 
+    required: true
+    minLength: 1
+    maxLength: 3
+    regex: ^YES$
+    regexDescription: Type YES to confirm
+    dependencies:         
+    - name: areyousure
+      values:
+      - true  

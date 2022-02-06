@@ -116,20 +116,21 @@ forms:
           'OFFLINE' and volume.isVserverRoot = 0 and vserver.type='DATA' and vserver.subtype='DEFAULT' 
           and volume.name like "%_to_be_deleted_after_%"
           order by volume.name
-        hide: false      
+        hide: false   
+        noOutput: true   
         
       - type: query
         name: expiredvolume
         label: The following decommissioned volumes are ready to be deleted
         multiple: true
-        expression: fn.fnJq($(decomissioned_vols),'[.[]|.|=.+{expiry:.volume| sub(".+to_be_deleted_after_";"")|gsub("_";"/")|strptime("%d/%m/%Y")|mktime}+{now:now}+{"Expiry Date":.volume| sub(".+to_be_deleted_after_";"")|gsub("_";"/")}+{"Original Volume":.volume| sub("_to_be_deleted_after_.+";"")}|select(.expiry<now+1000000)]')
+        expression: fn.fnJq($(decomissioned_vols),'[.[]|.|=.+{expiry:.volume| sub(".+to_be_deleted_after_";"")|gsub("_";"/")|strptime("%d/%m/%Y")|mktime}+{now:now}+{"Expiry Date":.volume| sub(".+to_be_deleted_after_";"")|gsub("_";"/")}+{"Original Volume":.volume| sub("_to_be_deleted_after_.+";"")}|select(.expiry<now+9999999)]')
         columns:
           - Cluster:SVM:Volume
           - Original Volume
           - Expiry Date
         required: true
         default: __none__
-        outputObject: true
+        outputObject: false
         model: volumes
         #sticky: true
         #noOutput: true
