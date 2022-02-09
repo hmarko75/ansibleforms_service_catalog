@@ -1,0 +1,66 @@
+- name: Create job schedules 
+  help: |
+      The following schedules will be created 
+      - 24 hourly schedules (hourly1..24) 
+      - 24 daily schedules (daily1..24) 
+      - 24 weekly scheules (weekly1..24)
+      - 24 monthly schedules (monthly1..24)
+  roles:
+    - Setup
+  description: Create schedules for dynamic 
+  categories:
+    - Provision
+  icon: scroll
+  playbook: create_schedules.yaml
+  inventory: hosts
+  type: ansible
+  fields:
+    - type: expression
+      name: settings
+      label: settings
+      expression: fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','')
+      noOutput: true
+      hide: true
+    - type: expression
+      name: aiqum
+      label: aiqum
+      expression: fn.fnJq($(settings),'.general.aiqum')
+      hide: true
+    - type: expression
+      name: aiqumlogin
+      label: aiqumlogin
+      expression: "'AIQUM'"
+      asCredential: true
+      hide: true
+    - type: expression
+      name: ontaplogin
+      label: ontaplogin
+      expression: "'ONTAP'"
+      asCredential: true
+      hide: true   
+
+    - type: query
+      name: cluster
+      label: Select cluster
+      expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM',
+        'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
+        0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
+        ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
+        }+{Location: .location}+{Contact:.contact}+{\"Total
+        Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available
+        Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailR\
+        aw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:\
+        {direction:\"asc\"}}],'')"
+      columns:
+        - Name
+        - Version
+        - Location
+        - Contact
+        - Total Capacity
+        - Available Capacity
+      required: true
+      default: __none__
+      outputObject: false
+      model: cluster
+      multiple: false
+      sticky: true

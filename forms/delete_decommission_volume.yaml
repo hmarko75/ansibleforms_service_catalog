@@ -2,14 +2,14 @@ name: Delete Decommissioned Volumes
 help: This is used to delete decommissioned volumes that reached thier expiry date 
 roles:
   - Provision
-description: Decommission existing volume
+description: Delete expired decommissioned volumes 
 categories:
-  - Provision
-icon: scroll
+  - Decommision
 playbook: delete_decommission_service_vol.yaml
 inventory: hosts
 type: ansible
 tileClass: has-background-danger-light
+icon: trash
 fields:
   - type: expression
     name: settings
@@ -52,7 +52,6 @@ fields:
   - type: query
     name: expiredvolume
     label: The following decommissioned volumes are ready to be deleted
-    multiple: true
     expression: fn.fnJq($(decomissioned_vols),'[.[]|.|=.+{expiry:.volume| sub(".+to_be_deleted_after_";"")|gsub("_";"/")|strptime("%d/%b/%Y")|mktime}+{now:now}+{"Expiry Date":.volume| sub(".+to_be_deleted_after_";"")|gsub("_";"-")}+{"Original Volume":.volume| sub("_to_be_deleted_after_.+";"")}|select(.expiry<now)]')
     columns:
       - Cluster:SVM:Volume
@@ -62,7 +61,8 @@ fields:
     default: __none__
     outputObject: false
     model: volumes
-    #sticky: true
+    multiple: true
+    sticky: true
     #noOutput: true
   - type: checkbox
     name: areyousure

@@ -205,7 +205,7 @@ fields:
   - type: expression
     name: currvolsize
     label: Current Volume size (G)
-    expression: "'$(selectedvolume.Size)'"
+    expression: "'$(selectedvolume.Size)'!='__auto__'?'$(selectedvolume.Size)':''"
     runLocal: true
     hide: false
     noOutput: true

@@ -5,12 +5,12 @@ roles:
   - Provision
 description: Decommission existing volume
 categories:
-  - Provision
-icon: scroll
+  - Decommision
 playbook: decommission_service_vol.yaml
 inventory: hosts
 type: ansible
 tileClass: has-background-danger-light
+icon: trash
 fields:
   - type: expression
     name: settings

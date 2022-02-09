@@ -122,3 +122,4 @@
   vars:
     cluster: "{{ vars[copy].cluster }}"
     cluster_key: "{{ vars[copy].clusterkey }}"
+  ignore_errors: yes

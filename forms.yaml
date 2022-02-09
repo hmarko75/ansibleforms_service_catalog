@@ -5,6 +5,8 @@ categories:
     icon: bath
   - name: Maintenance
     icon: bath
+  - name: Decommision    
+    icon: trash
 roles:
   - name: admin
     groups:
@@ -99,38 +101,30 @@ forms:
         asCredential: true
         hide: true   
 
-      - type: expression
-        name: decomissioned_vols
-        label: decomissioned_vols
-        dbConfig:
-          name: AIQUMSQL
-          type: mysql
-        query: select CONCAT(cluster.name,':',vserver.name,':',volume.name) as 'Cluster:SVM:Volume',
-          CONCAT(format(round(volume.size/1024/1024/1024,0),'T0'),'G') as Size,
-          round(volume.size/1024/1024/1024,0) as sizeg,
-          CONCAT(format(round(volume.sizeUsed/1024/1024/1024,0),'T0'),'G') as Used,
-          volume.sizeUsed/volume.size as Utilization, cluster.name as cluster,
-          vserver.name as svm, volume.name as volume 
-          from netapp_model_view.cluster, netapp_model_view.vserver, netapp_model_view.volume 
-          where volume.vserverid = vserver.objid and vserver.clusterid = cluster.objid and volume.state =
-          'OFFLINE' and volume.isVserverRoot = 0 and vserver.type='DATA' and vserver.subtype='DEFAULT' 
-          and volume.name like "%_to_be_deleted_after_%"
-          order by volume.name
-        hide: false   
-        noOutput: true   
-        
       - type: query
-        name: expiredvolume
-        label: The following decommissioned volumes are ready to be deleted
-        multiple: true
-        expression: fn.fnJq($(decomissioned_vols),'[.[]|.|=.+{expiry:.volume| sub(".+to_be_deleted_after_";"")|gsub("_";"/")|strptime("%d/%m/%Y")|mktime}+{now:now}+{"Expiry Date":.volume| sub(".+to_be_deleted_after_";"")|gsub("_";"/")}+{"Original Volume":.volume| sub("_to_be_deleted_after_.+";"")}|select(.expiry<now+9999999)]')
+        name: clusters
+        label: Select clusters
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM',
+          'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
+          0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
+          ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
+          }+{Location: .location}+{Contact:.contact}+{\"Total
+          Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available
+          Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailR\
+          aw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:\
+          {direction:\"asc\"}}],'')"
         columns:
-          - Cluster:SVM:Volume
-          - Original Volume
-          - Expiry Date
+          - Name
+          - Version
+          - Location
+          - Contact
+          - Total Capacity
+          - Available Capacity
         required: true
         default: __none__
         outputObject: false
-        model: volumes
-        #sticky: true
-        #noOutput: true
+        model: clusters
+        multiple: true
+        sticky: true
+
+

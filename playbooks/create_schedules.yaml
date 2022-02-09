@@ -1,0 +1,75 @@
+---
+- name: "create schedules"
+  hosts: "localhost"
+  become: no 
+  gather_facts: no
+  vars: 
+    clusterauth:  &login
+      username: "{{ ontaplogin.user }}"
+      password: "{{ ontaplogin.password }}"
+      hostname: "{{ cluster }}"
+      https: true
+      validate_certs: false
+  vars_files:
+  - ../globals.yaml
+  collections:
+  - netapp.ontap  
+  tasks: 
+
+    # info 
+    - name: create scheules for cluster 
+      ansible.builtin.debug:
+        msg:
+        - "creating schedules for cluster: {{ cluster }}"  
+
+    - name: "create hourly scheules" 
+      netapp.ontap.na_ontap_job_schedule:
+        state: present
+        name: "hourly{{item+1}}"
+        job_minutes: "{{ (item)*5 if (item)*5<60 else (item*5)-(60*(item*5/60)|int) }}"
+        job_hours: -1
+        job_days_of_month: -1
+        job_months: -1
+        <<: *login 
+      loop: "{{ range(0,24)|list }}"
+
+    - name: "create daily scheules" 
+      netapp.ontap.na_ontap_job_schedule:
+        state: present
+        name: "daily{{item+1}}"
+        job_minutes: 3
+        job_hours: "{{ item }}"
+        job_days_of_month: -1
+        job_months: -1
+        <<: *login 
+      loop: "{{ range(0,24)|list }}"      
+  
+    - name: "create weekly scheules" 
+      netapp.ontap.na_ontap_job_schedule:
+        state: present
+        name: "weekly{{item+1}}"
+        job_minutes: "{{ (item)*5 if (item)*5<60 else (item*5)-(60*(item*5/60)|int) }}"
+        job_hours: "{{ item }}"
+        job_days_of_week: 6
+        job_days_of_month: -1
+        job_months: -1
+        <<: *login 
+      loop: "{{ range(0,24)|list }}"  
+
+    - name: "create monthly scheules" 
+      netapp.ontap.na_ontap_job_schedule:
+        state: present
+        name: "monthly{{item+1}}"
+        job_minutes: "{{ (item)*5 if (item)*5<60 else (item*5)-(60*(item*5/60)|int) }}"
+        job_hours: "{{ item }}"
+        job_days_of_week: -1
+        job_days_of_month: "{{ item+1 }}"
+        job_months: -1
+        <<: *login 
+      loop: "{{ range(0,24)|list }}"  
+
+
+
+      
+        
+
