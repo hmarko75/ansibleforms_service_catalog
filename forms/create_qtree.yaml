@@ -1,0 +1,297 @@
+name: Create Qtree with quota 
+help: This is used to create qtree with optional quota setting.
+roles:
+  - Provision
+description: Create qtree
+categories:
+  - Provision
+icon: scroll
+playbook: create_service_qtree.yaml
+inventory: hosts
+type: ansible
+fields:
+  - type: expression
+    name: settings
+    label: settings
+    expression: fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','')
+    noOutput: true
+    hide: true
+  - type: expression
+    name: aiqum
+    expression: fn.fnJq($(settings),'.general.aiqum')
+    label: aiqum
+    hide: true
+    noOutput: true
+  - type: expression
+    name: login
+    expression: "'ONTAP'"
+    label: login
+    asCredential: true
+    hide: true
+  - type: query
+    name: selectedvolume
+    label: Select Production Volume
+    dbConfig:
+      name: AIQUMSQL
+      type: mysql
+    query: select CONCAT(cluster.name,':',vserver.name,':',volume.name) as
+      'Cluster:SVM:Volume',
+      CONCAT(format(round(volume.size/1024/1024/1024,0),'T0'),'G') as Size,
+      round(volume.size/1024/1024/1024,0) as sizeg,
+      CONCAT(format(round(volume.sizeUsed/1024/1024/1024,0),'T0'),'G') as Used,
+      volume.sizeUsed/volume.size as Utilization, cluster.name as cluster,
+      vserver.name as svm, volume.name as volume from netapp_model_view.cluster,
+      netapp_model_view.vserver, netapp_model_view.volume where volume.vserverid
+      = vserver.objid and vserver.clusterid = cluster.objid and volume.state =
+      'ONLINE' and volume.isVserverRoot = 0 and volume.volType='RW' and
+      vserver.type='DATA' and vserver.subtype='DEFAULT' order by volume.name
+    columns:
+      - Cluster:SVM:Volume
+      - Size
+      - Used
+      - Utilization
+    pctColumns:
+      - Utilization
+    required: true
+    default: __auto__
+    outputObject: true
+    noOutput: true
+  - type: expression
+    name: cluster
+    label: cluster
+    expression: "'$(selectedvolume.cluster)'"
+    hide: true
+    model: prod.cluster
+  - type: expression
+    name: svm
+    label: svm
+    expression: "'$(selectedvolume.svm)'"
+    hide: true
+    model: prod.svm
+  - type: expression
+    name: volname
+    label: volname
+    expression: "'$(selectedvolume.volume)'"
+    hide: true
+    model: prod.volume
+  - type: expression
+    name: flat_service_info
+    label: flat_service_info
+    expression: "fn.fnJq($(settings),'.services | [leaf_paths as $path | {\"key\":
+      $path | join(\"^\"), \"value\": getpath($path)}]')"
+    hide: true
+    noOutput: true
+  - type: expression
+    name: prod_service_info
+    label: prod_service_info
+    expression: fn.fnJq($(flat_service_info),'.|from_entries|with_entries(
+      select(.key|contains("^prod^clusters^$(cluster)")))|with_entries(
+      select(.value == ("$(svm)")))')
+    hide: true
+    noOutput: true
+  - type: expression
+    name: prod_svm_match_arr
+    label: prod_svm_match_arr
+    expression: fn.fnJq($(prod_service_info),'[.[]]')
+    hide: true
+    noOutput: true
+  - type: expression
+    name: prod_svm_count
+    label: prod_svm_count
+    expression: $(prod_svm_match_arr).length
+    runLocal: true
+    hide: true
+    noOutput: true
+  - type: expression
+    name: service
+    label: Service
+    expression: $(prod_svm_count)==1?Object.keys($(prod_service_info))[0].split('^')[0]:''
+    runLocal: true
+    hide: true
+    noOutput: false
+    model: general.service
+  - type: expression
+    name: company
+    label: Company
+    expression: $(prod_svm_count)==1?Object.keys($(prod_service_info))[0].split('^')[1]:''
+    runLocal: true
+    hide: true
+    noOutput: false
+    model: general.company
+  - type: expression
+    name: environment
+    label: Environment
+    expression: $(prod_svm_count)==1?Object.keys($(prod_service_info))[0].split('^')[2]:''
+    runLocal: true
+    hide: true
+    noOutput: false
+    model: general.environment
+  - type: expression
+    name: location
+    label: Location
+    expression: $(prod_svm_count)==1?Object.keys($(prod_service_info))[0].split('^')[3]:''
+    runLocal: true
+    hide: true
+    noOutput: false
+    model: general.location
+  - type: expression
+    name: volume2servicestatus
+    label: Volume to Service Mapping
+    hide: false
+    expression: "$(prod_svm_count)>1?'Containing SVM is configured for more than one
+      service':$(prod_svm_count)<1?'Containing SVM is not configured for a
+      service': '<p style=\"color:green;\">SERVICE:&nbsp</p> $(service) &nbsp;<p
+      style=\"color:green;\">COMPANY:&nbsp</p>$(company)&nbsp; <p
+      style=\"color:green;\">ENVIRONMENT:&nbsp</p>$(environment)&nbsp;<p
+      style=\"color:green;\">LOCATION:&nbsp</p>$(location)'"
+    runLocal: true
+    noOutput: true
+    isHtml: true
+  - type: expression
+    name: volume_comment
+    label: volume_comment
+    expression: fn.fnRestBasic('get','https://'+'$(cluster)'+'/api/storage/volumes?fields=comment&svm.name=$(svm)&name=$(volname)','','ONTAP','.records[]|.comment','','')
+    hide: true
+    noOutput: true
+  - type: expression
+    name: cr
+    label: cr
+    expression: "('$(volume_comment)').includes('CR:')?('$(volume_comment)').match(/CR:\"([^\"]*)\".*/)[1]:''"
+    runLocal: true 
+    hide: true
+    noOutput: true
+  - type: expression
+    name: application
+    label: application
+    expression: "('$(volume_comment)').includes('APPLICATION:')?('$(volume_comment)').match(/APPLICATION:\"([^\"]*)\".*/)[1]:''"
+    runLocal: true 
+    hide: true
+    noOutput: true               
+  - type: expression
+    name: used_for
+    label: used_for
+    expression: "('$(volume_comment)').includes('USEDFOR:')?('$(volume_comment)').match(/USEDFOR:\"([^\"]*)\".*/)[1]:''"
+    runLocal: true 
+    hide: true
+    noOutput: true
+  - type: expression
+    name: owner
+    label: owner
+    expression: "('$(volume_comment)').includes('OWNER:')?('$(volume_comment)').match(/OWNER:\"([^\"]*)\".*/)[1]:''"
+    runLocal: true 
+    hide: true
+    noOutput: true              
+  - type: expression
+    name: comment
+    label: comment
+    expression: "('$(volume_comment)').includes('COMMENT:')?('$(volume_comment)').match(/COMMENT:\"([^\"]*)\".*/)[1]:''"
+    runLocal: true 
+    hide: true
+    noOutput: true
+  - type: expression
+    name: volumeinfo
+    label: Volume Informaton
+    hide: false
+    expression: "('$(volume_comment)').includes('CR:')? 
+                  '<p style=\"color:green;\">Change Request:&nbsp</p> $(cr) &nbsp;
+                  <p style=\"color:green;\">Application:&nbsp</p>$(application)&nbsp; 
+                  <p style=\"color:green;\">Used For:&nbsp</p>$(used_for)&nbsp;
+                  <p style=\"color:green;\">Owner:&nbsp</p>$(owner)&nbsp;
+                  <p style=\"color:green;\">Comment:&nbsp</p>$(comment)':
+                  'Information is not avaialble'"
+    runLocal: true
+    noOutput: true
+    isHtml: true
+  - type: expression
+    name: existingqtrees
+    label: existingqtrees
+    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/qtrees?cluster.name=$(cluster)&svm.name=$(svm)&volume.name=$(volname)&max_records=1000','','AIQUM','[.records[]|select(.name!="")|.name]','','')
+    hide: true
+    noOutput: true    
+  
+  - type: text
+    name: qtreename
+    label: Qtree Name
+    default: ""
+    required: true
+    minLength: 1
+    maxLength: 30
+    regex:
+      expression: ^[a-z0-9_]*$
+      description: Invalid qtree name
+    notIn:
+      field: existingqtrees
+      description: Qtree already exists
+    model: prod.qtree
+
+  - type: enum
+    name: secstyle
+    label: Security Style
+    default: Inherit from parent volume
+    values:
+      - Inherit from parent volume
+      - ntfs
+      - unix
+    required: true
+    model: prod.secstyle
+
+  - type: checkbox
+    name: enablequota
+    label: Enable Quota ? 
+    default: false
+    placeholder: Are you sure you want to enable quota on the new qtree ?
+    required: false
+    noOutput: true  
+  - type: number
+    name: quota_soft_limit
+    label: Quota Soft Limit (GB)
+    default: ""
+    required: false
+    minValue: 0
+    maxValue: 90000
+    icon: user
+    model: quota.soft_disk_limit  
+    dependencies:         
+    - name: enablequota
+      values:
+      - true    
+  - type: number
+    name: quota_hard_limit
+    label: Quota Hard Limit (GB)
+    default: ""
+    required: false
+    minValue: 0
+    maxValue: 90000
+    icon: user
+    model: quota.disk_limit  
+    dependencies:         
+    - name: enablequota
+      values:
+      - true       
+  - type: number
+    name: quota_files_soft_limit
+    label: Quota Files Soft Limit
+    default: ""
+    required: false
+    minValue: 0
+    maxValue: 2100000000
+    icon: user
+    model: quota.soft_file_limit  
+    dependencies:         
+    - name: enablequota
+      values:
+      - true 
+  - type: number
+    name: quota_files_hard_limit
+    label: Quota Files Hard Limit
+    default: ""
+    required: false
+    minValue: 0
+    maxValue: 2100000000
+    icon: user
+    model: quota.file_limit  
+    dependencies:         
+    - name: enablequota
+      values:
+      - true   
+               

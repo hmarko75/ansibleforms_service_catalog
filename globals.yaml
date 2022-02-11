@@ -61,7 +61,7 @@ networks:
         iprange: 10.1.2.[30-35],10.1.2.240
         subnetmask: 255.255.255.0
 services:
-    NAS Prod DR1 B2D1 - David the king:
+    NAS Prod DR1 B2D1:
         Company 1:
             Production:
                 Site A:
