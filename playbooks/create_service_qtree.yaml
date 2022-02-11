@@ -1,0 +1,43 @@
+---
+- name: create qtree  
+  hosts: "localhost"
+  become: no 
+  gather_facts: no
+  vars:
+    clusterauth:  &login
+      hostname: "{{ prod.cluster }}"
+      username: "{{ login.user }}"
+      password: "{{ login.password }}"
+      https: true
+      validate_certs: false
+  
+  vars_files:
+  - ../globals.yaml
+
+  collections:
+  - netapp.ontap  
+  tasks:
+    - name: Create qtree
+      na_ontap_qtree:
+        state: present
+        name: "{{ prod.qtree }}"
+        flexvol_name: "{{ prod.volume }}"
+        export_policy: "{{ prod.policy | default(omit)}}"
+        security_style: "{{ prod.secstyle if prod.secstyle in ['ntfs','unix','mixed'] else omit | default(omit)}}"
+        vserver: "{{ prod.svm }}"
+        <<: *login
+
+    - name: Add qtree quota
+      na_ontap_quotas:
+        state: present
+        vserver: "{{ prod.svm }}"
+        volume: "/vol/{{ prod.volume }}"
+        quota_target: "/vol/{{ prod.volume+'/'+prod.qtree}}"
+        type: tree
+        policy: default
+        soft_file_limit: "{{quota.soft_file_limit if (quota.soft_file_limit|int)>0 else omit |default(omit)}}"
+        soft_disk_limit: "{{(quota.soft_disk_limit|float)*1024*1024 if (quota.soft_disk_limit|int)>0 else omit |default(omit)}}"
+        file_limit: "{{quota.file_limit if (quota.file_limit|float)>0 else omit |default(omit)}}"
+        disk_limit: "{{(quota.disk_limit|int)*1024*1024 if (quota.disk_limit|float)>0 else omit |default(omit)}}"
+        set_quota_status: yes
+        <<: *login
