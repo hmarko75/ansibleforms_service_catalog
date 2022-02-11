@@ -34,7 +34,7 @@
         volume: "/vol/{{ prod.volume }}"
         quota_target: "/vol/{{ prod.volume+'/'+prod.qtree}}"
         type: tree
-        policy: default
+        policy: default 
         soft_file_limit: "{{quota.soft_file_limit if (quota.soft_file_limit|int)>0 else omit |default(omit)}}"
         soft_disk_limit: "{{(quota.soft_disk_limit|float)*1024*1024 if (quota.soft_disk_limit|int)>0 else omit |default(omit)}}"
         file_limit: "{{quota.file_limit if (quota.file_limit|float)>0 else omit |default(omit)}}"
