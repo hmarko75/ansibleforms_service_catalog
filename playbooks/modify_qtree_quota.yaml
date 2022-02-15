@@ -1,0 +1,36 @@
+---
+- name: modify quota 
+  hosts: "localhost"
+  become: no 
+  gather_facts: no
+  vars:
+    clusterauth:  &login
+      hostname: "{{ prod.cluster }}"
+      username: "{{ login.user }}"
+      password: "{{ login.password }}"
+      https: true
+      validate_certs: false
+  
+  vars_files:
+  - ../globals.yaml
+
+  collections:
+  - netapp.ontap  
+  tasks:
+    - name: modify qtree quota
+      na_ontap_quotas:
+        state: present
+        vserver: "{{ prod.svm }}"
+        volume: "/vol/{{ prod.volume }}"
+        quota_target: "/vol/{{ prod.volume+'/'+item.Qtree}}"
+        type: tree
+        policy: default 
+        soft_file_limit: "{{item.softFileLimit|int if (item.softFileLimit|int)>0 else omit |default(omit)}}"
+        soft_disk_limit: "{{(item.softDiskLimit|float)*1024*1024 if (item.softDiskLimit|float)>0 else omit |default(omit)}}"
+        file_limit: "{{item.fileLimit|int if (item.fileLimit|int)>0 else omit |default(omit)}}"
+        disk_limit: "{{(item.diskLimit|float)*1024*1024 if (item.diskLimit|float)>0 else omit |default(omit)}}"
+        #activate_quota_on_change: reinitialize
+        #set_quota_status: yes
+        <<: *login
+      loop: "{{ qtrees_quota }}"
+      when: item.softDiskLimit|int|default(0) > 0 or item.diskLimit|float|default(0) > 0 or item.fileLimit|int|default(0) > 0 or item.softFileLimit|int|default(0) > 0

@@ -3,6 +3,8 @@ categories:
     icon: bars
   - name: Provision
     icon: bath
+  - name: Quota
+    icon: bath    
   - name: Maintenance
     icon: bath
   - name: Decommision    

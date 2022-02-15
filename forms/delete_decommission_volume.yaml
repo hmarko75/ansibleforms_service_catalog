@@ -77,8 +77,9 @@ fields:
     required: true
     minLength: 1
     maxLength: 3
-    regex: ^YES$
-    regexDescription: Type YES to confirm
+    regex:
+      expression: ^YES$
+      description: Type YES to confirm
     dependencies:         
     - name: areyousure
       values:
