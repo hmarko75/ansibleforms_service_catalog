@@ -4,9 +4,9 @@
   become: no 
   gather_facts: no
   vars:
-    cluster: "{{ vars[copy].cluster }}"
-    svm: "{{ vars[copy].svm }}"
-    volname: "{{ vars[copy].volume }}"
+    cluster: "{{ vars[copy].cluster | default(omit) }}"
+    svm: "{{ vars[copy].svm | default(omit) }}"
+    volname: "{{ vars[copy].volume | default(omit) }}"
     suffixed_volume: "{{ vars[copy].suffixed_volume }}"
     
     clusterauth:  &login
@@ -40,7 +40,7 @@
         source_hostname: "{{ vars[copy].source_cluster }}"
         relationship_info_only: yes
         <<: *login     
-      when: copy != 'prod'   
+      when: copy != 'prod' and volname is defined and vars[copy].volume|default(undefined) is defined
 
     - name: "rename volume from: {{ volname }} to {{ suffixed_volume }}"
       na_ontap_volume:
@@ -49,6 +49,7 @@
         name: "{{ suffixed_volume }}"
         from_name: "{{ volname }}"
         <<: *login 
+      when: volname is defined and vars[copy].volume|default(undefined) is defined
 
     - name: offline volume 
       na_ontap_volume:
@@ -57,7 +58,15 @@
         name: "{{ suffixed_volume }}"
         is_online: False
         <<: *login     
+      when: volname is defined and vars[copy].volume|default(undefined) is defined
 
+- name: Rediscover cluster in AIQUM
+  import_playbook: aiqum_rediscover_cluster.yaml
+  vars:
+    cluster: "{{ vars[copy].cluster | default (omit)}}"
+    cluster_key: "{{ vars[copy].clusterkey | default (omit)}}"
+  ignore_errors: yes
+  when: volname is defined and vars[copy].volume|default(undefined) is defined
 
 
 

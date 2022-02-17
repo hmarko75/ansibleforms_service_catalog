@@ -7,9 +7,9 @@
       - 24 monthly schedules (monthly1..24)
   roles:
     - Setup
-  description: Create schedules for dynamic 
+  description: Create schedules for dynamic scheduling of snapshot policies, snapmirror trasfers and efficiency scanners 
   categories:
-    - Provision
+    - Maintenance
   icon: scroll
   playbook: create_schedules.yaml
   inventory: hosts

@@ -23,6 +23,18 @@ fields:
     hide: true
     noOutput: true
   - type: expression
+    name: datasource_info
+    label: datasource_info
+    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/admin/datasources/clusters','','AIQUM','[.records[]|{name:.name}+{key:.key}]','','')
+    hide: true
+    noOutput: true    
+  - type: expression
+    name: aiqumlogin
+    label: aiqumlogin
+    expression: "'AIQUM'"
+    asCredential: true
+    hide: true    
+  - type: expression
     name: login
     expression: "'ONTAP'"
     label: login
@@ -132,6 +144,13 @@ fields:
     hide: true
     group: Production
     model: prod.cluster
+  - type: expression
+    name: cluster_key
+    label: cluster_key
+    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(cluster)")|.key')
+    hide: true
+    group: Production
+    model: prod.clusterkey    
   - type: expression
     name: aggregate
     label: aggregate
@@ -441,6 +460,17 @@ fields:
         values:
           - true
   - type: expression
+    name: dr1_cluster_key
+    label: dr1_cluster_key
+    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(dr1_cluster)")|.key')
+    hide: true
+    group: DR1
+    model: dr1.clusterkey
+    dependencies:
+      - name: dr1
+        values:
+          - true
+  - type: expression
     name: dr1_aggregate
     label: dr1_aggregate
     expression: "'$(dr1_cluster_aggr.Aggregate)'"
@@ -617,6 +647,17 @@ fields:
       - name: dr2
         values:
           - true
+  - type: expression
+    name: dr2_cluster_key
+    label: dr2_cluster_key
+    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(dr2_cluster)")|.key')
+    hide: true
+    group: DR2
+    model: dr2.clusterkey
+    dependencies:
+      - name: dr2
+        values:
+          - true          
   - type: expression
     name: dr2_aggregate
     label: dr2_aggregate
@@ -796,6 +837,17 @@ fields:
         values:
           - true
   - type: expression
+    name: b2d1_cluster_key
+    label: b2d1_cluster_key
+    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(b2d1_cluster)")|.key')
+    hide: true
+    group: B2D1
+    model: b2d1.clusterkey
+    dependencies:
+      - name: b2d1
+        values:
+          - true            
+  - type: expression
     name: b2d1_aggregate
     label: b2d1_aggregate
     expression: "'$(b2d1_cluster_aggr.Aggregate)'"
@@ -973,6 +1025,17 @@ fields:
       - name: b2d2
         values:
           - true
+  - type: expression
+    name: b2d2_cluster_key
+    label: b2d2_cluster_key
+    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(b2d2_cluster)")|.key')
+    hide: true
+    group: B2D2
+    model: b2d2.clusterkey
+    dependencies:
+      - name: b2d2
+        values:
+          - true            
   - type: expression
     name: b2d2_aggregate
     label: b2d2_aggregate

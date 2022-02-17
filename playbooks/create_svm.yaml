@@ -2,7 +2,7 @@
 - name: create svm  
   hosts: "localhost"
   become: no 
-  gather_facts: no
+  #gather_facts: no
   vars:
     cluster: "{{ vars[copy].cluster }}"
     svm: "{{ vars[copy].svm }}"
@@ -67,6 +67,41 @@
       loop_control:
         index_var: idx  
 
+    - name: create the dnscmd commands to add dns zone in dns_configuration_for_dnszone - prefix 
+      ansible.builtin.lineinfile:
+        line: |
+          ###############################################################################################################################
+          #### START DNS CREATION COMMANDS FOR SVM: {{ svm }} TIME: {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+          ###############################################################################################################################
+        path: "../dns_configuration_for_dnszone"
+        create: yes
+      when: newsvm.network.dnszone|default(False) == True 
+
+    - name: create the dnscmd commands to add dns zone in dns_configuration_for_dnszone - middle
+      ansible.builtin.lineinfile:
+        line: |
+          dnscmd localhost /RecordAdd {{ newsvm.network.domain }} {{ svm }}_data_lif_{{ idx + 1 }} /CreatePTR A {{item.ip}}
+          dnscmd localhost /RecordAdd {{ newsvm.network.domain }}  cdot-{{svm|replace('_','-')}} NS {{ svm }}_data_lif_{{ idx + 1 }}.{{newsvm.network.domain}}
+        path: "../dns_configuration_for_dnszone"
+        create: yes
+      loop: "{{ lifs }}" 
+      loop_control:
+        index_var: idx   
+      when: newsvm.network.dnszone|default(False) == True 
+    
+    - name: create the dnscmd commands to add dns zone in dns_configuration_for_dnszone -suffix
+      ansible.builtin.lineinfile:
+        line: |
+          dnscmd localhost /RecordAdd {{ newsvm.network.domain }} {{svm}} CNAME {{ (svm+'.cdot-'+svm+'.'+newsvm.network.domain) | replace('_','-') }}
+          ###############################################################################################################################
+          ####  END COMMANDS FOR SVM: {{ svm }}
+          ###############################################################################################################################
+
+        path: "../dns_configuration_for_dnszone"
+        create: yes
+      when: newsvm.network.dnszone|default(False) == True           
+   
+
     - name: create default gw route
       netapp.ontap.na_ontap_net_routes:
         state: present
@@ -113,6 +148,7 @@
         admin_user_name: "{{ adlogin.user }}"
         admin_password: "{{ adlogin.password }}"
         force: yes
+        use_rest: never
         <<: *login
       when: newsvm.protocols.cifs is defined and newsvm.protocols.cifs.enabled == True 
       ignore_errors: yes

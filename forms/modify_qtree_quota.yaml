@@ -215,6 +215,31 @@ fields:
       expression: ^(on|off)$
       description: Quota state should be on or off to enable modification. Reload the form to update state   
 
+  - type: expression
+    name: current_quota
+    label: Qtree on the volumes  
+    dbConfig:
+      name: AIQUMSQL
+      type: mysql
+    query:  SELECT 
+              qtree.name as Qtree, 
+              qtree.securityStyle as 'Security Style',
+              CONCAT(format(round(COALESCE(qtree_quota.diskUsed,0)/1024/1024,2),'T0'),'G') as 'Disk Used', 
+              ROUND(qtree_quota.diskLimit/1024/1024,2) as 'diskLimit', 
+              ROUND(qtree_quota.softDiskLimit/1024/1024,2) as 'softDiskLimit', 
+              FORMAT(COALESCE(qtree_quota.fileUsed,0),'N') as 'File Used',
+              qtree_quota.fileLimit as 'fileLimit',
+              qtree_quota.softFileLimit as 'softFileLimit'
+            FROM netapp_model_view.cluster, netapp_model_view.vserver, netapp_model_view.volume, netapp_model_view.qtree
+            LEFT JOIN netapp_model_view.qtree_quota ON qtree_quota.qtreeid = qtree.objid
+            WHERE qtree.volumeid = volume.objId and qtree.vserverid = vserver.objId and qtree.clusterid = cluster.objId and volume.name='$(volname)' and vserver.name='$(svm)' and cluster.name='$(cluster)' and qtree.name!=''
+    hide: true
+
+  - type: expression
+    name: validatequota 
+    expression: $(qtrees_quota).every( x => ( (x.fileLimit??2000000000) >= (x.softFileLimit??-1) && (x.diskLimit??9000000) >= (x.softDiskLimit??-1) ))
+    hide: true 
+    runLocal: true
   - type: table
     name: qtrees_quota 
     label: Qtree on the volumes  
@@ -233,6 +258,9 @@ fields:
             FROM netapp_model_view.cluster, netapp_model_view.vserver, netapp_model_view.volume, netapp_model_view.qtree
             LEFT JOIN netapp_model_view.qtree_quota ON qtree_quota.qtreeid = qtree.objid
             WHERE qtree.volumeid = volume.objId and qtree.vserverid = vserver.objId and qtree.clusterid = cluster.objId and volume.name='$(volname)' and vserver.name='$(svm)' and cluster.name='$(cluster)' and qtree.name!=''
+    validIf:
+      field: validatequota
+      description: hard limits should be bigger than soft limits for all entries
     required: true
     allowDelete: false
     allowInsert: false  

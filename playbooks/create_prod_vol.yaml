@@ -182,7 +182,8 @@
         vserver: "{{ svm }}"
         <<: *login
       when:
-        vars[copy].cifsaccess is defined 
+        vars[copy].cifsaccess is defined
+      ignore_errors: yes
 
     #Remove everyone 
     - name: Create CIFS share ACL 
@@ -194,6 +195,7 @@
         <<: *login
       when:
         vars[copy].cifsaccess is defined 
+      ignore_errors: yes
     
     #set user from volume defaults 
     - name: Create CIFS share ACL 
@@ -206,3 +208,11 @@
         <<: *login
       when:
         vars[copy].cifsaccess is defined 
+      ignore_errors: yes
+
+- name: Rediscover cluster in AIQUM
+  import_playbook: aiqum_rediscover_cluster.yaml
+  vars:
+    cluster: "{{ vars[copy].cluster | default (omit)}}"
+    cluster_key: "{{ vars[copy].clusterkey | default (omit)}}"
+  ignore_errors: yes

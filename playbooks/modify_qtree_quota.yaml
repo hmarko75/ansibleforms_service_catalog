@@ -25,12 +25,13 @@
         quota_target: "/vol/{{ prod.volume+'/'+item.Qtree}}"
         type: tree
         policy: default 
-        soft_file_limit: "{{item.softFileLimit|int if (item.softFileLimit|int)>0 else omit |default(omit)}}"
-        soft_disk_limit: "{{(item.softDiskLimit|float)*1024*1024 if (item.softDiskLimit|float)>0 else omit |default(omit)}}"
-        file_limit: "{{item.fileLimit|int if (item.fileLimit|int)>0 else omit |default(omit)}}"
-        disk_limit: "{{(item.diskLimit|float)*1024*1024 if (item.diskLimit|float)>0 else omit |default(omit)}}"
-        #activate_quota_on_change: reinitialize
-        #set_quota_status: yes
+        soft_file_limit: "{{ item.softFileLimit|int if item.softFileLimit!=current_quota[idx-1].softFileLimit else omit|default(omit) }}"
+        soft_disk_limit: "{{ (item.softDiskLimit|float)*1024*1024 if item.softDiskLimit!=current_quota[idx-1].softDiskLimit else omit |default(omit) }}"
+        file_limit: "{{ item.fileLimit|int if item.fileLimit!=current_quota[idx-1].fileLimit else omit |default(omit )}}"
+        disk_limit: "{{ (item.diskLimit|float)*1024*1024 if item.diskLimit!=current_quota[idx-1].diskLimit else omit|default(omit) }}"
+        activate_quota_on_change: "{{ 'reinitialize' if ansible_loop.last else 'none' }}"
         <<: *login
       loop: "{{ qtrees_quota }}"
-      when: item.softDiskLimit|int|default(0) > 0 or item.diskLimit|float|default(0) > 0 or item.fileLimit|int|default(0) > 0 or item.softFileLimit|int|default(0) > 0
+      loop_control:
+        index_var: idx
+        extended: yes

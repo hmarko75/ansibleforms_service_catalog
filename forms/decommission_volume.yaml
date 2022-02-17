@@ -5,7 +5,7 @@ roles:
   - Provision
 description: Decommission existing volume
 categories:
-  - Decommision
+  - Decommission
 playbook: decommission_service_vol.yaml
 inventory: hosts
 type: ansible
@@ -24,6 +24,18 @@ fields:
     label: aiqum
     hide: true
     noOutput: true
+  - type: expression
+    name: aiqumlogin
+    label: aiqumlogin
+    expression: "'AIQUM'"
+    asCredential: true
+    hide: true
+  - type: expression
+    name: datasource_info
+    label: datasource_info
+    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/admin/datasources/clusters','','AIQUM','[.records[]|{name:.name}+{key:.key}]','','')
+    hide: true
+    noOutput: true    
   - type: expression
     name: login
     expression: "'ONTAP'"
@@ -64,6 +76,13 @@ fields:
     expression: "'$(selectedvolume.cluster)'"
     hide: true
     model: prod.cluster
+  - type: expression
+    name: cluster_key
+    label: cluster_key
+    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(cluster)")|.key')
+    hide: true
+    group: Production
+    model: prod.clusterkey
   - type: expression
     name: svm
     label: svm
@@ -314,6 +333,17 @@ fields:
         values:
           - true
   - type: expression
+    name: dr1_cluster_key
+    label: dr1_cluster_key
+    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(dr1_cluster)")|.key')
+    hide: true
+    group: DR1
+    model: dr1.clusterkey
+    dependencies:
+      - name: dr1
+        values:
+          - true           
+  - type: expression
     name: dr1_svm
     label: dr1_svm
     expression: fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains("$(service)^$(company)^$(environment)^$(location)^dr1^fixed_relationship_for_prod^$(cluster)_$(svm)^svm")))[]')
@@ -467,6 +497,17 @@ fields:
       - name: dr2
         values:
           - true
+  - type: expression
+    name: dr2_cluster_key
+    label: dr2_cluster_key
+    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(dr2_cluster)")|.key')
+    hide: true
+    group: DR2
+    model: dr2.clusterkey
+    dependencies:
+      - name: dr2
+        values:
+          - true            
   - type: expression
     name: dr2_svm
     label: dr2_svm
@@ -624,6 +665,17 @@ fields:
       - name: b2d1
         values:
           - true
+  - type: expression
+    name: b2d1_cluster_key
+    label: b2d1_cluster_key
+    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(b2d1_cluster)")|.key')
+    hide: true
+    group: B2D1
+    model: b2d1.clusterkey
+    dependencies:
+      - name: b2d1
+        values:
+          - true            
   - type: expression
     name: b2d1_svm
     label: b2d1_svm
@@ -784,6 +836,17 @@ fields:
       - name: b2d2
         values:
           - true
+  - type: expression
+    name: b2d2_cluster_key
+    label: b2d2_cluster_key
+    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(b2d2_cluster)")|.key')
+    hide: true
+    group: B2D2
+    model: b2d2.clusterkey
+    dependencies:
+      - name: b2d2
+        values:
+          - true            
   - type: expression
     name: b2d2_svm
     label: b2d2_svm

@@ -7,13 +7,18 @@ categories:
     icon: bath    
   - name: Maintenance
     icon: bath
-  - name: Decommision    
+  - name: Debug
+    icon: bath    
+  - name: Decommission    
     icon: trash
 roles:
   - name: admin
     groups:
       - local/admins
       - ldap/Domain Admins
+  - name: setup
+    groups:
+      - local/admins  
   - name: operator
     groups:
       - local/operator
@@ -24,7 +29,7 @@ roles:
     groups: []
   - name: Provision
     groups:
-      - local/Provision Admins
+      - ldap/Provision Admins
 constants: {}
 forms:
   - name: Cleanup Ansibleforms Jobs
@@ -73,7 +78,7 @@ forms:
       - Provision
     description: Debug
     categories:
-      - Provision
+      - Debug
     icon: scroll
     playbook: debug.yaml
     inventory: hosts
@@ -105,7 +110,7 @@ forms:
 
       - type: query
         name: clusters
-        label: Select clusters
+        label: מה קורה אח שלי הכל טוב
         expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM',
           'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
           0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\

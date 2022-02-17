@@ -4,7 +4,7 @@ roles:
   - Provision
 description: Delete expired decommissioned volumes 
 categories:
-  - Decommision
+  - Decommission
 playbook: delete_decommission_service_vol.yaml
 inventory: hosts
 type: ansible

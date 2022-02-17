@@ -1,0 +1,67 @@
+---
+- name: create svm  
+  hosts: "localhost"
+  become: no 
+  #gather_facts: no
+  vars:
+    cluster: "{{ vars[copy].cluster }}"
+    svm: "{{ vars[copy].svm }}"
+    lifs: "{{ vars[copy].lifs }}"
+    newsvm: "{{ services[general.service][general.company][general.environment][general.location][copy]['newsvm'] }}"
+
+    clusterauth:  &login
+      hostname: "{{ cluster }}"
+      username: "{{ login.user }}"
+      password: "{{ login.password }}"
+      https: true
+      validate_certs: false
+
+  vars_files:
+  #- volume_variables.yaml
+  - ../globals.yaml
+
+  collections:
+  - netapp.ontap  
+
+  tasks:
+
+    # log infomration 
+    - name: svm creation info
+      ansible.builtin.debug:
+        msg:
+        - "creating svm:{{ cluster }}:{{ svm }} copy:{{ copy }}"  
+
+    - name: create the dnscmd commands to add dns zone in dns_configuration_for_dnszone - prefix 
+      ansible.builtin.lineinfile:
+        line: |
+          ###############################################################################################################################
+          #### START DNS CREATION COMMANDS FOR SVM: {{ svm }} TIME: {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+          ###############################################################################################################################
+        path: "../dns_configuration_for_dnszone"
+        create: yes
+      when: newsvm.network.dnszone|default(False) == True 
+
+    - name: create the dnscmd commands to add dns zone in dns_configuration_for_dnszone - middle
+      ansible.builtin.lineinfile:
+        line: |
+          dnscmd localhost /RecordAdd {{ newsvm.network.domain }} {{ svm }}_data_lif_{{ idx + 1 }} /CreatePTR A {{item.ip}}
+          dnscmd localhost /RecordAdd {{ newsvm.network.domain }} NS {{ svm }}_data_lif_{{ idx + 1 }}.{{newsvm.network.domain}}
+        path: "../dns_configuration_for_dnszone"
+        create: yes
+      loop: "{{ lifs }}" 
+      loop_control:
+        index_var: idx   
+      when: newsvm.network.dnszone|default(False) == True 
+    
+    - name: create the dnscmd commands to add dns zone in dns_configuration_for_dnszone -suffix
+      ansible.builtin.lineinfile:
+        line: |
+          dnscmd localhost /RecordAdd {{ newsvm.network.domain }} {{svm}} CNAME {{ (svm+'.cdot-'+svm+'.'+newsvm.network.domain) | replace('_','-') }}
+          ###############################################################################################################################
+          ####  END COMMANDS FOR SVM: {{ svm }}
+          ###############################################################################################################################
+
+        path: "../dns_configuration_for_dnszone"
+        create: yes
+      when: newsvm.network.dnszone|default(False) == True       
+      
