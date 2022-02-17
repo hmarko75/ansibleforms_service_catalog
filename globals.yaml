@@ -6,30 +6,37 @@ VolumeDefaults:
             shrink_threshold_percent: 85
             vol_max_size_ratio: 2
             vol_min_size_ratio: 1
+            #max_size: 101376
+            max_size: 10132
         b2d2:
             grow_threshold_percent: 95
             mode: grow_shrink
             shrink_threshold_percent: 85
             vol_max_size_ratio: 2
             vol_min_size_ratio: 1
+            #max_size: 101376
+            max_size: 10132
         dr1:
             grow_threshold_percent: 95
             mode: grow_shrink
             shrink_threshold_percent: 85
             vol_max_size_ratio: 1.2
             vol_min_size_ratio: 1
+            max_size: 101376
         dr2:
             grow_threshold_percent: 95
             mode: grow_shrink
             shrink_threshold_percent: 85
             vol_max_size_ratio: 1.2
             vol_min_size_ratio: 1
+            max_size: 101376
         prod:
             grow_threshold_percent: 95
             mode: grow_shrink
             shrink_threshold_percent: 85
             vol_max_size_ratio: 1.2
             vol_min_size_ratio: 1
+            max_size: 101376
     defualt_junction_path: /
     dynamic:
         prod_efficiency_policy_duation: 3
