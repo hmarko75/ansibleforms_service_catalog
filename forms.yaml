@@ -110,7 +110,7 @@ forms:
 
       - type: query
         name: clusters
-        label: מה קורה אח שלי הכל טוב
+        label: Cluster
         expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM',
           'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
           0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
@@ -128,10 +128,42 @@ forms:
           - Total Capacity
           - Available Capacity
         required: true
-        default: __none__
+        default: __auto__
         outputObject: false
         model: clusters
-        multiple: true
-        sticky: true
+        #multiple: true
+        #sticky: true
+
+      - type: query
+        name: svms
+        label: SVMs
+        expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms','','AIQUM','[.records[]|{Name: .name}]','','')"
+        columns:
+          - Name
+        required: true
+        default: __auto__
+
+      - type: text
+        name: volname
+        label: Volume Name
+        default: ""
+        required: true
+        minLength: 1
+        maxLength: 30
+        regex:
+          expression: ^[a-z0-9_]*$
+          description: Invalid volume name
+        icon: user
+
+      - type: number
+        name: volsize
+        label: Volume Size (G)
+        default: "100"
+        required: true
+        minValue: 10
+        maxValue: 90000
+        icon: user        
+
+
 
 

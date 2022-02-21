@@ -177,7 +177,7 @@ fields:
   - type: expression
     name: prod_svm_count
     label: prod_svm_count
-    expression: $(prod_svm_match_arr).length
+    expression: "([...new Set($(prod_svm_match_arr))]).length"
     runLocal: true
     hide: true
     noOutput: true

@@ -8,10 +8,12 @@
     aggregate: "{{ vars.prod.aggregate }}"
     svm: "{{ vars.prod.svm }}"
     volname: "{{ vars.prod.volname }}"
-    volsize: "{{ vars.prod.volsize }}"
-    secstyle: "{{ vars.prod.secstyle }}"
+    secstyle: "{{ vars.prod.secstyle | default(VolumeDefaults.secstyle) | default(omit) }}"
     snapshot_policy: "{{ vars.prod.snapshotpolicy }}"
+    percent_snapshot_space: "{{ vars.prod.snapshotpolicy.percent_snapshot_space|default(VolumeDefaults.percent_snapshot_space)|default(0)|int }}"
+    volsize: "{{ vars.prod.volsize|int + vars.prod.volsize|int*percent_snapshot_space|int/100|int }}"
     cifsaccess:  "{{ vars.prod.cifsaccess }}"
+    
 
     clusterauth:  &login
       hostname: "{{ cluster }}"
@@ -51,7 +53,7 @@
       when: 
         vars.prod.efficiency.dynamicschedule == true and vars.prod.efficiency.schedule not in ['none','']
       set_fact:
-        efficiency_policy_suffix: "{{ (base_schedule_suffix|int + VolumeDefaults.dynamic.prod_efficiency_policy_offet|int)}}"
+        efficiency_policy_suffix: "{{ (base_schedule_suffix|int + VolumeDefaults.dynamic.prod_efficiency_policy_offset|int)}}"
 
     #when suffix is < 1 rotate 
     - name: dynamic efficiency policy1
@@ -83,7 +85,7 @@
         policy_name: "{{ vars.prod.efficiency.schedule + efficiency_policy_suffix if efficiency_policy_suffix is defined else vars.prod.efficiency.schedule }}"
         enabled: true
         schedule: "{{ vars.prod.efficiency.schedule + efficiency_policy_suffix if efficiency_policy_suffix is defined else vars.prod.efficiency.schedule }}"
-        duration: "{{ vars.prod.efficiency.duration | default(omit) }}"
+        duration: "{{ vars.prod.efficiency.duration | default(VolumeDefaults.dynamic.prod_efficiency_policy_offset) | default(omit) }}"
         qos_policy: background
         <<: *login
 
@@ -128,10 +130,10 @@
         name: "{{ volname }}"
         vserver: "{{ svm }}"
         size: "{{ volsize|int }}"
-        junction_path: "{{ VolumeDefaults.defualt_junction_path + volname if VolumeDefaults.defualt_junction_path is defined else '/'+volname }}"
+        junction_path: "{{ VolumeDefaults.default_junction_path + volname if VolumeDefaults.default_junction_path is defined else '/'+volname }}"
         snapshot_policy: "{{ snapshot_policy | default(omit) }}"
-        percent_snapshot_space: "{{ VolumeDefaults.percent_snapshot_space | default(omit) }}"
-        volume_security_style: "{{ VolumeDefaults.secstyle | default(omit) }}"
+        percent_snapshot_space: "{{ percent_snapshot_space }}"
+        volume_security_style: "{{ secstyle | default(omit) }}"
         export_policy: "{{ volname }}"
         comment: "{{ general.comment | default(omit)}}"
         <<: *login
@@ -178,7 +180,7 @@
       netapp.ontap.na_ontap_cifs:
         state: present
         share_name: "{{ volname + vars[copy].cifsaccess.share_suffix|default('') }}"
-        path: "{{ VolumeDefaults.defualt_junction_path + volname if VolumeDefaults.defualt_junction_path is defined else '/'+volname }}"
+        path: "{{ VolumeDefaults.default_junction_path + volname if VolumeDefaults.default_junction_path is defined else '/'+volname }}"
         vserver: "{{ svm }}"
         <<: *login
       when:

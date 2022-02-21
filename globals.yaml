@@ -1,46 +1,47 @@
+general:
+    aiqum: aiqum.demo.netapp.com
+
 VolumeDefaults:
     auto_size:
         b2d1:
             grow_threshold_percent: 95
+            max_size: 101376
             mode: grow_shrink
             shrink_threshold_percent: 85
             vol_max_size_ratio: 2
             vol_min_size_ratio: 1
-            #max_size: 101376
-            max_size: 10132
         b2d2:
             grow_threshold_percent: 95
+            max_size: 101376
             mode: grow_shrink
             shrink_threshold_percent: 85
             vol_max_size_ratio: 2
             vol_min_size_ratio: 1
-            #max_size: 101376
-            max_size: 10132
         dr1:
             grow_threshold_percent: 95
+            max_size: 101376
             mode: grow_shrink
             shrink_threshold_percent: 85
             vol_max_size_ratio: 1.2
             vol_min_size_ratio: 1
-            max_size: 101376
         dr2:
             grow_threshold_percent: 95
+            max_size: 101376
             mode: grow_shrink
             shrink_threshold_percent: 85
             vol_max_size_ratio: 1.2
             vol_min_size_ratio: 1
-            max_size: 101376
         prod:
             grow_threshold_percent: 95
+            max_size: 101376
             mode: grow_shrink
             shrink_threshold_percent: 85
             vol_max_size_ratio: 1.2
             vol_min_size_ratio: 1
-            max_size: 101376
-    defualt_junction_path: /
+    default_junction_path: /
     dynamic:
-        prod_efficiency_policy_duation: 3
-        prod_efficiency_policy_offet: -3
+        prod_efficiency_policy_duration: 3
+        prod_efficiency_policy_offset: -3
         prod_snapshot_policy_range_end: 9
         prod_snapshot_policy_range_start: 5
         replication_schedule_offset:
@@ -49,25 +50,177 @@ VolumeDefaults:
             dr1: 1
             dr2: 2
         total_schedules: 10
-    percent_snapshot_space: 0
-    size_unit: gb
+    percent_snapshot_space: 5
+
 domains:
     demo.netapp.com:
         dnsservers:
         - 192.168.0.253
         ou: CN=Computers
-general:
-    aiqum: aiqum.demo.netapp.com
+
 networks:
     vlan-1:
         gateway: 192.168.0.1
-        iprange: 192.168.0.[90-115]
+        iprange: 192.168.0.[90-100],192.168.0.[130-149]
         subnetmask: 255.255.255.0
     vlan-2:
         gateway: 10.1.2.254
         iprange: 10.1.2.[30-35],10.1.2.240
         subnetmask: 255.255.255.0
+
 services:
+    Home Directories:
+        ACME Corp:
+            Production:
+                Tel Aviv:
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            cluster1:
+                            - tlv_nas
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            - iscsi
+                            - nvme
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 2
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            percent_snapshot_space: 10
+                            count:
+                            - 24
+                            - 4
+                            dynamicschedule: true
+                            name: sp
+                            prefix:
+                            - daily
+                            - weekly
+                            schedule:
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - daily
+                            - weekly
+                    dr1:
+                        clusters:
+                            cluster1: []
+                            cluster2: []
+                        fixed_relationship_for_prod:
+                            cluster1_tlv_nas:
+                                cluster: cluster2
+                                svm: tlv_nas_dr1
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr1
+                        sizeratio: 1.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: daily
+                        volnamesuffix: ''
+                    b2d1:
+                        clusters:
+                            cluster2: []
+                        fixed_relationship_for_prod:
+                            cluster1_tlv_nas:
+                                cluster: cluster2
+                                svm: tlv_nas_b2d1
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _b2d1
+                        sizeratio: 2.5
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+
     NAS Prod DR1 B2D1:
         Company 1:
             Production:
@@ -197,6 +350,7 @@ services:
                                     vstorage_state: enabled
                             root_volume_security_style: ntfs
                         snapshotpolicy:
+                            percent_snapshot_space: 10
                             count:
                             - 24
                             - 4
@@ -211,6 +365,7 @@ services:
                             snapmirror_label:
                             - daily
                             - weekly
+                        
                 Site B:
                     b2d1:
                         clusters:
@@ -219,6 +374,9 @@ services:
                             cluster1_nas1:
                                 cluster: cluster2
                                 svm: nas1_b2d1
+                            cluster1_nas2:
+                                cluster: cluster2
+                                svm: nas2_b2d1
                         newsvm:
                             language: he.utf_8
                             network:
@@ -263,6 +421,9 @@ services:
                             cluster1_nas1:
                                 cluster: cluster1
                                 svm: nas1_dr1
+                            cluster1_nas2:
+                                cluster: cluster2
+                                svm: nas2_dr1
                         newsvm:
                             language: he.utf_8
                             network:
@@ -304,8 +465,7 @@ services:
                         clusters:
                             cluster1:
                             - nas1
-                            - nas1
-                            - nas1
+                            - nas2
                         efficiency:
                             duration: 3
                             dynamicschedule: true
