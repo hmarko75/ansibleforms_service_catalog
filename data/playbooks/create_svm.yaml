@@ -136,6 +136,18 @@
         <<: *login
       when: newsvm.protocols.nfs is defined
 
+    #add default export policy rule 
+    - name: Create ExportPolicyRule
+      netapp.ontap.na_ontap_export_policy_rule:
+        state: present
+        name: default
+        vserver: "{{ svm }}"
+        client_match: 0.0.0.0/0
+        ro_rule: sys
+        rw_rule: none
+        super_user_security: none
+        <<: *login
+      when: newsvm.protocols.nfs is defined
 
     - name: create CIFS server 
       netapp.ontap.na_ontap_cifs_server:

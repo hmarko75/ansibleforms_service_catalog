@@ -1,13 +1,13 @@
 ---
-- name: create svm  
+- name: update fixed relationships with new topology   
   hosts: "localhost"
   become: no 
   gather_facts: no
   vars:
-    cluster: "{{ vars[copy].cluster }}"
-    svm: "{{ vars[copy].svm }}"
-    lifs: "{{ vars[copy].lifs }}"
-    newsvm: "{{ services[general.service][general.company][general.environment][general.location][copy]['newsvm'] }}"
+    # cluster: "{{ vars[copy].cluster }}"
+    # svm: "{{ vars[copy].svm }}"
+    # lifs: "{{ vars[copy].lifs }}"
+    # newsvm: "{{ services[general.service][general.company][general.environment][general.location][copy]['newsvm'] }}"
 
   tasks:
   - name: Read globals.yaml file 

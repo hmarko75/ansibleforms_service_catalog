@@ -85,7 +85,7 @@
         policy_name: "{{ vars.prod.efficiency.schedule + efficiency_policy_suffix if efficiency_policy_suffix is defined else vars.prod.efficiency.schedule }}"
         enabled: true
         schedule: "{{ vars.prod.efficiency.schedule + efficiency_policy_suffix if efficiency_policy_suffix is defined else vars.prod.efficiency.schedule }}"
-        duration: "{{ vars.prod.efficiency.duration | default(VolumeDefaults.dynamic.prod_efficiency_policy_offset) | default(omit) }}"
+        duration: "{{ vars.prod.efficiency.duration | default(VolumeDefaults.dynamic.prod_efficiency_policy_duration) | default(omit) }}"
         qos_policy: background
         <<: *login
 

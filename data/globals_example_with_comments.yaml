@@ -1,3 +1,92 @@
+general:
+    aiqum: aiqum.demo.netapp.com  # name of the activeiq unified manager
+
+VolumeDefaults:
+    #default junction path to mount new volumes 
+    default_junction_path: /
+    #default snap reserve, can be override per service 
+    percent_snapshot_space: 5
+
+    #dynamic scheules for efficiency, snapshots and replication scheules 
+    #requires creation of schedules using tha scheule creation form on all relevant clusters 
+    dynamic:
+        total_schedules: 24 #total number of scheules created per scheule type
+        
+        prod_efficiency_policy_duration: 3 #efficiency per volume will run maximum 3h 
+        prod_efficiency_policy_offset: -3  #efficiency scanner will kick -3h before the daily snapshot 
+        #daily snapshot will randomize between 21:00 to 4am 
+        prod_snapshot_policy_range_start: 21 
+        prod_snapshot_policy_range_end: 4 
+        
+        #replication offset from choosen schedule
+        replication_schedule_offset:
+            dr1: 1
+            dr2: 2
+            b2d1: 3
+            b2d2: 4
+        
+  
+    #autosize configurtion for each volume created 
+    auto_size:
+        prod:
+            grow_threshold_percent: 95
+            max_size: 101376
+            mode: grow_shrink
+            shrink_threshold_percent: 85
+            vol_max_size_ratio: 1.2
+            vol_min_size_ratio: 1
+
+        dr1:
+            grow_threshold_percent: 95
+            max_size: 101376
+            mode: grow_shrink
+            shrink_threshold_percent: 85
+            vol_max_size_ratio: 1.2
+            vol_min_size_ratio: 1
+
+        dr2:
+            grow_threshold_percent: 95
+            max_size: 101376
+            mode: grow_shrink
+            shrink_threshold_percent: 85
+            vol_max_size_ratio: 1.2
+            vol_min_size_ratio: 1
+
+        b2d1:
+            grow_threshold_percent: 95
+            max_size: 101376
+            mode: grow_shrink
+            shrink_threshold_percent: 85
+            vol_max_size_ratio: 2
+            vol_min_size_ratio: 1
+        b2d2:
+            grow_threshold_percent: 95
+            max_size: 101376
+            mode: grow_shrink
+            shrink_threshold_percent: 85
+            vol_max_size_ratio: 2
+            vol_min_size_ratio: 1
+
+#dns domain and ad ou (if relevant) information information for each domain 
+domains:
+    demo.netapp.com:
+        dnsservers:
+        - 192.168.0.253
+        ou: CN=Computers
+
+#network and avaialble ip address information. network name should be configured as the BD name in all relevant clusters 
+#iprange is used to specifiy the avaialble ip addresses in this range 
+networks:
+    vlan-1:
+        gateway: 192.168.0.1
+        iprange: 192.168.0.[90-100],192.168.0.[130-149],192.168.0.170
+        subnetmask: 255.255.255.0
+    vlan-2:
+        gateway: 10.1.2.254
+        iprange: 10.1.2.[30-35],10.1.2.240
+        subnetmask: 255.255.255.0
+
+
 services:
     Service_Name:
         Company:
