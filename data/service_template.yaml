@@ -1,0 +1,235 @@
+services:
+    Service_Name:
+        Company:
+            Environment:
+                Location:
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $ #created share will be suffixed with $ in this examples
+                            user_or_group: DEMO\administrator #username/group for sharing 
+                        clusters: {} 
+                        # when importing existing svms should contain cluster should clusters should contain the following structure:
+                        # clusters:
+                        #   cluster1:
+                        #     - svm1
+                        #     - svm2                        
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm: #the bellow section is used for creation of new SVM for this service 
+                            allowed_protocols: [cifs,nfs] #allowed protocols can be one or more from the following list: cifs,nfs,iscsi,nvme,fcp
+                            language: he.utf_8 #svm default language can be one of the following languages https://docs.ansible.com/ansible/latest/collections/netapp/ontap/na_ontap_svm_module.html#parameter-language
+                            network:
+                                dnszone: true #enable creation of dnszone as part of onboard dns load balancing. 
+                                domain: demo.netapp.com # refrence for the dns configuration (should be part of the globals.yaml)
+                                lif_auto_revert: true #lifs auto revert configuration 
+                                lifcount: 2 #the number of lifs to create on the SVM. only cifs/nfs lifs are supported for now
+                                name: vlan-1 #refrence to the network configuration (should be part of the globals.yaml). the name of the network shoud be as the broadcast doamin name on the relevant netapp controllers 
+                            protocols: #define the services to create on a new SVM
+                                cifs:
+                                    domain: demo.netapp.com # refrence for the dns configuration (should be part of the globals.yaml)
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs #the svm root volume security style 
+
+                        snapshotpolicy: #snapshot settings for volumes created for this service 
+                            percent_snapshot_space: 10
+                            dynamicschedule: true #dynamic scheules will be used, ranges and offsets are provided as part of the VolumeDefaults in the globals.yaml
+                            name: sp_24d_4w_  #name of the snapshot policy (for dynamic scheules this name will be suffixed by )
+                            schedule: [daily,weekly] #schedule will be suffixed if dynamic 
+                            count: [24,4]
+                            prefix: [daily,weekly]
+                            snapmirror_label: [daily, weekly]
+
+                    dr1: # dr1 copy can be source from prod copy 
+                        clusters: {}
+                        #list of allowed clusters to choose from. should look like this 
+                        #clusters:
+                        #    cluster1: []
+                        #    cluster2: []                        
+                        fixed_relationship_for_prod: {}  
+                        # fixed_relationship_for_prod is used to link between between destination svm to the prod svm and will auto populate when creating SVM.
+                        # fixed_relationship_for_prod
+                        #   cluster1_tlv_nas: #prodcluster_prodsvm
+                        #     cluster: cluster2 #destinationcluster
+                        #       svm: tlv_nas_dr1 #destination SVM                        
+                        sizeratio: 1 #volume size ratio comparing to the prod copy 
+                        volnamesuffix: '' # volume will be suffixed if provided 
+                        source: #information about the source of the replication 
+                            copy: prod  # source replication 
+                            dynamicschedule: true #dynamic scheule VolumeDefault contains the offset from the producuction
+                            schedule: daily #scheule will be suffixed in case of dynamic  
+                            policy:  #snapmirrror policy to be used 
+                                name: MirrorAllSnapshots #name of the snapmirror policy 
+                            
+                        newsvm: #identical to prod 
+                            suffix: _dr1 # svm name will be suffixed with this 
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.netapp.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+
+                    dr2:
+                        clusters: {}
+                        # clusters: 
+                        #     cluster1: []
+                        #     cluster2: []
+                        fixed_relationship_for_prod: {}
+                        # fixed_relationship_for_prod:
+                        #     cluster1_tlv_nas:
+                        #         cluster: cluster2
+                        #         svm: tlv_nas_dr1
+                        sizeratio: 1.5
+                        volnamesuffix: ''
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            schedule: daily
+                            suffix: _dr1
+                            policy:
+                                name: MirrorAllSnapshots
+                                                
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+
+                    b2d1:
+                        clusters: {}
+                        # clusters:
+                        #     cluster2: []
+                        fixed_relationship_for_prod: {}
+                        # fixed_relationship_for_prod:
+                        #     cluster1_tlv_nas:
+                        #         cluster: cluster2
+                        #         svm: tlv_nas_b2d1
+                        newsvm:
+                            suffix: _b2d1                        
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            
+                        sizeratio: 2.5
+                        volnamesuffix: ''
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            schedule: daily
+                            policy: #snapmirror policy with snapmirror labels 
+                                snapmirror_label: [daily]                            
+                                keep: [90]
+                                name: 90daily
+                                policy_type: async_mirror
+                          
+                    b2d2:
+                        clusters: {}
+                        fixed_relationship_for_prod: {}
+                        volnamesuffix: ''    
+                        sizeratio: 2.5
+                        source:
+                            copy: dr2
+                            dynamicschedule: true
+                            schedule: daily
+                            policy:
+                                snapmirror_label: [daily,hourly]
+                                keep: [120,10]
+                                name: 120daily_10hourly
+                                policy_type: async_mirror                            
+                        newsvm:
+                            suffix: _b2d2
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
