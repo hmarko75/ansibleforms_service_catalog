@@ -40,5 +40,6 @@
         soft_file_limit: "{{quota.soft_file_limit|int if (quota.soft_file_limit|int)>0 else omit |default(omit)}}"
         file_limit: "{{quota.file_limit|int if (quota.file_limit|int)>0 else omit |default(omit)}}"
         set_quota_status: yes
+        activate_quota_on_change: reinitialize
         <<: *login
       when: quota is defined

@@ -86,7 +86,7 @@ networks:
         iprange: 10.1.2.[30-35],10.1.2.240
         subnetmask: 255.255.255.0
 
-
+#services information
 services:
     Service_Name:
         Company:
@@ -97,12 +97,22 @@ services:
                             access: full_control
                             share_suffix: $ #created share will be suffixed with $ in this examples
                             user_or_group: DEMO\administrator #username/group for sharing 
+
                         clusters: {} 
                         # when importing existing svms should contain cluster should clusters should contain the following structure:
                         # clusters:
                         #   cluster1:
                         #     - svm1
                         #     - svm2                        
+                        snapshotpolicy: #snapshot settings for volumes created for this service 
+                            percent_snapshot_space: 10
+                            dynamicschedule: true #dynamic scheules will be used, ranges and offsets are provided as part of the VolumeDefaults in the globals.yaml
+                            name: sp_24d_4w_  #name of the snapshot policy (for dynamic scheules this name will be suffixed by )
+                            schedule: [daily,weekly] #schedule will be suffixed if dynamic 
+                            count: [24,4]
+                            prefix: [daily,weekly]
+                            snapmirror_label: [daily, weekly]
+
                         efficiency:
                             duration: 3
                             dynamicschedule: true
@@ -138,15 +148,6 @@ services:
                                     showmount: enabled
                                     vstorage_state: enabled
                             root_volume_security_style: ntfs #the svm root volume security style 
-
-                        snapshotpolicy: #snapshot settings for volumes created for this service 
-                            percent_snapshot_space: 10
-                            dynamicschedule: true #dynamic scheules will be used, ranges and offsets are provided as part of the VolumeDefaults in the globals.yaml
-                            name: sp_24d_4w_  #name of the snapshot policy (for dynamic scheules this name will be suffixed by )
-                            schedule: [daily,weekly] #schedule will be suffixed if dynamic 
-                            count: [24,4]
-                            prefix: [daily,weekly]
-                            snapmirror_label: [daily, weekly]
 
                     dr1: # dr1 copy can be source from prod copy 
                         clusters: {}
@@ -201,7 +202,7 @@ services:
                         #     cluster1: []
                         #     cluster2: []
                         fixed_relationship_for_prod: {}
-                        # fixed_relationship_for_prod:
+                        # fixed_relationship_for_prod:Q
                         #     cluster1_tlv_nas:
                         #         cluster: cluster2
                         #         svm: tlv_nas_dr1
