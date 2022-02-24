@@ -144,7 +144,7 @@ services:
                             share_suffix: $
                             user_or_group: DEMO\administrator
                         clusters:
-                            tlv-cluster: {}
+                            tlv-cluster: []
                         efficiency:
                             duration: 3
                             dynamicschedule: true
@@ -282,7 +282,7 @@ services:
                             share_suffix: $
                             user_or_group: DEMO\administrator
                         clusters:
-                            cluster1: {}
+                            bru-cluster: []
                         efficiency:
                             duration: 3
                             dynamicschedule: true

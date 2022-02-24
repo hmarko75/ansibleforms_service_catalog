@@ -162,7 +162,7 @@ fields:
     name: svm_filter_jq
     label: svm_filter_jq
     hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.prod|.clusters|.$(cluster)|join("%7C")')
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.prod|.clusters|.\"$(cluster)\"|join("%7C")')
     group: Production
     noOutput: true
   - type: query
@@ -487,7 +487,7 @@ fields:
     hide: true
     expression: fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if
       "$(dr1_dedicated_svm)" != "null" then "$(dr1_dedicated_svm)" else
-      .services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr1|.clusters|.$(dr1_cluster)|join("%7C")
+      .services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr1|.clusters|.\"$(dr1_cluster)\"|join("%7C")
       end')
     group: DR1
     noOutput: true
@@ -675,7 +675,7 @@ fields:
     hide: true
     expression: fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if
       "$(dr2_dedicated_svm)" != "null" then "$(dr2_dedicated_svm)" else
-      .services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.clusters|.$(dr2_cluster)|join("%7C")
+      .services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.clusters|.\"$(dr2_cluster)\"|join("%7C")
       end')
     group: DR2
     noOutput: true
@@ -864,7 +864,7 @@ fields:
     hide: true
     expression: fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if
       "$(b2d1_dedicated_svm)" != "null" then "$(b2d1_dedicated_svm)" else
-      .services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d1|.clusters|.$(b2d1_cluster)|join("%7C")
+      .services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d1|.clusters|.\"$(b2d1_cluster)\"|join("%7C")
       end')
     group: B2D1
     noOutput: true
@@ -1053,7 +1053,7 @@ fields:
     hide: true
     expression: fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if
       "$(b2d2_dedicated_svm)" != "null" then "$(b2d2_dedicated_svm)" else
-      .services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d2|.clusters|.$(b2d2_cluster)|join("%7C")
+      .services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d2|.clusters|.\"$(b2d2_cluster)\"|join("%7C")
       end')
     group: B2D2
     noOutput: true
