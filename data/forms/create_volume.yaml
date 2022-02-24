@@ -383,7 +383,7 @@ fields:
     name: dr1_dedicated_cluster
     label: dr1_dedicated_cluster
     hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr1|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr1|.fixed_relationship_for_prod|.\"$(cluster)_$(svm)\"|.cluster')
     group: DR1
     noOutput: true
     dependencies:
@@ -394,7 +394,7 @@ fields:
     name: dr1_dedicated_svm
     label: dr1_dedicated_svm
     hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr1|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr1|.fixed_relationship_for_prod|.\"$(cluster)_$(svm)\"|.svm')
     group: DR1
     noOutput: true
     dependencies:
@@ -571,7 +571,7 @@ fields:
     name: dr2_dedicated_cluster
     label: dr2_dedicated_cluster
     hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.fixed_relationship_for_prod|.\"$(cluster)_$(svm)\"|.cluster')
     group: DR2
     noOutput: true
     dependencies:
@@ -582,7 +582,7 @@ fields:
     name: dr2_dedicated_svm
     label: dr2_dedicated_svm
     hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.fixed_relationship_for_prod|.\"$(cluster)_$(svm)\"|.svm')
     group: DR2
     noOutput: true
     dependencies:
@@ -759,7 +759,7 @@ fields:
     name: b2d1_dedicated_cluster
     label: b2d1_dedicated_cluster
     hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d1|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d1|.fixed_relationship_for_prod|.\"$(cluster)_$(svm)\"|.cluster')
     group: B2D1
     noOutput: true
     dependencies:
@@ -770,7 +770,7 @@ fields:
     name: b2d1_dedicated_svm
     label: b2d1_dedicated_svm
     hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d1|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d1|.fixed_relationship_for_prod|.\"$(cluster)_$(svm)\"|.svm')
     group: B2D1
     noOutput: true
     dependencies:
