@@ -34,7 +34,8 @@
     - name: calculate base suffix for dynamic snapshot policy 
       no_log: true
       set_fact:
-        base_schedule_suffix: "{{ VolumeDefaults.dynamic.prod_snapshot_policy_range_end | random(start=VolumeDefaults.dynamic.prod_snapshot_policy_range_start) }}"
+        #base_schedule_suffix: "{{ VolumeDefaults.dynamic.prod_snapshot_policy_range_end | random(start=VolumeDefaults.dynamic.prod_snapshot_policy_range_start) }}"
+        base_schedule_suffix: "{{VolumeDefaults.dynamic.prod_snapshot_policy_range_end|random(start=VolumeDefaults.dynamic.prod_snapshot_policy_range_start) if start<=end else (VolumeDefaults.dynamic.total_schedules|random(start=VolumeDefaults.dynamic.prod_snapshot_policy_range_start) if 1|random(start=0)==1 else VolumeDefaults.dynamic.prod_snapshot_policy_range_end|random(start=1)}}"
       when: 
         vars.prod.snapshotpolicy.dynamicschedule == true
 
