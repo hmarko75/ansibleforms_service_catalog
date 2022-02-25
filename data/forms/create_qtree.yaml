@@ -146,7 +146,7 @@ fields:
     noOutput: true
   - type: expression
     name: cr
-    expression: "$(parse_comment).filter(x=>x.name==='CR')[0]?.value || ''"
+    expression: "$(volume_comment).includes('CR:')?('$(volume_comment)').match(/CR:\"([^\"]*)\".*/)[1]:''"
     runLocal: true 
     hide: true
     noOutput: true
