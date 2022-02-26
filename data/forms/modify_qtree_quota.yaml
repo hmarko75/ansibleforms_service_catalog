@@ -210,7 +210,7 @@ fields:
     expression: fn.fnRestBasic('get','https://'+'$(cluster)'+'/api/storage/volumes?fields=quota.state&svm.name=$(svm)&name=$(volname)','','ONTAP','.records[]|.quota.state','','')
     hide: false
     noOutput: true
-    refresh: 5s
+    refresh: 20s
     regex:
       expression: ^(on|off)$
       description: Quota state should be on or off to enable modification. Reload the form to update state   
@@ -237,7 +237,7 @@ fields:
 
   - type: expression
     name: validatequota 
-    expression: $(qtrees_quota).every( x => ( (x.fileLimit??2000000000) >= (x.softFileLimit??-1) && (x.diskLimit??9000000) >= (x.softDiskLimit??-1) ))
+    expression: $(qtrees_quota).every( x => ( (x.fileLimit||200000000) >= (x.softFileLimit||-1) && (x.diskLimit||9000000) >= (x.softDiskLimit||-1)))
     hide: true 
     runLocal: true
   - type: table

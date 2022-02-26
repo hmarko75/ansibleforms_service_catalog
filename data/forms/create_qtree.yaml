@@ -255,7 +255,7 @@ fields:
     dependencies: *quotadependency       
   - type: expression
     name: check_quota_limit
-    expression: "$(quota_hard_limit)>=$(quota_soft_limit)"
+    expression: "(\"$(quota_hard_limit)\"==\"\"?9000000:Number(\"$(quota_hard_limit)\"))>=(\"$(quota_soft_limit)\"==\"\"?-1:Number(\"$(quota_soft_limit)\"))"
     hide: true
     runLocal: true
     noOutput: true   
@@ -289,7 +289,7 @@ fields:
   - type: expression
     name: check_file_limit
     label: check_file_limit
-    expression: "$(quota_files_hard_limit)>=$(quota_files_soft_limit)"
+    expression: "(\"$(quota_files_hard_limit)\"==\"\"?200000000:Number(\"$(quota_files_hard_limit)\"))>=(\"$(quota_files_soft_limit)\"==\"\"?-1:Number(\"$(quota_files_soft_limit)\"))"
     hide: true
     runLocal: true
     noOutput: true   
