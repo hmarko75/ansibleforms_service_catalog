@@ -124,10 +124,10 @@
       when: 
         vars.prod.exports != ''
 
-    - name: Create Prod Volume
+    - name: Create Prod Volume (flexvol)
       na_ontap_volume:
         state: present
-        aggregate_name: "{{ aggregate }}"
+        aggregate_name: "{{ vars.prod.aggregate }}"
         name: "{{ volname }}"
         vserver: "{{ svm }}"
         size: "{{ volsize|int }}"
@@ -137,7 +137,29 @@
         volume_security_style: "{{ secstyle | default(omit) }}"
         export_policy: "{{ volname }}"
         comment: "{{ general.comment | default(omit)}}"
+        wait_for_completion: yes
         <<: *login
+      when: 
+        not vars.prod.flexgroup
+
+    - name: Create Prod Volume (flexgroup)
+      na_ontap_volume:
+        state: present
+        aggr_list: "{{ vars.prod.aggrlist | default(omit) }}"
+        aggr_list_multiplier: "{{ VolumeDefaults.aggr_list_multiplier | default(omit) }}"
+        name: "{{ volname }}"
+        vserver: "{{ svm }}"
+        size: "{{ volsize|int }}"
+        junction_path: "{{ VolumeDefaults.default_junction_path + volname if VolumeDefaults.default_junction_path is defined else '/'+volname }}"
+        snapshot_policy: "{{ snapshot_policy | default(omit) }}"
+        percent_snapshot_space: "{{ percent_snapshot_space }}"
+        volume_security_style: "{{ secstyle | default(omit) }}"
+        export_policy: "{{ volname }}"
+        comment: "{{ general.comment | default(omit)}}"
+        wait_for_completion: yes
+        <<: *login
+      when: 
+        vars.prod.flexgroup        
 
     - name: Enable Volume efficiency
       na_ontap_volume_efficiency:
@@ -149,10 +171,11 @@
         enable_cross_volume_inline_dedupe: "{{ vars.prod.efficiency.enable_cross_volume_inline_dedupe | default(omit) }}"
         enable_data_compaction: "{{ vars.prod.efficiency.enable_data_compaction | default(omit) }}"
         enable_inline_compression: "{{ vars.prod.efficiency.enable_inline_compression | default(omit) }}"
-        enable_inline_dedupe: "{{ vars.prod.efficiency.enable_inline_dedupe | default(omit) }}"
+        enable_inline_dedupe: "{{ vars.prod.efficiency.enable_inline_dedupe if not vars.prod.flexgroup else omit }}"
         #not realy working to set policy 
         #policy: "{{ vars.prod.efficiency.schedule + efficiency_policy_suffix if efficiency_policy_suffix is defined else vars.prod.efficiency.schedule }}"
         <<: *login
+      ignore_errors: yes
     
     #set efficiency policy using ssh due to issue with na_ontap_volume_efficiency and effciency policy 
     - name: Set volume efficiency policy
@@ -165,6 +188,7 @@
         privilege: diag
       when: 
         vars.prod.efficiency.schedule is defined
+      ignore_errors: yes        
       
     - name: Modify volume autosize
       na_ontap_volume_autosize:

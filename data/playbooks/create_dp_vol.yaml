@@ -62,18 +62,36 @@
       ansible.builtin.debug:
         msg:
         - "creating dr/b2d volume: {{ cluster }}:{{ svm }}:{{ volname }} size:{{ volsize }}GB copy:{{ copy }} source: {{ sourcecluster+':'+source }}"
+        - "{{ ((VolumeDefaults.aggr_list_multiplier|int)*(vars.prod.aggrlist|length)/(vars[copy].aggrlist|length))|string }}"
 
     # create dp volume 
-    - name: create dr/b2d volume
+    - name: create dr/b2d volume (FlexVol)
       na_ontap_volume:
         state: present
-        aggregate_name: "{{ aggregate }}"
+        aggregate_name: "{{ vars[copy].aggregate }}"
         name: "{{ volname }}"
         vserver: "{{ svm }}"
         size: "{{ volsize | int }}"
         type: DP
         comment: "{{ general.comment | default(omit) }}"
         <<: *login 
+      when: 
+        not vars.prod.flexgroup       
+
+    # create dp volume 
+    - name: create dr/b2d volume (FlexGroup)
+      na_ontap_volume:
+        state: present
+        aggr_list: "{{ vars[copy].aggrlist | default(omit) }}"
+        aggr_list_multiplier: "{{ ((VolumeDefaults.aggr_list_multiplier|int)*(vars.prod.aggrlist|length)/(vars[copy].aggrlist|length))|int | default(omit) }}"
+        name: "{{ volname }}"
+        vserver: "{{ svm }}"
+        size: "{{ volsize | int }}"
+        type: DP
+        comment: "{{ general.comment | default(omit) }}"
+        <<: *login 
+      when: 
+        vars.prod.flexgroup           
 
     # set dp volume autosize 
     - name: Modify volume autosize

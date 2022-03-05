@@ -6,6 +6,8 @@ VolumeDefaults:
     default_junction_path: /
     #default snap reserve, can be override per service 
     percent_snapshot_space: 5
+    #for flex group the aggr_list_multiplier represnts the number of DC per aggr
+    aggr_list_multiplier: 4
 
     #dynamic scheules for efficiency, snapshots and replication scheules 
     #requires creation of schedules using tha scheule creation form on all relevant clusters 

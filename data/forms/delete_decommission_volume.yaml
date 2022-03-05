@@ -43,7 +43,7 @@ fields:
       vserver.name as svm, volume.name as volume 
       from netapp_model_view.cluster, netapp_model_view.vserver, netapp_model_view.volume 
       where volume.vserverid = vserver.objid and vserver.clusterid = cluster.objid and volume.state =
-      'OFFLINE' and volume.isVserverRoot = 0 and vserver.type='DATA' and vserver.subtype='DEFAULT' 
+      'OFFLINE' and volume.isVserverRoot = 0 and volume.derivedStyle != 'CONSTITUENT' and vserver.type='DATA' and vserver.subtype='DEFAULT' 
       and volume.name like "%_to_be_deleted_after_%"
       order by volume.name
     hide: true   

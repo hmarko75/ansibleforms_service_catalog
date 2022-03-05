@@ -109,14 +109,48 @@ fields:
     expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.prod|.clusters|keys|join("%7C")')
     group: Production
     noOutput: true
+
+  - type: checkbox
+    name: flexgroup
+    label: Provision as Flex Group ? 
+    default: false
+    placeholder: Provision as Flex Group ?
+    required: false
+    group: Production
+    model: prod.flexgroup
+
   - type: query
-    name: cluster_aggr
-    label: Cluster/Aggregate
+    name: cluster
+    label: Select cluster
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters?name=$(aggr_filter_jq)','','AIQUM',
+      'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
+      0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
+      ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
+      }+{Location: .location}+{Contact:.contact}+{\"Total
+      Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available
+      Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailR\
+      aw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:\
+      {direction:\"asc\"}}],'')"
+    columns:
+      - Name
+      - Version
+      - Location
+      - Contact
+      - Total Capacity
+      - Available Capacity
+    required: true
+    default: __auto__
+    group: Production
+    outputObject: false
+    model: prod.cluster
+
+  - type: query
+    name: aggregate
+    label: Aggregate
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
-      e/aggregates?state=online&cluster.name=$(aggr_filter_jq)','','AIQUM','def
+      e/aggregates?state=online&cluster.name=$(cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
-      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource:
-      (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster:
+      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name}+{Cluster:
       .cluster.name}+{Node: .node.name}+{Size:
       (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
       ck_storage.available}+{Available:
@@ -124,7 +158,7 @@ fields:
       (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
       .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
     columns:
-      - Resource
+      - Aggregate
       - Node
       - Size
       - Available
@@ -135,15 +169,46 @@ fields:
     required: true
     default: __auto__
     group: Production
-    outputObject: true
-    noOutput: true
-  - type: expression
-    name: cluster
-    label: cluster
-    expression: "'$(cluster_aggr.Cluster)'"
-    hide: true
+    outputObject: false
+    model: prod.aggregate
+    dependencies:
+      - name: flexgroup
+        values:
+          - false     
+
+  - type: query
+    name: fg_aggrs
+    label: Cluster/Aggregates
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+      e/aggregates?state=online&cluster.name=$(cluster)','','AIQUM','def
+      gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
+      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name} + {Node: .node.name}+{Size:
+      (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
+      ck_storage.available}+{Available:
+      (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
+      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
+      .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
+    columns:
+      - Aggregate
+      - Node
+      - Size
+      - Available
+      - Perf
+      - Type
+    pctColumns:
+      - Perf
+    required: true
+    multiple: true
+    sticky: true    
+    default: __all__
     group: Production
-    model: prod.cluster
+    outputObject: false
+    model: prod.aggrlist
+    dependencies:
+      - name: flexgroup
+        values:
+          - true              
+
   - type: expression
     name: cluster_key
     label: cluster_key
@@ -151,13 +216,7 @@ fields:
     hide: true
     group: Production
     model: prod.clusterkey    
-  - type: expression
-    name: aggregate
-    label: aggregate
-    expression: "'$(cluster_aggr.Aggregate)'"
-    hide: true
-    group: Production
-    model: prod.aggregate
+
   - type: expression
     name: svm_filter_jq
     label: svm_filter_jq
@@ -165,6 +224,7 @@ fields:
     expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.prod|.clusters|.\"$(cluster)\"|join("%7C")')
     group: Production
     noOutput: true
+
   - type: query
     name: svm
     label: SVM
@@ -415,15 +475,55 @@ fields:
       - name: dr1
         values:
           - true
+
+  - type: expression
+    name: dr1_flexgroup
+    hide: true
+    expression: "($(flexgroup)&&$(dr1))?true:false"
+    runLocal: true
+    group: DR1
+    noOutput: true
+    dependencies:
+      - name: dr1
+        values:
+          - true
+
   - type: query
-    name: dr1_cluster_aggr
-    label: Cluster/Aggregate
+    name: dr1_cluster
+    label: Select cluster
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters?name=$(dr1_aggr_filter_jq)','','AIQUM',
+      'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
+      0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
+      ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
+      }+{Location: .location}+{Contact:.contact}+{\"Total
+      Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available
+      Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailR\
+      aw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:\
+      {direction:\"asc\"}}],'')"
+    columns:
+      - Name
+      - Version
+      - Location
+      - Contact
+      - Total Capacity
+      - Available Capacity
+    required: true
+    default: __auto__
+    group: DR1
+    outputObject: false
+    model: dr1.cluster
+    dependencies:
+      - name: dr1
+        values:
+          - true
+
+  - type: query
+    name: dr1_aggregate
+    label: Aggregate
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
-      e/aggregates?state=online&cluster.name=$(dr1_aggr_filter_jq)','','AIQUM',\
-      'def
+      e/aggregates?state=online&cluster.name=$(dr1_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
-      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource:
-      (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster:
+      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name}+{Cluster:
       .cluster.name}+{Node: .node.name}+{Size:
       (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
       ck_storage.available}+{Available:
@@ -431,7 +531,7 @@ fields:
       (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
       .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
     columns:
-      - Resource
+      - Aggregate
       - Node
       - Size
       - Available
@@ -439,26 +539,49 @@ fields:
       - Type
     pctColumns:
       - Perf
-    noOutput: true
-    default: __auto__
     required: true
+    default: __auto__
     group: DR1
-    outputObject: true
+    outputObject: false
+    model: dr1.aggregate
     dependencies:
-      - name: dr1
+      - name: dr1_flexgroup
         values:
-          - true
-  - type: expression
-    name: dr1_cluster
-    label: dr1_cluster
-    expression: "'$(dr1_cluster_aggr.Cluster)'"
-    hide: true
+          - false     
+
+  - type: query
+    name: dr1_fg_aggrs
+    label: Cluster/Aggregates
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+      e/aggregates?state=online&cluster.name=$(dr1_cluster)','','AIQUM','def
+      gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
+      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name} + {Node: .node.name}+{Size:
+      (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
+      ck_storage.available}+{Available:
+      (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
+      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
+      .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
+    columns:
+      - Aggregate
+      - Node
+      - Size
+      - Available
+      - Perf
+      - Type
+    pctColumns:
+      - Perf
+    required: true
+    multiple: true
+    sticky: true    
+    default: __all__
     group: DR1
-    model: dr1.cluster
+    outputObject: false
+    model: dr1.aggrlist
     dependencies:
-      - name: dr1
+      - name: dr1_flexgroup
         values:
-          - true
+          - true 
+
   - type: expression
     name: dr1_cluster_key
     label: dr1_cluster_key
@@ -470,17 +593,7 @@ fields:
       - name: dr1
         values:
           - true
-  - type: expression
-    name: dr1_aggregate
-    label: dr1_aggregate
-    expression: "'$(dr1_cluster_aggr.Aggregate)'"
-    hide: true
-    group: DR1
-    model: dr1.aggregate
-    dependencies:
-      - name: dr1
-        values:
-          - true
+
   - type: expression
     name: dr1_svm_filter_jq
     label: dr1_svm_filter_jq
@@ -499,7 +612,7 @@ fields:
     name: dr1_svm
     label: SVM
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/sv\
-      ms?cluster.name=$(dr1_cluster_aggr.Cluster)&name=$(dr1_svm_filter_jq)',''\
+      ms?cluster.name=$(dr1_cluster)&name=$(dr1_svm_filter_jq)',''\
       ,'AIQUM','[.records[]|{Name: .name}]','','')"
     columns:
       - Name
@@ -603,15 +716,55 @@ fields:
       - name: dr2
         values:
           - true
+
+  - type: expression
+    name: dr2_flexgroup
+    hide: true
+    expression: "($(flexgroup)&&$(dr2))?true:false"
+    runLocal: true
+    group: DR2
+    noOutput: true
+    dependencies:
+      - name: dr2
+        values:
+          - true
+
   - type: query
-    name: dr2_cluster_aggr
-    label: Cluster/Aggregate
+    name: dr2_cluster
+    label: Select cluster
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters?name=$(dr2_aggr_filter_jq)','','AIQUM',
+      'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
+      0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
+      ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
+      }+{Location: .location}+{Contact:.contact}+{\"Total
+      Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available
+      Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailR\
+      aw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:\
+      {direction:\"asc\"}}],'')"
+    columns:
+      - Name
+      - Version
+      - Location
+      - Contact
+      - Total Capacity
+      - Available Capacity
+    required: true
+    default: __auto__
+    group: DR2
+    outputObject: false
+    model: dr2.cluster
+    dependencies:
+      - name: dr2
+        values:
+          - true
+
+  - type: query
+    name: dr2_aggregate
+    label: Aggregate
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
-      e/aggregates?state=online&cluster.name=$(dr2_aggr_filter_jq)','','AIQUM',\
-      'def
+      e/aggregates?state=online&cluster.name=$(dr2_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
-      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource:
-      (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster:
+      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name}+{Cluster:
       .cluster.name}+{Node: .node.name}+{Size:
       (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
       ck_storage.available}+{Available:
@@ -619,7 +772,7 @@ fields:
       (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
       .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
     columns:
-      - Resource
+      - Aggregate
       - Node
       - Size
       - Available
@@ -627,26 +780,49 @@ fields:
       - Type
     pctColumns:
       - Perf
-    noOutput: true
-    default: __auto__
     required: true
+    default: __auto__
     group: DR2
-    outputObject: true
+    outputObject: false
+    model: dr2.aggregate
     dependencies:
-      - name: dr2
+      - name: dr2_flexgroup
         values:
-          - true
-  - type: expression
-    name: dr2_cluster
-    label: dr2_cluster
-    expression: "'$(dr2_cluster_aggr.Cluster)'"
-    hide: true
+          - false     
+
+  - type: query
+    name: dr2_fg_aggrs
+    label: Cluster/Aggregates
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+      e/aggregates?state=online&cluster.name=$(dr2_cluster)','','AIQUM','def
+      gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
+      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name} + {Node: .node.name}+{Size:
+      (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
+      ck_storage.available}+{Available:
+      (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
+      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
+      .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
+    columns:
+      - Aggregate
+      - Node
+      - Size
+      - Available
+      - Perf
+      - Type
+    pctColumns:
+      - Perf
+    required: true
+    multiple: true
+    sticky: true    
+    default: __all__
     group: DR2
-    model: dr2.cluster
+    outputObject: false
+    model: dr2.aggrlist
     dependencies:
-      - name: dr2
+      - name: dr2_flexgroup
         values:
-          - true
+          - true  
+
   - type: expression
     name: dr2_cluster_key
     label: dr2_cluster_key
@@ -658,17 +834,6 @@ fields:
       - name: dr2
         values:
           - true          
-  - type: expression
-    name: dr2_aggregate
-    label: dr2_aggregate
-    expression: "'$(dr2_cluster_aggr.Aggregate)'"
-    hide: true
-    group: DR2
-    model: dr2.aggregate
-    dependencies:
-      - name: dr2
-        values:
-          - true
   - type: expression
     name: dr2_svm_filter_jq
     label: dr2_svm_filter_jq
@@ -792,15 +957,54 @@ fields:
       - name: b2d1
         values:
           - true
+  - type: expression
+    name: b2d1_flexgroup
+    hide: true
+    expression: "($(flexgroup)&&$(b2d1))?true:false"
+    runLocal: true
+    group: B2D1
+    noOutput: true
+    dependencies:
+      - name: b2d1
+        values:
+          - true
+
   - type: query
-    name: b2d1_cluster_aggr
-    label: Cluster/Aggregate
+    name: b2d1_cluster
+    label: Select cluster
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters?name=$(b2d1_aggr_filter_jq)','','AIQUM',
+      'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
+      0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
+      ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
+      }+{Location: .location}+{Contact:.contact}+{\"Total
+      Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available
+      Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailR\
+      aw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:\
+      {direction:\"asc\"}}],'')"
+    columns:
+      - Name
+      - Version
+      - Location
+      - Contact
+      - Total Capacity
+      - Available Capacity
+    required: true
+    default: __auto__
+    group: B2D1
+    outputObject: false
+    model: b2d1.cluster
+    dependencies:
+      - name: b2d1
+        values:
+          - true
+
+  - type: query
+    name: b2d1_aggregate
+    label: Aggregate
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
-      e/aggregates?state=online&cluster.name=$(b2d1_aggr_filter_jq)','','AIQUM'\
-      ,'def
+      e/aggregates?state=online&cluster.name=$(b2d1_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
-      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource:
-      (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster:
+      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name}+{Cluster:
       .cluster.name}+{Node: .node.name}+{Size:
       (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
       ck_storage.available}+{Available:
@@ -808,7 +1012,7 @@ fields:
       (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
       .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
     columns:
-      - Resource
+      - Aggregate
       - Node
       - Size
       - Available
@@ -816,26 +1020,48 @@ fields:
       - Type
     pctColumns:
       - Perf
-    noOutput: true
-    default: __auto__
     required: true
+    default: __auto__
     group: B2D1
-    outputObject: true
+    outputObject: false
+    model: b2d1.aggregate
     dependencies:
-      - name: b2d1
+      - name: b2d1_flexgroup
         values:
-          - true
-  - type: expression
-    name: b2d1_cluster
-    label: b2d1_cluster
-    expression: "'$(b2d1_cluster_aggr.Cluster)'"
-    hide: true
+          - false     
+
+  - type: query
+    name: b2d1_fg_aggrs
+    label: Cluster/Aggregates
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+      e/aggregates?state=online&cluster.name=$(b2d1_cluster)','','AIQUM','def
+      gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
+      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name} + {Node: .node.name}+{Size:
+      (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
+      ck_storage.available}+{Available:
+      (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
+      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
+      .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
+    columns:
+      - Aggregate
+      - Node
+      - Size
+      - Available
+      - Perf
+      - Type
+    pctColumns:
+      - Perf
+    required: true
+    multiple: true
+    sticky: true    
+    default: __all__
     group: B2D1
-    model: b2d1.cluster
+    outputObject: false
+    model: b2d1.aggrlist
     dependencies:
-      - name: b2d1
+      - name: b2d1_flexgroup
         values:
-          - true
+          - true            
   - type: expression
     name: b2d1_cluster_key
     label: b2d1_cluster_key
@@ -847,17 +1073,6 @@ fields:
       - name: b2d1
         values:
           - true            
-  - type: expression
-    name: b2d1_aggregate
-    label: b2d1_aggregate
-    expression: "'$(b2d1_cluster_aggr.Aggregate)'"
-    hide: true
-    group: B2D1
-    model: b2d1.aggregate
-    dependencies:
-      - name: b2d1
-        values:
-          - true
   - type: expression
     name: b2d1_svm_filter_jq
     label: b2d1_svm_filter_jq
@@ -948,7 +1163,7 @@ fields:
     name: b2d2_dedicated_cluster
     label: b2d2_dedicated_cluster
     hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d2|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.cluster')
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d2|.fixed_relationship_for_prod|."$(cluster)_$(svm)"|.cluster')
     group: B2D2
     noOutput: true
     dependencies:
@@ -959,7 +1174,7 @@ fields:
     name: b2d2_dedicated_svm
     label: b2d2_dedicated_svm
     hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d2|.fixed_relationship_for_prod|.$(cluster)_$(svm)|.svm')
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.b2d2|.fixed_relationship_for_prod|."$(cluster)_$(svm)"|.svm')
     group: B2D2
     noOutput: true
     dependencies:
@@ -981,15 +1196,55 @@ fields:
       - name: b2d2
         values:
           - true
+
+  - type: expression
+    name: b2d2_flexgroup
+    hide: true
+    expression: "($(flexgroup)&&$(b2d2))?true:false"
+    runLocal: true
+    group: B2D2
+    noOutput: true
+    dependencies:
+      - name: b2d2
+        values:
+          - true
+
   - type: query
-    name: b2d2_cluster_aggr
-    label: Cluster/Aggregate
+    name: b2d2_cluster
+    label: Select cluster
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters?name=$(b2d2_aggr_filter_jq)','','AIQUM',
+      'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
+      0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
+      ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
+      }+{Location: .location}+{Contact:.contact}+{\"Total
+      Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available
+      Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailR\
+      aw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:\
+      {direction:\"asc\"}}],'')"
+    columns:
+      - Name
+      - Version
+      - Location
+      - Contact
+      - Total Capacity
+      - Available Capacity
+    required: true
+    default: __auto__
+    group: B2D2
+    outputObject: false
+    model: b2d2.cluster
+    dependencies:
+      - name: b2d2
+        values:
+          - true
+
+  - type: query
+    name: b2d2_aggregate
+    label: Aggregate
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
-      e/aggregates?state=online&cluster.name=$(b2d2_aggr_filter_jq)','','AIQUM'\
-      ,'def
+      e/aggregates?state=online&cluster.name=$(b2d2_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
-      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Resource:
-      (.cluster.name+\" : \"+.name)}+{Aggregate: .name}+{Cluster:
+      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name}+{Cluster:
       .cluster.name}+{Node: .node.name}+{Size:
       (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
       ck_storage.available}+{Available:
@@ -997,7 +1252,7 @@ fields:
       (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
       .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
     columns:
-      - Resource
+      - Aggregate
       - Node
       - Size
       - Available
@@ -1005,26 +1260,47 @@ fields:
       - Type
     pctColumns:
       - Perf
-    noOutput: true
-    default: __auto__
     required: true
+    default: __auto__
     group: B2D2
-    outputObject: true
+    outputObject: false
+    model: b2d2.aggregate
     dependencies:
-      - name: b2d2
+      - name: b2d2_flexgroup
         values:
-          - true
-  - type: expression
-    name: b2d2_cluster
-    label: b2d2_cluster
-    expression: "'$(b2d2_cluster_aggr.Cluster)'"
-    hide: true
+          - false     
+  - type: query
+    name: b2d2_fg_aggrs
+    label: Cluster/Aggregates
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+      e/aggregates?state=online&cluster.name=$(b2d2_cluster)','','AIQUM','def
+      gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
+      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name} + {Node: .node.name}+{Size:
+      (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
+      ck_storage.available}+{Available:
+      (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
+      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
+      .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
+    columns:
+      - Aggregate
+      - Node
+      - Size
+      - Available
+      - Perf
+      - Type
+    pctColumns:
+      - Perf
+    required: true
+    multiple: true
+    sticky: true    
+    default: __all__
     group: B2D2
-    model: b2d2.cluster
+    outputObject: false
+    model: b2d2.aggrlist
     dependencies:
-      - name: b2d2
+      - name: b2d2_flexgroup
         values:
-          - true
+          - true  
   - type: expression
     name: b2d2_cluster_key
     label: b2d2_cluster_key
@@ -1036,17 +1312,6 @@ fields:
       - name: b2d2
         values:
           - true            
-  - type: expression
-    name: b2d2_aggregate
-    label: b2d2_aggregate
-    expression: "'$(b2d2_cluster_aggr.Aggregate)'"
-    hide: true
-    group: B2D2
-    model: b2d2.aggregate
-    dependencies:
-      - name: b2d2
-        values:
-          - true
   - type: expression
     name: b2d2_svm_filter_jq
     label: b2d2_svm_filter_jq

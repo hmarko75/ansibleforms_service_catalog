@@ -19,4 +19,5 @@
         method: POST
         force_basic_auth: yes
         validate_certs: no
+      ignore_errors: yes         
         

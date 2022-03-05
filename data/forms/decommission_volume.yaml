@@ -57,7 +57,7 @@ fields:
       vserver.name as svm, volume.name as volume from netapp_model_view.cluster,
       netapp_model_view.vserver, netapp_model_view.volume where volume.vserverid
       = vserver.objid and vserver.clusterid = cluster.objid and volume.state =
-      'ONLINE' and volume.isVserverRoot = 0 and volume.volType='RW' and
+      'ONLINE' and volume.isVserverRoot = 0 and volume.derivedStyle != 'CONSTITUENT' and volume.volType='RW' and
       vserver.type='DATA' and vserver.subtype='DEFAULT' order by volume.name
     columns:
       - Cluster:SVM:Volume
