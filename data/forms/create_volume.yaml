@@ -178,7 +178,7 @@ fields:
 
   - type: query
     name: fg_aggrs
-    label: Cluster/Aggregates
+    label: Aggregates
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
@@ -207,7 +207,13 @@ fields:
     dependencies:
       - name: flexgroup
         values:
-          - true              
+          - true      
+
+  - type: expression
+    name: fg_aggr_list_multiplier
+    expression: fn.fnJq($(settings),'.VolumeDefaults.aggr_list_multiplier')
+    hide: true
+    noOutput: true
 
   - type: expression
     name: cluster_key
@@ -551,7 +557,7 @@ fields:
 
   - type: query
     name: dr1_fg_aggrs
-    label: Cluster/Aggregates
+    label: Aggregates
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(dr1_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
@@ -578,9 +584,25 @@ fields:
     outputObject: false
     model: dr1.aggrlist
     dependencies:
-      - name: dr1_flexgroup
-        values:
-          - true 
+     - name: dr1_flexgroup
+       values:
+         - true 
+
+  # - type: expression
+  #   name: dr1_fg_dc_ok
+  #   label: FG Data constituent
+  #   hide: false
+  #   expression: Number.isInteger($(fg_aggrs).length*$(fg_aggr_list_multiplier)/$(dr1_fg_aggrs).length)?'the number of prod data constituates comply with selected aggregates':'cannot host '+($(fg_aggrs).length*$(fg_aggr_list_multiplier)).toString()+' fg data constituates on '+($(dr1_fg_aggrs).length).toString()+' selected aggregates'
+  #   runLocal: true
+  #   noOutput: true
+  #   regex:
+  #     expression: comply
+  #     description: prod data constituates cannot be hosted on the selected aggreagtes
+  #   group: DR1
+  #   dependencies:
+  #     - name: dr1_flexgroup
+  #       values:
+  #         - true          
 
   - type: expression
     name: dr1_cluster_key
@@ -792,7 +814,7 @@ fields:
 
   - type: query
     name: dr2_fg_aggrs
-    label: Cluster/Aggregates
+    label: Aggregates
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(dr2_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
@@ -1032,7 +1054,7 @@ fields:
 
   - type: query
     name: b2d1_fg_aggrs
-    label: Cluster/Aggregates
+    label: Aggregates
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(b2d1_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
@@ -1271,7 +1293,7 @@ fields:
           - false     
   - type: query
     name: b2d2_fg_aggrs
-    label: Cluster/Aggregates
+    label: Aggregates
     expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(b2d2_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def

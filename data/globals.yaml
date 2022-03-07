@@ -1,4 +1,5 @@
 VolumeDefaults:
+    aggr_list_multiplier: 4
     auto_size:
         b2d1:
             grow_threshold_percent: 95
@@ -48,7 +49,6 @@ VolumeDefaults:
             dr2: 2
         total_schedules: 24
     percent_snapshot_space: 5
-    aggr_list_multiplier: 4
 domains:
     demo.netapp.com:
         dnsservers:
@@ -472,6 +472,329 @@ services:
                             snapmirror_label:
                             - hourly
                             - daily
+    Maya:
+        ACME Corp:
+            Production:
+                Haifa:
+                    b2d1:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: en.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            suffix: _b2d
+                        sizeratio: 2.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 100
+                                - 150
+                                - 14
+                                name: 100h_150d_14w
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - hourly
+                                - daily
+                                - weekly
+                            schedule: hourly
+                        volnamesuffix: ''
+                    dr1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr1
+                        sizeratio: 1
+                        source:
+                            copy: prod
+                            dynamicschedule: false
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: 5min
+                        volnamesuffix: ''
+                    prod:
+                        clusters:
+                            bru-cluster: []
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: en.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 2
+                                name: vlan-1
+                            protocols:
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: unix
+                        snapshotpolicy:
+                            count:
+                            - 12
+                            - 56
+                            - 8
+                            dynamicschedule: true
+                            name: 12h_2d_8w
+                            percent_snapshot_space: 0
+                            prefix:
+                            - hourly
+                            - daily
+                            - weekly
+                            schedule:
+                            - hourly
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                            - weekly
+                tzur Moshe:
+                    b2d1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod:
+                            tlv-cluster_shalev:
+                                cluster: tlv-cluster
+                                svm: shalev_b2d
+                        newsvm:
+                            language: en.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            suffix: _b2d
+                        sizeratio: 2.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 100
+                                - 150
+                                - 14
+                                name: 100h_150d_14w
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - hourly
+                                - daily
+                                - weekly
+                            schedule: hourly
+                        volnamesuffix: ''
+                    dr1:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod:
+                            tlv-cluster_shalev:
+                                cluster: bru-cluster
+                                svm: shalev1
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr1
+                        sizeratio: 1
+                        source:
+                            copy: prod
+                            dynamicschedule: false
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: 5min
+                        volnamesuffix: ''
+                    prod:
+                        clusters:
+                            tlv-cluster:
+                            - shalev
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: en.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 2
+                                name: vlan-1
+                            protocols:
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: unix
+                        snapshotpolicy:
+                            count:
+                            - 12
+                            - 56
+                            - 8
+                            dynamicschedule: true
+                            name: 12h_2d_8w
+                            percent_snapshot_space: 0
+                            prefix:
+                            - hourly
+                            - daily
+                            - weekly
+                            schedule:
+                            - hourly
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                            - weekly
+            Test:
+                Brussels:
+                    prod:
+                        clusters:
+                            bru-cluster: []
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: en.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 2
+                                name: vlan-1
+                            protocols:
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: unix
+                        snapshotpolicy:
+                            count:
+                            - 12
+                            dynamicschedule: true
+                            name: 12h
+                            percent_snapshot_space: 0
+                            prefix:
+                            - hourly
+                            schedule:
+                            - hourly
+                            snapmirror_label:
+                            - hourly
+                Tel Aviv:
+                    prod:
+                        clusters:
+                            tlv-cluster: []
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: en.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 2
+                                name: vlan-1
+                            protocols:
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: unix
+                        snapshotpolicy:
+                            count:
+                            - 12
+                            dynamicschedule: true
+                            name: 12h
+                            percent_snapshot_space: 0
+                            prefix:
+                            - hourly
+                            schedule:
+                            - hourly
+                            snapmirror_label:
+                            - hourly
     Vmware:
         ACME Corp:
             Production:
