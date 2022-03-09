@@ -588,21 +588,21 @@ fields:
        values:
          - true 
 
-  # - type: expression
-  #   name: dr1_fg_dc_ok
-  #   label: FG Data constituent
-  #   hide: false
-  #   expression: Number.isInteger($(fg_aggrs).length*$(fg_aggr_list_multiplier)/$(dr1_fg_aggrs).length)?'the number of prod data constituates comply with selected aggregates':'cannot host '+($(fg_aggrs).length*$(fg_aggr_list_multiplier)).toString()+' fg data constituates on '+($(dr1_fg_aggrs).length).toString()+' selected aggregates'
-  #   runLocal: true
-  #   noOutput: true
-  #   regex:
-  #     expression: comply
-  #     description: prod data constituates cannot be hosted on the selected aggreagtes
-  #   group: DR1
-  #   dependencies:
-  #     - name: dr1_flexgroup
-  #       values:
-  #         - true          
+  - type: expression
+    name: dr1_fg_dc_ok
+    label: FG Data constituent
+    hide: false
+    expression: Number.isInteger($(fg_aggrs).length*$(fg_aggr_list_multiplier)/$(dr1_fg_aggrs).length)?'The number of prod data constituates comply with number of selected aggregates':'Cannot host '+($(fg_aggrs).length*$(fg_aggr_list_multiplier)).toString()+'prod flex group data constituates on '+($(dr1_fg_aggrs).length).toString()+' selected aggregates'
+    runLocal: true
+    noOutput: true
+    regex:
+      expression: comply
+      description: prod data constituates cannot be hosted on the selected aggreagtes
+    group: DR1
+    dependencies:
+      - name: dr1_flexgroup
+        values:
+          - true          
 
   - type: expression
     name: dr1_cluster_key
@@ -840,6 +840,22 @@ fields:
     group: DR2
     outputObject: false
     model: dr2.aggrlist
+    dependencies:
+      - name: dr2_flexgroup
+        values:
+          - true  
+
+  - type: expression
+    name: dr2_fg_dc_ok
+    label: FG Data constituent
+    hide: false
+    expression: Number.isInteger($(fg_aggrs).length*$(fg_aggr_list_multiplier)/$(dr2_fg_aggrs).length)?'The number of prod data constituates comply with number of selected aggregates':'Cannot host '+($(fg_aggrs).length*$(fg_aggr_list_multiplier)).toString()+'prod flex group data constituates on '+($(dr2_fg_aggrs).length).toString()+' selected aggregates'
+    runLocal: true
+    noOutput: true
+    regex:
+      expression: comply
+      description: prod data constituates cannot be hosted on the selected aggreagtes
+    group: DR2
     dependencies:
       - name: dr2_flexgroup
         values:
@@ -1084,6 +1100,23 @@ fields:
       - name: b2d1_flexgroup
         values:
           - true            
+
+  - type: expression
+    name: b2d1_fg_dc_ok
+    label: FG Data constituent
+    hide: false
+    expression: Number.isInteger($(fg_aggrs).length*$(fg_aggr_list_multiplier)/$(b2d1_fg_aggrs).length)?'The number of prod data constituates comply with number of selected aggregates':'Cannot host '+($(fg_aggrs).length*$(fg_aggr_list_multiplier)).toString()+'prod flex group data constituates on '+($(b2d1_fg_aggrs).length).toString()+' selected aggregates'
+    runLocal: true
+    noOutput: true
+    regex:
+      expression: comply
+      description: prod data constituates cannot be hosted on the selected aggreagtes
+    group: B2D1
+    dependencies:
+      - name: b2d1_flexgroup
+        values:
+          - true 
+
   - type: expression
     name: b2d1_cluster_key
     label: b2d1_cluster_key
@@ -1323,6 +1356,23 @@ fields:
       - name: b2d2_flexgroup
         values:
           - true  
+
+  - type: expression
+    name: b2d2_fg_dc_ok
+    label: FG Data constituent
+    hide: false
+    expression: Number.isInteger($(fg_aggrs).length*$(fg_aggr_list_multiplier)/$(b2d2_fg_aggrs).length)?'The number of prod data constituates comply with number of selected aggregates':'Cannot host '+($(fg_aggrs).length*$(fg_aggr_list_multiplier)).toString()+'prod flex group data constituates on '+($(b2d2_fg_aggrs).length).toString()+' selected aggregates'
+    runLocal: true
+    noOutput: true
+    regex:
+      expression: comply
+      description: prod data constituates cannot be hosted on the selected aggreagtes
+    group: B2D2
+    dependencies:
+      - name: b2d2_flexgroup
+        values:
+          - true  
+
   - type: expression
     name: b2d2_cluster_key
     label: b2d2_cluster_key
