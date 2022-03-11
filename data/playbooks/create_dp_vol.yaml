@@ -62,7 +62,6 @@
       ansible.builtin.debug:
         msg:
         - "creating dr/b2d volume: {{ cluster }}:{{ svm }}:{{ volname }} size:{{ volsize }}GB copy:{{ copy }} source: {{ sourcecluster+':'+source }}"
-        - "{{ ((VolumeDefaults.aggr_list_multiplier|int)*(vars.prod.aggrlist|length)/(vars[copy].aggrlist|length))|string }}"
 
     # create dp volume 
     - name: create dr/b2d volume (FlexVol)

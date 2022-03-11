@@ -301,18 +301,18 @@ fields:
     expression: $(copy_types_jq).includes('dr1')
     noOutput: true
   - type: expression
-    name: dr2
-    label: dr2
-    hide: true
-    runLocal: true
-    expression: $(copy_types_jq).includes('dr2')
-    noOutput: true
-  - type: expression
     name: b2d1
     label: b2d1
     hide: true
     runLocal: true
     expression: $(copy_types_jq).includes('b2d1')
+    noOutput: true    
+  - type: expression
+    name: dr2
+    label: dr2
+    hide: true
+    runLocal: true
+    expression: $(copy_types_jq).includes('dr2')
     noOutput: true
   - type: expression
     name: b2d2
@@ -487,174 +487,6 @@ fields:
         values:
           - true
   - type: expression
-    name: dr2_cluster
-    label: dr2_cluster
-    expression: fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains("$(service)^$(company)^$(environment)^$(location)^dr2^fixed_relationship_for_prod^$(cluster)_$(svm)^cluster")))[]')
-    hide: true
-    noOutput: false
-    model: dr2.cluster
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_cluster_key
-    label: dr2_cluster_key
-    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(dr2_cluster)")|.key')
-    hide: true
-    group: DR2
-    model: dr2.clusterkey
-    dependencies:
-      - name: dr2
-        values:
-          - true            
-  - type: expression
-    name: dr2_svm
-    label: dr2_svm
-    expression: fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains("$(service)^$(company)^$(environment)^$(location)^dr2^fixed_relationship_for_prod^$(cluster)_$(svm)^svm")))[]')
-    hide: true
-    noOutput: false
-    model: dr2.svm
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_source_copy
-    label: dr2_source_copy
-    expression: fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains("$(service)^$(company)^$(environment)^$(location)^dr2^source^copy")))[]')
-    noOutput: true
-    hide: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_source_cluster
-    label: dr2_source_cluster
-    expression: "'$(dr2_source_copy)'=='prod'?'$(cluster)':'$(dr2_source_copy)'=='d\
-      r1'?$(dr1_relationship)[0][\"dst_cluster_name\"]:''"
-    runLocal: true
-    hide: true
-    model: dr2.source_cluster
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_source_svm
-    label: dr2_source_svm
-    expression: "'$(dr2_source_copy)'=='prod'?'$(svm)':'$(dr2_source_copy)'=='dr1'?\
-      $(dr1_relationship)[0][\"dst_vserver_name\"]:''"
-    runLocal: true
-    hide: true
-    model: dr2.source_svm
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_source_vol
-    label: dr2_source_vol
-    expression: "'$(dr2_source_copy)'=='prod'?'$(volname)':'$(dr2_source_copy)'=='d\
-      r1'?$(dr1_relationship)[0][\"dst_volume_name\"]:''"
-    runLocal: true
-    hide: true
-    model: dr2.source_vol
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_relationship
-    label: dr2_relationship
-    dbConfig:
-      name: AIQUMSQL
-      type: mysql
-    hide: true
-    noOutput: true
-    default: []
-    query: SELECT cluster_src.name as src_cluster_name, vserver_src.name as
-      src_vserver_name, volume_src.name as src_volume_name, cluster_dst.name as
-      dst_cluster_name, vserver_dst.name as dst_vserver_name, volume_dst.name as
-      dst_volume_name, snap_mirror.mirrorStateRaw AS mirror_state, CASE WHEN
-      snap_mirror.isHealthy=1 THEN 'Yes' ELSE 'No' END AS mirror_health FROM
-      netapp_model_view.snap_mirror INNER JOIN netapp_model_view.cluster
-      cluster_src ON snap_mirror.sourceClusterId = cluster_src.objId INNER JOIN
-      netapp_model_view.vserver vserver_src ON snap_mirror.sourceVserverId =
-      vserver_src.objId INNER JOIN netapp_model_view.volume volume_src ON
-      snap_mirror.sourceVolumeId  = volume_src.objId INNER JOIN
-      netapp_model_view.cluster cluster_dst ON snap_mirror.destinationClusterId
-      = cluster_dst.objId INNER JOIN netapp_model_view.vserver vserver_dst ON
-      snap_mirror.destinationVserverId = vserver_dst.objId INNER JOIN
-      netapp_model_view.volume volume_dst ON snap_mirror.destinationVolumeId  =
-      volume_dst.objId WHERE cluster_src.name = '$(dr2_source_cluster)' AND
-      vserver_src.name='$(dr2_source_svm)' AND volume_src.name =
-      '$(dr2_source_vol)' AND cluster_dst.name = '$(dr2_cluster)' AND
-      vserver_dst.name = '$(dr2_svm)'
-  - type: expression
-    name: dr2_volname
-    label: dr2_volname
-    expression: $(dr2_relationship)[0]["dst_volume_name"]
-    runLocal: true
-    hide: true
-    model: dr2.volume
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_suffixed_volname
-    label: dr2_suffixed_volname
-    expression: "'$(dr2_volname)'+'$(vol_suffix)'"
-    runLocal: true
-    hide: true
-    model: dr2.suffixed_volume
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_mirror_state
-    label: dr2_mirror_state
-    expression: ($(dr2_relationship))[0]['mirror_state']
-    runLocal: true
-    hide: true
-    noOutput: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_mirror_health
-    label: dr2_mirror_health
-    expression: ($(dr2_relationship))[0]['mirror_health']
-    runLocal: true
-    hide: true
-    noOutput: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_volume_information
-    label: DR2
-    hide: false
-    expression: "'$(dr2_volname)'==''?'could not identify dr2 volume': '<p
-      style=\"color:green;\">SOURCE:&nbsp</p>$(dr2_source_copy)&nbsp;<p
-      style=\"color:green;\">CLUSTER:&nbsp</p>$(dr2_cluster)&nbsp; <p
-      style=\"color:green;\">SVM:&nbsp</p>$(dr2_svm)&nbsp;<p
-      style=\"color:green;\">VOLUME:&nbsp</p>$(dr2_volname)&nbsp; <p
-      style=\"color:green;\">STATE:&nbsp</p>$(dr2_mirror_state)&nbsp; <p
-      style=\"color:green;\">HEALTHY:&nbsp</p>$(dr2_mirror_health)&nbsp;'"
-    runLocal: true
-    noOutput: true
-    isHtml: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
     name: b2d1_cluster
     label: b2d1_cluster
     expression: fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains("$(service)^$(company)^$(environment)^$(location)^b2d1^fixed_relationship_for_prod^$(cluster)_$(svm)^cluster")))[]')
@@ -700,9 +532,7 @@ fields:
   - type: expression
     name: b2d1_source_cluster
     label: b2d1_source_cluster
-    expression: "'$(b2d1_source_copy)'=='prod'?'$(cluster)':'$(b2d1_source_copy)'==\
-      'dr1'?$(dr1_relationship)[0][\"dst_cluster_name\"]:'$(b2d1_source_copy)'=\
-      ='dr2'?$(dr2_relationship)[0][\"dst_cluster_name\"]:''"
+    expression: "'$(b2d1_source_copy)'=='prod'?'$(cluster)':'$(b2d1_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_cluster_name\"]:''"
     runLocal: true
     hide: true
     model: b2d1.source_cluster
@@ -713,9 +543,7 @@ fields:
   - type: expression
     name: b2d1_source_svm
     label: b2d1_source_svm
-    expression: "'$(b2d1_source_copy)'=='prod'?'$(svm)':'$(b2d1_source_copy)'=='dr1\
-      '?$(dr1_relationship)[0][\"dst_vserver_name\"]:'$(b2d1_source_copy)'=='dr\
-      2'?$(dr2_relationship)[0][\"dst_vserver_name\"]:''"
+    expression: "'$(b2d1_source_copy)'=='prod'?'$(svm)':'$(b2d1_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_vserver_name\"]:''"
     runLocal: true
     hide: true
     model: b2d1.source_svm
@@ -726,9 +554,7 @@ fields:
   - type: expression
     name: b2d1_source_vol
     label: b2d1_source_vol
-    expression: "'$(b2d1_source_copy)'=='prod'?'$(volname)':'$(b2d1_source_copy)'==\
-      'dr1'?$(dr1_relationship)[0][\"dst_volume_name\"]:'$(b2d1_source_copy)'==\
-      'dr2'?$(dr2_relationship)[0][\"dst_volume_name\"]:''"
+    expression: "'$(b2d1_source_copy)'=='prod'?'$(volname)':'$(b2d1_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_volume_name\"]:''"
     runLocal: true
     hide: true
     model: b2d1.source_vol
@@ -823,6 +649,171 @@ fields:
     isHtml: true
     dependencies:
       - name: b2d1
+        values:
+          - true
+  - type: expression
+    name: dr2_cluster
+    label: dr2_cluster
+    expression: fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains("$(service)^$(company)^$(environment)^$(location)^dr2^fixed_relationship_for_prod^$(cluster)_$(svm)^cluster")))[]')
+    hide: true
+    noOutput: false
+    model: dr2.cluster
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_cluster_key
+    label: dr2_cluster_key
+    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(dr2_cluster)")|.key')
+    hide: true
+    group: DR2
+    model: dr2.clusterkey
+    dependencies:
+      - name: dr2
+        values:
+          - true            
+  - type: expression
+    name: dr2_svm
+    label: dr2_svm
+    expression: fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains("$(service)^$(company)^$(environment)^$(location)^dr2^fixed_relationship_for_prod^$(cluster)_$(svm)^svm")))[]')
+    hide: true
+    noOutput: false
+    model: dr2.svm
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_source_copy
+    label: dr2_source_copy
+    expression: fn.fnJq($(flat_service_info),'.|from_entries|with_entries(select(.key|contains("$(service)^$(company)^$(environment)^$(location)^dr2^source^copy")))[]')
+    noOutput: true
+    hide: true
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_source_cluster
+    label: dr2_source_cluster
+    expression: "'$(dr2_source_copy)'=='prod'?'$(cluster)':'$(dr2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_cluster_name\"]:'$(dr2_source_copy)'=='b2d1'?$(b2d1_relationship)[0][\"dst_cluster_name\"]:''"
+    runLocal: true
+    hide: true
+    model: dr2.source_cluster
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_source_svm
+    label: dr2_source_svm
+    expression: "'$(dr2_source_copy)'=='prod'?'$(svm)':'$(dr2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_vserver_name\"]:'$(dr2_source_copy)'=='b2d1'?$(b2d1_relationship)[0][\"dst_vserver_name\"]:''"
+    runLocal: true
+    hide: true
+    model: dr2.source_svm
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_source_vol
+    label: dr2_source_vol
+    expression: "'$(dr2_source_copy)'=='prod'?'$(volname)':'$(dr2_source_copy)'=='dr1'?$(dr1_relationship)[0][\"dst_volume_name\"]:'$(dr2_source_copy)'=='b2d1'?$(b2d1_relationship)[0][\"dst_volume_name\"]:''"
+    runLocal: true
+    hide: true
+    model: dr2.source_vol
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_relationship
+    label: dr2_relationship
+    dbConfig:
+      name: AIQUMSQL
+      type: mysql
+    hide: true
+    noOutput: true
+    default: []
+    query: SELECT cluster_src.name as src_cluster_name, vserver_src.name as
+      src_vserver_name, volume_src.name as src_volume_name, cluster_dst.name as
+      dst_cluster_name, vserver_dst.name as dst_vserver_name, volume_dst.name as
+      dst_volume_name, snap_mirror.mirrorStateRaw AS mirror_state, CASE WHEN
+      snap_mirror.isHealthy=1 THEN 'Yes' ELSE 'No' END AS mirror_health FROM
+      netapp_model_view.snap_mirror INNER JOIN netapp_model_view.cluster
+      cluster_src ON snap_mirror.sourceClusterId = cluster_src.objId INNER JOIN
+      netapp_model_view.vserver vserver_src ON snap_mirror.sourceVserverId =
+      vserver_src.objId INNER JOIN netapp_model_view.volume volume_src ON
+      snap_mirror.sourceVolumeId  = volume_src.objId INNER JOIN
+      netapp_model_view.cluster cluster_dst ON snap_mirror.destinationClusterId
+      = cluster_dst.objId INNER JOIN netapp_model_view.vserver vserver_dst ON
+      snap_mirror.destinationVserverId = vserver_dst.objId INNER JOIN
+      netapp_model_view.volume volume_dst ON snap_mirror.destinationVolumeId  =
+      volume_dst.objId WHERE cluster_src.name = '$(dr2_source_cluster)' AND
+      vserver_src.name='$(dr2_source_svm)' AND volume_src.name =
+      '$(dr2_source_vol)' AND cluster_dst.name = '$(dr2_cluster)' AND
+      vserver_dst.name = '$(dr2_svm)'
+  - type: expression
+    name: dr2_volname
+    label: dr2_volname
+    expression: $(dr2_relationship)[0]["dst_volume_name"]
+    runLocal: true
+    hide: true
+    model: dr2.volume
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_suffixed_volname
+    label: dr2_suffixed_volname
+    expression: "'$(dr2_volname)'+'$(vol_suffix)'"
+    runLocal: true
+    hide: true
+    model: dr2.suffixed_volume
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_mirror_state
+    label: dr2_mirror_state
+    expression: ($(dr2_relationship))[0]['mirror_state']
+    runLocal: true
+    hide: true
+    noOutput: true
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_mirror_health
+    label: dr2_mirror_health
+    expression: ($(dr2_relationship))[0]['mirror_health']
+    runLocal: true
+    hide: true
+    noOutput: true
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_volume_information
+    label: DR2
+    hide: false
+    expression: "'$(dr2_volname)'==''?'could not identify dr2 volume': '<p
+      style=\"color:green;\">SOURCE:&nbsp</p>$(dr2_source_copy)&nbsp;<p
+      style=\"color:green;\">CLUSTER:&nbsp</p>$(dr2_cluster)&nbsp; <p
+      style=\"color:green;\">SVM:&nbsp</p>$(dr2_svm)&nbsp;<p
+      style=\"color:green;\">VOLUME:&nbsp</p>$(dr2_volname)&nbsp; <p
+      style=\"color:green;\">STATE:&nbsp</p>$(dr2_mirror_state)&nbsp; <p
+      style=\"color:green;\">HEALTHY:&nbsp</p>$(dr2_mirror_health)&nbsp;'"
+    runLocal: true
+    noOutput: true
+    isHtml: true
+    dependencies:
+      - name: dr2
         values:
           - true
   - type: expression

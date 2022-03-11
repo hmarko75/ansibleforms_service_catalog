@@ -82,19 +82,21 @@ fields:
     expression: $(copy_types_jq).includes('dr1')
     noOutput: true
   - type: expression
-    name: dr2
-    label: dr2
-    hide: true
-    runLocal: true
-    expression: $(copy_types_jq).includes('dr2')
-    noOutput: true
-  - type: expression
     name: b2d1
     label: b2d1
     hide: true
     runLocal: true
     expression: $(copy_types_jq).includes('b2d1')
     noOutput: true
+
+  - type: expression
+    name: dr2
+    label: dr2
+    hide: true
+    runLocal: true
+    expression: $(copy_types_jq).includes('dr2')
+    noOutput: true
+
   - type: expression
     name: b2d2
     label: b2d2
@@ -657,262 +659,7 @@ fields:
         values:
           - true
     model: dr1.source
-  - type: expression
-    name: dr2_volnamesuffix
-    label: dr2_volnamesuffix
-    hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.volnamesuffix')
-    group: DR2
-    noOutput: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_volname
-    label: Volume Name
-    hide: true
-    expression: "'$(volname)'+'$(dr2_volnamesuffix)'"
-    group: DR2
-    dependencies:
-      - name: dr2
-        values:
-          - true
-    model: dr2.volname
-  - type: expression
-    name: dr2_sizeratio
-    label: dr2_sizeratio
-    hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.sizeratio')
-    group: DR2
-    noOutput: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_volsize
-    label: Volume Size
-    hide: true
-    runLocal: true
-    expression: ($(volsize)*$(dr2_sizeratio)).toString()
-    group: DR2
-    dependencies:
-      - name: dr2
-        values:
-          - true
-    model: dr2.volsize
-  - type: expression
-    name: dr2_dedicated_cluster
-    label: dr2_dedicated_cluster
-    hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.fixed_relationship_for_prod|.\"$(cluster)_$(svm)\"|.cluster')
-    group: DR2
-    noOutput: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_dedicated_svm
-    label: dr2_dedicated_svm
-    hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.fixed_relationship_for_prod|.\"$(cluster)_$(svm)\"|.svm')
-    group: DR2
-    noOutput: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_aggr_filter_jq
-    label: dr2_aggr_filter_jq
-    hide: true
-    expression: fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if
-      "$(dr2_dedicated_cluster)" != "null" then "$(dr2_dedicated_cluster)" else
-      .services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.clusters|keys|join("%7C")
-      end')
-    group: DR2
-    noOutput: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
 
-  - type: expression
-    name: dr2_flexgroup
-    hide: true
-    expression: "($(flexgroup)&&$(dr2))?true:false"
-    runLocal: true
-    group: DR2
-    noOutput: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
-
-  - type: query
-    name: dr2_cluster
-    label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters?name=$(dr2_aggr_filter_jq)','','AIQUM',
-      'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
-      0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
-      ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
-      }+{Location: .location}+{Contact:.contact}+{\"Total
-      Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available
-      Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailR\
-      aw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:\
-      {direction:\"asc\"}}],'')"
-    columns:
-      - Name
-      - Version
-      - Location
-      - Contact
-      - Total Capacity
-      - Available Capacity
-    required: true
-    default: __auto__
-    group: DR2
-    outputObject: false
-    model: dr2.cluster
-    dependencies:
-      - name: dr2
-        values:
-          - true
-
-  - type: query
-    name: dr2_aggregate
-    label: Aggregate
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
-      e/aggregates?state=online&cluster.name=$(dr2_cluster)','','AIQUM','def
-      gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
-      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name}+{Cluster:
-      .cluster.name}+{Node: .node.name}+{Size:
-      (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
-      ck_storage.available}+{Available:
-      (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
-      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
-      .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
-    columns:
-      - Aggregate
-      - Node
-      - Size
-      - Available
-      - Perf
-      - Type
-    pctColumns:
-      - Perf
-    required: true
-    default: __auto__
-    group: DR2
-    outputObject: false
-    model: dr2.aggregate
-    dependencies:
-      - name: dr2_flexgroup
-        values:
-          - false     
-
-  - type: query
-    name: dr2_fg_aggrs
-    label: Aggregates
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
-      e/aggregates?state=online&cluster.name=$(dr2_cluster)','','AIQUM','def
-      gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
-      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name} + {Node: .node.name}+{Size:
-      (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
-      ck_storage.available}+{Available:
-      (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
-      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
-      .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
-    columns:
-      - Aggregate
-      - Node
-      - Size
-      - Available
-      - Perf
-      - Type
-    pctColumns:
-      - Perf
-    required: true
-    multiple: true
-    sticky: true    
-    default: __all__
-    group: DR2
-    outputObject: false
-    model: dr2.aggrlist
-    dependencies:
-      - name: dr2_flexgroup
-        values:
-          - true  
-
-  - type: expression
-    name: dr2_fg_dc_ok
-    label: FG Data constituent
-    hide: false
-    expression: Number.isInteger($(fg_aggrs).length*$(fg_aggr_list_multiplier)/$(dr2_fg_aggrs).length)?'The number of prod data constituates comply with number of selected aggregates':'Cannot host '+($(fg_aggrs).length*$(fg_aggr_list_multiplier)).toString()+'prod flex group data constituates on '+($(dr2_fg_aggrs).length).toString()+' selected aggregates'
-    runLocal: true
-    noOutput: true
-    regex:
-      expression: comply
-      description: prod data constituates cannot be hosted on the selected aggreagtes
-    group: DR2
-    dependencies:
-      - name: dr2_flexgroup
-        values:
-          - true  
-
-  - type: expression
-    name: dr2_cluster_key
-    label: dr2_cluster_key
-    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(dr2_cluster)")|.key')
-    hide: true
-    group: DR2
-    model: dr2.clusterkey
-    dependencies:
-      - name: dr2
-        values:
-          - true          
-  - type: expression
-    name: dr2_svm_filter_jq
-    label: dr2_svm_filter_jq
-    hide: true
-    expression: fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if
-      "$(dr2_dedicated_svm)" != "null" then "$(dr2_dedicated_svm)" else
-      .services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.clusters|.\"$(dr2_cluster)\"|join("%7C")
-      end')
-    group: DR2
-    noOutput: true
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: query
-    name: dr2_svm
-    label: SVM
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/sv\
-      ms?cluster.name=$(dr2_cluster)&name=$(dr2_svm_filter_jq)','','AIQUM','[.r\
-      ecords[]|{Name: .name}]','','')"
-    columns:
-      - Name
-    required: true
-    default: __auto__
-    group: DR2
-    model: dr2.svm
-    dependencies:
-      - name: dr2
-        values:
-          - true
-  - type: expression
-    name: dr2_source
-    label: dr2_source
-    hide: true
-    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.source')
-    group: DR2
-    dependencies:
-      - name: dr2
-        values:
-          - true
-    model: dr2.source
   - type: expression
     name: b2d1_volnamesuffix
     label: b2d1_volnamesuffix
@@ -1169,6 +916,266 @@ fields:
         values:
           - true
     model: b2d1.source
+
+
+  - type: expression
+    name: dr2_volnamesuffix
+    label: dr2_volnamesuffix
+    hide: true
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.volnamesuffix')
+    group: DR2
+    noOutput: true
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_volname
+    label: Volume Name
+    hide: true
+    expression: "'$(volname)'+'$(dr2_volnamesuffix)'"
+    group: DR2
+    dependencies:
+      - name: dr2
+        values:
+          - true
+    model: dr2.volname
+  - type: expression
+    name: dr2_sizeratio
+    label: dr2_sizeratio
+    hide: true
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.sizeratio')
+    group: DR2
+    noOutput: true
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_volsize
+    label: Volume Size
+    hide: true
+    runLocal: true
+    expression: ($(volsize)*$(dr2_sizeratio)).toString()
+    group: DR2
+    dependencies:
+      - name: dr2
+        values:
+          - true
+    model: dr2.volsize
+  - type: expression
+    name: dr2_dedicated_cluster
+    label: dr2_dedicated_cluster
+    hide: true
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.fixed_relationship_for_prod|.\"$(cluster)_$(svm)\"|.cluster')
+    group: DR2
+    noOutput: true
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_dedicated_svm
+    label: dr2_dedicated_svm
+    hide: true
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.fixed_relationship_for_prod|.\"$(cluster)_$(svm)\"|.svm')
+    group: DR2
+    noOutput: true
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_aggr_filter_jq
+    label: dr2_aggr_filter_jq
+    hide: true
+    expression: fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if
+      "$(dr2_dedicated_cluster)" != "null" then "$(dr2_dedicated_cluster)" else
+      .services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.clusters|keys|join("%7C")
+      end')
+    group: DR2
+    noOutput: true
+    dependencies:
+      - name: dr2
+        values:
+          - true
+
+  - type: expression
+    name: dr2_flexgroup
+    hide: true
+    expression: "($(flexgroup)&&$(dr2))?true:false"
+    runLocal: true
+    group: DR2
+    noOutput: true
+    dependencies:
+      - name: dr2
+        values:
+          - true
+
+  - type: query
+    name: dr2_cluster
+    label: Select cluster
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters?name=$(dr2_aggr_filter_jq)','','AIQUM',
+      'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
+      0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
+      ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
+      }+{Location: .location}+{Contact:.contact}+{\"Total
+      Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available
+      Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailR\
+      aw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:\
+      {direction:\"asc\"}}],'')"
+    columns:
+      - Name
+      - Version
+      - Location
+      - Contact
+      - Total Capacity
+      - Available Capacity
+    required: true
+    default: __auto__
+    group: DR2
+    outputObject: false
+    model: dr2.cluster
+    dependencies:
+      - name: dr2
+        values:
+          - true
+
+  - type: query
+    name: dr2_aggregate
+    label: Aggregate
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+      e/aggregates?state=online&cluster.name=$(dr2_cluster)','','AIQUM','def
+      gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
+      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name}+{Cluster:
+      .cluster.name}+{Node: .node.name}+{Size:
+      (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
+      ck_storage.available}+{Available:
+      (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
+      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
+      .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
+    columns:
+      - Aggregate
+      - Node
+      - Size
+      - Available
+      - Perf
+      - Type
+    pctColumns:
+      - Perf
+    required: true
+    default: __auto__
+    group: DR2
+    outputObject: false
+    model: dr2.aggregate
+    dependencies:
+      - name: dr2_flexgroup
+        values:
+          - false     
+
+  - type: query
+    name: dr2_fg_aggrs
+    label: Aggregates
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+      e/aggregates?state=online&cluster.name=$(dr2_cluster)','','AIQUM','def
+      gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
+      roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name} + {Node: .node.name}+{Size:
+      (.space.block_storage.size/1024/1024/1024)|round|gb}+{AvailRaw:.space.blo\
+      ck_storage.available}+{Available:
+      (.space.block_storage.available/1024/1024/1024)|round|gb}+{Perf:
+      (((.performance_capacity.used*100)|roundit|tostring))}+{Type:
+      .type}]',[{AvailRaw:{direction:\"desc\"}},{Perf:{direction:\"asc\"}}],'')"
+    columns:
+      - Aggregate
+      - Node
+      - Size
+      - Available
+      - Perf
+      - Type
+    pctColumns:
+      - Perf
+    required: true
+    multiple: true
+    sticky: true    
+    default: __all__
+    group: DR2
+    outputObject: false
+    model: dr2.aggrlist
+    dependencies:
+      - name: dr2_flexgroup
+        values:
+          - true  
+
+  - type: expression
+    name: dr2_fg_dc_ok
+    label: FG Data constituent
+    hide: false
+    expression: Number.isInteger($(fg_aggrs).length*$(fg_aggr_list_multiplier)/$(dr2_fg_aggrs).length)?'The number of prod data constituates comply with number of selected aggregates':'Cannot host '+($(fg_aggrs).length*$(fg_aggr_list_multiplier)).toString()+'prod flex group data constituates on '+($(dr2_fg_aggrs).length).toString()+' selected aggregates'
+    runLocal: true
+    noOutput: true
+    regex:
+      expression: comply
+      description: prod data constituates cannot be hosted on the selected aggreagtes
+    group: DR2
+    dependencies:
+      - name: dr2_flexgroup
+        values:
+          - true  
+
+  - type: expression
+    name: dr2_cluster_key
+    label: dr2_cluster_key
+    expression: fn.fnJq($(datasource_info),'.[]|select(.name=="$(dr2_cluster)")|.key')
+    hide: true
+    group: DR2
+    model: dr2.clusterkey
+    dependencies:
+      - name: dr2
+        values:
+          - true          
+  - type: expression
+    name: dr2_svm_filter_jq
+    label: dr2_svm_filter_jq
+    hide: true
+    expression: fn.fnReadYamlFile('/app/dist/persistent/globals.yaml','if
+      "$(dr2_dedicated_svm)" != "null" then "$(dr2_dedicated_svm)" else
+      .services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.clusters|.\"$(dr2_cluster)\"|join("%7C")
+      end')
+    group: DR2
+    noOutput: true
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: query
+    name: dr2_svm
+    label: SVM
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/sv\
+      ms?cluster.name=$(dr2_cluster)&name=$(dr2_svm_filter_jq)','','AIQUM','[.r\
+      ecords[]|{Name: .name}]','','')"
+    columns:
+      - Name
+    required: true
+    default: __auto__
+    group: DR2
+    model: dr2.svm
+    dependencies:
+      - name: dr2
+        values:
+          - true
+  - type: expression
+    name: dr2_source
+    label: dr2_source
+    hide: true
+    expression: fn.fnJq($(settings),'.services|."$(service)"|."$(company)"|."$(environment)"|."$(location)"|.dr2|.source')
+    group: DR2
+    dependencies:
+      - name: dr2
+        values:
+          - true
+    model: dr2.source
+
+
   - type: expression
     name: b2d2_volnamesuffix
     label: b2d2_volnamesuffix

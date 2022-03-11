@@ -59,7 +59,7 @@ general:
 networks:
     vlan-1:
         gateway: 192.168.0.1
-        iprange: 192.168.0.[90-100],192.168.0.[130-149]
+        iprange: 192.168.0.[90-100],192.168.0.[130-169]
         subnetmask: 255.255.255.0
     vlan-2:
         gateway: 10.1.2.254
@@ -70,6 +70,45 @@ services:
         ACME Corp:
             Production:
                 Brussels:
+                    dr1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod:
+                            bru-cluster_bruno:
+                                cluster: tlv-cluster
+                                svm: bruno_dr
+                            bru-cluster_karel:
+                                cluster: tlv-cluster
+                                svm: karel_dr
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr
+                        sizeratio: 1.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
                     b2d1:
                         clusters:
                             bru-cluster: []
@@ -77,6 +116,9 @@ services:
                             bru-cluster_bruno:
                                 cluster: bru-cluster
                                 svm: bruno_b2d
+                            bru-cluster_karel:
+                                cluster: bru-cluster
+                                svm: karel_b2d
                         newsvm:
                             language: he.utf_8
                             network:
@@ -113,13 +155,62 @@ services:
                                 - daily
                             schedule: daily
                         volnamesuffix: ''
-                    dr1:
+                    dr2:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod:
+                            bru-cluster_bruno:
+                                cluster: bru-cluster
+                                svm: bruno_b2d
+                            bru-cluster_karel:
+                                cluster: bru-cluster
+                                svm: karel_b2d
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _b2d
+                        sizeratio: 2.5
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    b2d2:
                         clusters:
                             tlv-cluster: []
                         fixed_relationship_for_prod:
                             bru-cluster_bruno:
                                 cluster: tlv-cluster
                                 svm: bruno_dr
+                            bru-cluster_karel:
+                                cluster: tlv-cluster
+                                svm: karel_dr
                         newsvm:
                             language: he.utf_8
                             network:
@@ -143,12 +234,13 @@ services:
                             suffix: _dr
                         sizeratio: 1.5
                         source:
-                            copy: prod
+                            copy: b2d1
                             dynamicschedule: true
                             policy:
                                 name: MirrorAllSnapshots
                             schedule: hourly
                         volnamesuffix: ''
+
                     prod:
                         cifsaccess:
                             access: full_control
@@ -157,6 +249,7 @@ services:
                         clusters:
                             bru-cluster:
                             - bruno
+                            - karel
                         efficiency:
                             duration: 3
                             dynamicschedule: true
@@ -176,7 +269,7 @@ services:
                                 dnszone: true
                                 domain: demo.netapp.com
                                 lif_auto_revert: true
-                                lifcount: 2
+                                lifcount: 1
                                 name: vlan-1
                             protocols:
                                 cifs:
@@ -310,7 +403,7 @@ services:
                                 dnszone: true
                                 domain: demo.netapp.com
                                 lif_auto_revert: true
-                                lifcount: 2
+                                lifcount: 1
                                 name: vlan-1
                             protocols:
                                 cifs:
@@ -377,7 +470,7 @@ services:
                                 dnszone: true
                                 domain: demo.netapp.com
                                 lif_auto_revert: true
-                                lifcount: 2
+                                lifcount: 1
                                 name: vlan-1
                             protocols:
                                 cifs:
@@ -438,7 +531,7 @@ services:
                                 dnszone: true
                                 domain: demo.netapp.com
                                 lif_auto_revert: true
-                                lifcount: 2
+                                lifcount: 1
                                 name: vlan-1
                             protocols:
                                 cifs:
@@ -479,9 +572,12 @@ services:
                     b2d1:
                         clusters:
                             bru-cluster: []
-                        fixed_relationship_for_prod: {}
+                        fixed_relationship_for_prod:
+                            bru-cluster_k:
+                                cluster: bru-cluster
+                                svm: k_b2d
                         newsvm:
-                            language: en.utf_8
+                            language: he.utf_8
                             network:
                                 dnszone: true
                                 domain: demo.netapp.com
@@ -505,10 +601,13 @@ services:
                                 - weekly
                             schedule: hourly
                         volnamesuffix: ''
-                    dr1:
+                    dr2:
                         clusters:
                             tlv-cluster: []
-                        fixed_relationship_for_prod: {}
+                        fixed_relationship_for_prod:
+                            bru-cluster_k:
+                                cluster: tlv-cluster
+                                svm: k_dr1
                         newsvm:
                             language: he.utf_8
                             network:
@@ -524,7 +623,7 @@ services:
                             suffix: _dr1
                         sizeratio: 1
                         source:
-                            copy: prod
+                            copy: b2d1
                             dynamicschedule: false
                             policy:
                                 name: MirrorAllSnapshots
@@ -532,7 +631,8 @@ services:
                         volnamesuffix: ''
                     prod:
                         clusters:
-                            bru-cluster: []
+                            bru-cluster:
+                            - k
                         efficiency:
                             duration: 3
                             dynamicschedule: true
@@ -552,7 +652,7 @@ services:
                                 dnszone: true
                                 domain: demo.netapp.com
                                 lif_auto_revert: true
-                                lifcount: 2
+                                lifcount: 1
                                 name: vlan-1
                             protocols:
                                 nfs:
