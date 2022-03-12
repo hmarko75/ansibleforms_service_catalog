@@ -59,27 +59,21 @@ general:
 networks:
     vlan-1:
         gateway: 192.168.0.1
-        iprange: 192.168.0.[90-100],192.168.0.[130-169]
+        iprange: 192.168.0.[90-100],192.168.0.[130-160],192.168.0.[170-190]
         subnetmask: 255.255.255.0
     vlan-2:
         gateway: 10.1.2.254
         iprange: 10.1.2.[30-35],10.1.2.240
         subnetmask: 255.255.255.0
 services:
-    Home Directories:
+    Home Directories1:
         ACME Corp:
             Production:
                 Brussels:
                     dr1:
                         clusters:
                             tlv-cluster: []
-                        fixed_relationship_for_prod:
-                            bru-cluster_bruno:
-                                cluster: tlv-cluster
-                                svm: bruno_dr
-                            bru-cluster_karel:
-                                cluster: tlv-cluster
-                                svm: karel_dr
+                        fixed_relationship_for_prod: {}
                         newsvm:
                             language: he.utf_8
                             network:
@@ -100,7 +94,7 @@ services:
                                     tcp: disabled
                                     udp: disabled
                                     vstorage_state: enabled
-                            suffix: _dr
+                            suffix: _dr1
                         sizeratio: 1.5
                         source:
                             copy: prod
@@ -112,13 +106,7 @@ services:
                     b2d1:
                         clusters:
                             bru-cluster: []
-                        fixed_relationship_for_prod:
-                            bru-cluster_bruno:
-                                cluster: bru-cluster
-                                svm: bruno_b2d
-                            bru-cluster_karel:
-                                cluster: bru-cluster
-                                svm: karel_b2d
+                        fixed_relationship_for_prod: {}
                         newsvm:
                             language: he.utf_8
                             network:
@@ -141,10 +129,10 @@ services:
                                     nfsv4_id_domain: demo.com
                                     service_state: started
                                     vstorage_state: enabled
-                            suffix: _b2d
+                            suffix: _b2d1
                         sizeratio: 2.5
                         source:
-                            copy: dr1
+                            copy: prod
                             dynamicschedule: true
                             policy:
                                 keep:
@@ -158,13 +146,7 @@ services:
                     dr2:
                         clusters:
                             bru-cluster: []
-                        fixed_relationship_for_prod:
-                            bru-cluster_bruno:
-                                cluster: bru-cluster
-                                svm: bruno_b2d
-                            bru-cluster_karel:
-                                cluster: bru-cluster
-                                svm: karel_b2d
+                        fixed_relationship_for_prod: {}
                         newsvm:
                             language: he.utf_8
                             network:
@@ -187,7 +169,7 @@ services:
                                     nfsv4_id_domain: demo.com
                                     service_state: started
                                     vstorage_state: enabled
-                            suffix: _b2d
+                            suffix: _dr2
                         sizeratio: 2.5
                         source:
                             copy: dr1
@@ -204,13 +186,7 @@ services:
                     b2d2:
                         clusters:
                             tlv-cluster: []
-                        fixed_relationship_for_prod:
-                            bru-cluster_bruno:
-                                cluster: tlv-cluster
-                                svm: bruno_dr
-                            bru-cluster_karel:
-                                cluster: tlv-cluster
-                                svm: karel_dr
+                        fixed_relationship_for_prod: {}
                         newsvm:
                             language: he.utf_8
                             network:
@@ -231,7 +207,7 @@ services:
                                     tcp: disabled
                                     udp: disabled
                                     vstorage_state: enabled
-                            suffix: _dr
+                            suffix: _b2d2
                         sizeratio: 1.5
                         source:
                             copy: b2d1
@@ -240,16 +216,13 @@ services:
                                 name: MirrorAllSnapshots
                             schedule: hourly
                         volnamesuffix: ''
-
                     prod:
                         cifsaccess:
                             access: full_control
                             share_suffix: $
                             user_or_group: DEMO\administrator
                         clusters:
-                            bru-cluster:
-                            - bruno
-                            - karel
+                            bru-cluster: {}
                         efficiency:
                             duration: 3
                             dynamicschedule: true
@@ -449,8 +422,7 @@ services:
                             share_suffix: $
                             user_or_group: DEMO\administrator
                         clusters:
-                            bru-cluster:
-                            - test
+                            bru-cluster: {}
                         efficiency:
                             duration: 3
                             dynamicschedule: true
@@ -565,6 +537,2072 @@ services:
                             snapmirror_label:
                             - hourly
                             - daily
+
+    Home Directories2:
+        ACME Corp:
+            Production:
+                Brussels:
+                    dr1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr1
+                        sizeratio: 1.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    b2d1:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _b2d1
+                        sizeratio: 2.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    dr2:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _dr2
+                        sizeratio: 2.5
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    b2d2:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _b2d2
+                        sizeratio: 1.5
+                        source:
+                            copy: b2d1
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            bru-cluster: {}
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 44
+                            - 24
+                            - 4
+                            dynamicschedule: true
+                            name: 44h_24d_4w
+                            percent_snapshot_space: 10
+                            prefix:
+                            - hourly
+                            - daily
+                            - weekly
+                            schedule:
+                            - hourly
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                            - weekly
+                Tel Aviv:
+                    b2d1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _b2d
+                        sizeratio: 2.5
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    dr1:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr
+                        sizeratio: 1.1
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            tlv-cluster: []
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 44
+                            - 24
+                            - 4
+                            dynamicschedule: true
+                            name: 44h_24d_4w
+                            percent_snapshot_space: 10
+                            prefix:
+                            - hourly
+                            - daily
+                            - weekly
+                            schedule:
+                            - hourly
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                            - weekly
+            Test:
+                Brussels:
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            bru-cluster: {}
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 12
+                            - 4
+                            dynamicschedule: true
+                            name: 12h_4h
+                            percent_snapshot_space: 0
+                            prefix:
+                            - hourly
+                            - daily
+                            schedule:
+                            - hourly
+                            - daily
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                Tel Aviv:
+                    prod:
+
+    Home Directories3:
+        ACME Corp:
+            Production:
+                Brussels:
+                    dr1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr1
+                        sizeratio: 1.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    b2d1:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _b2d1
+                        sizeratio: 2.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    dr2:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _dr2
+                        sizeratio: 2.5
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    b2d2:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _b2d2
+                        sizeratio: 1.5
+                        source:
+                            copy: b2d1
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            bru-cluster: {}
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 44
+                            - 24
+                            - 4
+                            dynamicschedule: true
+                            name: 44h_24d_4w
+                            percent_snapshot_space: 10
+                            prefix:
+                            - hourly
+                            - daily
+                            - weekly
+                            schedule:
+                            - hourly
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                            - weekly
+                Tel Aviv:
+                    b2d1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _b2d
+                        sizeratio: 2.5
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    dr1:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr
+                        sizeratio: 1.1
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            tlv-cluster: []
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 44
+                            - 24
+                            - 4
+                            dynamicschedule: true
+                            name: 44h_24d_4w
+                            percent_snapshot_space: 10
+                            prefix:
+                            - hourly
+                            - daily
+                            - weekly
+                            schedule:
+                            - hourly
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                            - weekly
+            Test:
+                Brussels:
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            bru-cluster: {}
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 12
+                            - 4
+                            dynamicschedule: true
+                            name: 12h_4h
+                            percent_snapshot_space: 0
+                            prefix:
+                            - hourly
+                            - daily
+                            schedule:
+                            - hourly
+                            - daily
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                Tel Aviv:
+                    prod:
+
+    Home Directories4:
+        ACME Corp:
+            Production:
+                Brussels:
+                    dr1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr1
+                        sizeratio: 1.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    b2d1:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _b2d1
+                        sizeratio: 2.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    dr2:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _dr2
+                        sizeratio: 2.5
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    b2d2:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _b2d2
+                        sizeratio: 1.5
+                        source:
+                            copy: b2d1
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            bru-cluster: {}
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 44
+                            - 24
+                            - 4
+                            dynamicschedule: true
+                            name: 44h_24d_4w
+                            percent_snapshot_space: 10
+                            prefix:
+                            - hourly
+                            - daily
+                            - weekly
+                            schedule:
+                            - hourly
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                            - weekly
+                Tel Aviv:
+                    b2d1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _b2d
+                        sizeratio: 2.5
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    dr1:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr
+                        sizeratio: 1.1
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            tlv-cluster: []
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 44
+                            - 24
+                            - 4
+                            dynamicschedule: true
+                            name: 44h_24d_4w
+                            percent_snapshot_space: 10
+                            prefix:
+                            - hourly
+                            - daily
+                            - weekly
+                            schedule:
+                            - hourly
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                            - weekly
+            Test:
+                Brussels:
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            bru-cluster: {}
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 12
+                            - 4
+                            dynamicschedule: true
+                            name: 12h_4h
+                            percent_snapshot_space: 0
+                            prefix:
+                            - hourly
+                            - daily
+                            schedule:
+                            - hourly
+                            - daily
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                Tel Aviv:
+                    prod:
+
+    Home Directories5:
+        ACME Corp:
+            Production:
+                Brussels:
+                    dr1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr1
+                        sizeratio: 1.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    b2d1:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _b2d1
+                        sizeratio: 2.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    dr2:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _dr2
+                        sizeratio: 2.5
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    b2d2:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _b2d2
+                        sizeratio: 1.5
+                        source:
+                            copy: b2d1
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            bru-cluster: {}
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 44
+                            - 24
+                            - 4
+                            dynamicschedule: true
+                            name: 44h_24d_4w
+                            percent_snapshot_space: 10
+                            prefix:
+                            - hourly
+                            - daily
+                            - weekly
+                            schedule:
+                            - hourly
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                            - weekly
+                Tel Aviv:
+                    b2d1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _b2d
+                        sizeratio: 2.5
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    dr1:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr
+                        sizeratio: 1.1
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            tlv-cluster: []
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 44
+                            - 24
+                            - 4
+                            dynamicschedule: true
+                            name: 44h_24d_4w
+                            percent_snapshot_space: 10
+                            prefix:
+                            - hourly
+                            - daily
+                            - weekly
+                            schedule:
+                            - hourly
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                            - weekly
+            Test:
+                Brussels:
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            bru-cluster: {}
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 12
+                            - 4
+                            dynamicschedule: true
+                            name: 12h_4h
+                            percent_snapshot_space: 0
+                            prefix:
+                            - hourly
+                            - daily
+                            schedule:
+                            - hourly
+                            - daily
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                Tel Aviv:
+                    prod:
+
+    Home Directories6:
+        ACME Corp:
+            Production:
+                Brussels:
+                    dr1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr1
+                        sizeratio: 1.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    b2d1:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _b2d1
+                        sizeratio: 2.5
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    dr2:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                fcp:
+                                    enabled: false
+                                iscsi:
+                                    enabled: false
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _dr2
+                        sizeratio: 2.5
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    b2d2:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _b2d2
+                        sizeratio: 1.5
+                        source:
+                            copy: b2d1
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            bru-cluster: {}
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 44
+                            - 24
+                            - 4
+                            dynamicschedule: true
+                            name: 44h_24d_4w
+                            percent_snapshot_space: 10
+                            prefix:
+                            - hourly
+                            - daily
+                            - weekly
+                            schedule:
+                            - hourly
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                            - weekly
+                Tel Aviv:
+                    b2d1:
+                        clusters:
+                            tlv-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    vstorage_state: enabled
+                            suffix: _b2d
+                        sizeratio: 2.5
+                        source:
+                            copy: dr1
+                            dynamicschedule: true
+                            policy:
+                                keep:
+                                - 90
+                                name: 90daily
+                                policy_type: async_mirror
+                                snapmirror_label:
+                                - daily
+                            schedule: daily
+                        volnamesuffix: ''
+                    dr1:
+                        clusters:
+                            bru-cluster: []
+                        fixed_relationship_for_prod: {}
+                        newsvm:
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    tcp: disabled
+                                    udp: disabled
+                                    vstorage_state: enabled
+                            suffix: _dr
+                        sizeratio: 1.1
+                        source:
+                            copy: prod
+                            dynamicschedule: true
+                            policy:
+                                name: MirrorAllSnapshots
+                            schedule: hourly
+                        volnamesuffix: ''
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            tlv-cluster: []
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 44
+                            - 24
+                            - 4
+                            dynamicschedule: true
+                            name: 44h_24d_4w
+                            percent_snapshot_space: 10
+                            prefix:
+                            - hourly
+                            - daily
+                            - weekly
+                            schedule:
+                            - hourly
+                            - daily
+                            - weekly
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                            - weekly
+            Test:
+                Brussels:
+                    prod:
+                        cifsaccess:
+                            access: full_control
+                            share_suffix: $
+                            user_or_group: DEMO\administrator
+                        clusters:
+                            bru-cluster: {}
+                        efficiency:
+                            duration: 3
+                            dynamicschedule: true
+                            enable_compression: true
+                            enable_cross_volume_background_dedupe: true
+                            enable_cross_volume_inline_dedupe: true
+                            enable_data_compaction: true
+                            enable_inline_compression: true
+                            enable_inline_dedupe: true
+                            schedule: daily
+                        newsvm:
+                            allowed_protocols:
+                            - cifs
+                            - nfs
+                            language: he.utf_8
+                            network:
+                                dnszone: true
+                                domain: demo.netapp.com
+                                lif_auto_revert: true
+                                lifcount: 1
+                                name: vlan-1
+                            protocols:
+                                cifs:
+                                    domain: demo.netapp.com
+                                    enabled: true
+                                    v1.0: true
+                                    v2.0: true
+                                    v3.0: true
+                                nfs:
+                                    nfsv3: enabled
+                                    nfsv4: enabled
+                                    nfsv41: enabled
+                                    nfsv4_id_domain: demo.com
+                                    service_state: started
+                                    showmount: enabled
+                                    vstorage_state: enabled
+                            root_volume_security_style: ntfs
+                        snapshotpolicy:
+                            count:
+                            - 12
+                            - 4
+                            dynamicschedule: true
+                            name: 12h_4h
+                            percent_snapshot_space: 0
+                            prefix:
+                            - hourly
+                            - daily
+                            schedule:
+                            - hourly
+                            - daily
+                            snapmirror_label:
+                            - hourly
+                            - daily
+                Tel Aviv:
+                    prod:
+
     Maya:
         ACME Corp:
             Production:

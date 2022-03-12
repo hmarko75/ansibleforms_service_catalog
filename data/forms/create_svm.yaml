@@ -8,7 +8,7 @@ categories:
 icon: scroll
 playbook: create_service_svm.yaml
 inventory: hosts
-type: ansible
+type: ansible	
 fields:
   - type: expression
     name: settings
@@ -620,7 +620,7 @@ fields:
       ports to host requested IP
       addresses':'$(dr1_cluster_peer)'==''&&'$(dr1_cluster)'!='$(dr1_source_cluster)'?'Cluster
       peer to $(dr1_source_cluster) is missing or not healthy':!(['prod'].includes('$(dr1_source_copy)'))?'source cpoy can be only:prod currently:$(dr1_source_copy)':'IP, ports and
-      cluster peer requirements are satisfied'
+      cluster peer requirements are satisfied, souce copy:$(dr1_source_copy)'
     runLocal: true
     noOutput: true
     regex:
@@ -951,7 +951,7 @@ fields:
       enought ports to host requested IP
       addresses':'$(b2d1_cluster_peer)'==''&&'$(b2d1_cluster)'!='$(b2d1_source_cluster)'?'Cluster
       peer to $(b2d1_source_cluster) is missing or not healthy':!(['prod','dr1'].includes('$(b2d1_source_copy)'))?'source cpoy can be only:prod,dr1 currently:$(b2d1_source_copy)':'IP, ports and
-      cluster peer requirements are satisfied'
+      cluster peer requirements are satisfied, souce copy:$(b2d1_source_copy)'
     runLocal: true
     noOutput: true
     regex:
@@ -1284,7 +1284,7 @@ fields:
       ports to host requested IP
       addresses':'$(dr2_cluster_peer)'==''&&'$(dr2_cluster)'!='$(dr2_source_cluster)'?'Cluster
       peer to $(dr2_source_cluster) is missing or not healthy':!(['prod','dr1','b2d1'].includes('$(dr2_source_copy)'))?'source cpoy can be only:prod,dr1,b2d1 currently:$(dr2_source_copy)':'IP, ports and
-      cluster peer requirements are satisfied'
+      cluster peer requirements are satisfied, souce copy:$(dr2_source_copy)'
     runLocal: true
     noOutput: true
     regex:
@@ -1616,7 +1616,7 @@ fields:
       enought ports to host requested IP
       addresses':'$(b2d2_cluster_peer)'==''&&'$(b2d2_cluster)'!='$(b2d2_source_cluster)'?'Cluster
       peer to $(b2d2_source_cluster) is missing or not healthy':!(['prod','dr1','b2d1','dr2'].includes('$(b2d2_source_copy)'))?'source cpoy can be only:prod,dr1,b2d1,dr2 currently:$(b2d2_source_copy)':'IP, ports and
-      cluster peer requirements are satisfied'
+      cluster peer requirements are satisfied, souce copy:$(b2d2_source_copy)'
     runLocal: true
     noOutput: true
     regex:
