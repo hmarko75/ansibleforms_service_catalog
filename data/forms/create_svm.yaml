@@ -1599,8 +1599,7 @@ fields:
     name: b2d2_selectedports
     label: b2d2_selectedports
     hide: true
-    expression: fn.fnJq($(ports),'[.[]|select (.cluster==\"$(b2d2_cluster)\" and
-      .bd==\"$(b2d2_netname)\")] | .[:$(b2d2_lifcount)]')
+    expression: fn.fnJq($(ports),'[.[]|select (.cluster==\"$(b2d2_cluster)\" and .bd==\"$(b2d2_netname)\")] | .[:$(b2d2_lifcount)]')
     noOutput: true
     group: B2D2
     dependencies:

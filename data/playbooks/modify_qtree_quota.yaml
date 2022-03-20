@@ -10,6 +10,8 @@
       password: "{{ login.password }}"
       https: true
       validate_certs: false
+    
+    modifiedquota: []
   
   vars_files:
   - ../globals.yaml
@@ -17,6 +19,16 @@
   collections:
   - netapp.ontap  
   tasks:
+    - name: create changed qtree list 
+      set_fact: 
+        modifiedquota: "{{modifiedquota + [item]}}"
+      when: item.fileLimit!=None or item.softFileLimit!=None or item.diskLimit!=None or item.softDiskLimit!=None
+      loop: "{{ qtrees_quota }}"
+    
+    - name: List of modified qtree
+      debug:
+        var: modifiedquota
+
     - name: modify qtree quota
       na_ontap_quotas:
         state: present
@@ -25,13 +37,15 @@
         quota_target: "/vol/{{ prod.volume+'/'+item.Qtree}}"
         type: tree
         policy: default 
+        set_quota_status: on 
         soft_file_limit: "{{ item.softFileLimit|int if item.softFileLimit!=current_quota[idx-1].softFileLimit else omit|default(omit) }}"
         soft_disk_limit: "{{ (item.softDiskLimit|float)*1024*1024 if item.softDiskLimit!=current_quota[idx-1].softDiskLimit else omit |default(omit) }}"
         file_limit: "{{ item.fileLimit|int if item.fileLimit!=current_quota[idx-1].fileLimit else omit |default(omit )}}"
         disk_limit: "{{ (item.diskLimit|float)*1024*1024 if item.diskLimit!=current_quota[idx-1].diskLimit else omit|default(omit) }}"
         activate_quota_on_change: "{{ 'reinitialize' if ansible_loop.last else 'none' }}"
         <<: *login
-      loop: "{{ qtrees_quota }}"
+      loop: "{{ modifiedquota }}"
       loop_control:
         index_var: idx
         extended: yes
+
