@@ -290,12 +290,12 @@ fields:
     model: prod.secstyle
   - type: text
     name: exports
-    label: Export Hosts
+    label: Comma Seperated Export Hosts
     default: ""
     required: false
     regex:
-      expression: ([^,]+)
-      description: Invalid volume name
+      expression: ^((([a-zA-Z0-9\.]){1,45}))(,([a-zA-Z0-9\.]){1,45})*$
+      description: Invalid export host list (should be comma seperated)
     model: prod.exports
     icon: user
     group: Production

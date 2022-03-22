@@ -1,0 +1,12 @@
+---
+- name: clone dataset
+  hosts: "{{ general.dataopshost }}"
+  become: no 
+  gather_facts: no
+  tasks:
+  - name: create clone 
+    command: "{{ general.dataopscli }} clone volume --cluster={{ cluster }} --source-svm={{ source.svm }} --target-svm={{ clone.svm }} --name={{ clone.volume }} --source-volume={{ source.volume }} --source-snapshot={{ source.snapshot }}"
+    register: out
+  - debug: var=out.stdout_lines
+  - debug: var=out.stderr_lines 
+

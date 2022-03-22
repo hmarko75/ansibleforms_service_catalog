@@ -1,0 +1,247 @@
+- name: Refresh clone 
+  help: |
+    Refresh clone (remove existing clone, and recreate a new one )
+  roles:
+    - Provision
+  description: Create/Refresh clone 
+  categories:
+    - Clone
+  #tileClass: has-background-link
+  icon: scroll
+  type: multistep 
+  steps:
+  # - type: ansible
+  #   name: Delete existing clone
+  #   playbook: data_ops_delete_clone.yaml
+  #   inventory: hosts
+  - type: ansible
+    name: Create new clone
+    playbook: dataops_create_clone.yaml
+    inventory: hosts
+
+  fields:   
+  #load global parameters 
+  - type: expression
+    name: settings
+    label: settings
+    expression: fn.fnReadYamlFile('/app/dist/persistent/dataops_globals.yaml','')
+    noOutput: false
+    hide: true   
+    model: general
+
+  - type: expression
+    name: aiqum
+    label: aiqum
+    expression: fn.fnJq($(settings),'.aiqum')
+    noOutput: true
+    hide: true            
+
+  - type: query
+    name: cluster
+    label: Select cluster
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM',
+      'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
+      0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
+      ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
+      }+{Location: .location}+{Contact:.contact}+{\"Total
+      Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available
+      Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailR\
+      aw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:\
+      {direction:\"asc\"}}],'')"
+    columns:
+      - Name
+      - Version
+      - Location
+      - Contact
+      - Total Capacity
+      - Available Capacity
+    required: true
+    default: __auto__
+    outputObject: false
+
+  - type: query
+    name: volumedetails
+    label: Select Volume to Clone
+    dbConfig:
+      name: AIQUMSQL
+      type: mysql
+    query: select CONCAT(vserver.name,':',volume.name) as
+      'SVM:Volume', CONCAT(format(round(volume.size/1024/1024/1024,0),'T0'),'G') as Size,
+      round(volume.size/1024/1024/1024,0) as sizeg,
+      CONCAT(format(round(volume.sizeUsed/1024/1024/1024,0),'T0'),'G') as Used,
+      volume.sizeUsed/volume.size as Utilization, cluster.name as cluster,
+      vserver.name as svm, volume.name as volume from netapp_model_view.cluster,
+      netapp_model_view.vserver, netapp_model_view.volume 
+      where cluster.name = '$(cluster)' and volume.vserverid = vserver.objid and vserver.clusterid = cluster.objid and volume.state =
+      'ONLINE' and volume.isVserverRoot = 0 and volume.derivedStyle != 'CONSTITUENT' and volume.volType='RW' and
+      vserver.type='DATA' and vserver.subtype='DEFAULT' order by volume.name
+    columns:
+      - SVM:Volume
+      - Size
+      - Used
+      - Utilization
+    pctColumns:
+      - Utilization
+    required: true
+    default: __auto__
+    outputObject: true
+    noOutput: true
+    group: Parent Volume
+  - type: expression
+    name: svm
+    expression: "'$(volumedetails.svm)'"
+    hide: true
+    model: source.svm 
+    group: Parent Volume
+  - type: expression
+    name: volname
+    label: volname
+    expression: "'$(volumedetails.volume)'"
+    hide: true
+    model: source.volume
+    group: Parent Volume
+  - type: expression
+    name: volumeuuid
+    expression: fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes?svm.name=$(svm)&name=$(volname)&fields=uuid&max_records=500','','ONTAP','.records[]|.uuid','','')
+    hide: true   
+    noOutput: true
+    group: Parent Volume
+  - type: query
+    name: parent_snapshot
+    label: Base Snapshot
+    expression: fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes/$(volumeuuid)/snapshots?fields=name,create_time&order_by=create_time desc','','ONTAP','[(.records[] | ({Snapshot:.name} + {"Creation Time":.create_time} ) ) ]','','')
+    default: __auto__
+    multiple: false
+    outputObject: false
+    columns:
+    - Snapshot
+    - "Creation Time"
+    model: source.snapshot
+    group: Parent Volume
+  - type: checkbox
+    name: clonerefresh
+    label: Check to refresh existing clones 
+    default: false
+    placeholder: Refresh Existing Clone
+    required: false
+    group: Clone
+  
+  - type: query
+    name: clonesvm
+    label: Clone SVM
+    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster)','','AIQUM','[{\"Name\":  \"$(svm)\"}]+([.records[]|{Name: .name}]|map(select(.Name != \"$(svm)\")))','','')"
+    columns:
+      - Name
+    required: true
+    default: __auto__
+    group: Clone
+    model: clone.svm
+    dependencies:
+      - name: clonerefresh
+        values:
+          - false  
+
+  - type: expression
+    name: existingvols
+    label: existingvols
+    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/volumes?cluster.name=$(cluster)&svm.name=$(svm)&max_records=1000','','AIQUM','[.records[]|.name]','','')
+    hide: true
+    noOutput: true
+    group: Clone
+    dependencies:
+      - name: clonerefresh
+        values:
+          - false   
+
+  - type: text
+    name: clonename
+    label: Clone Name
+    default: ""
+    required: true
+    minLength: 1
+    maxLength: 30
+    regex:
+      expression: ^[a-z0-9_]*$
+      description: Invalid volume name
+    notIn:
+      field: existingvols
+      description: Volume already exists
+    icon: user
+    group: Clone
+    model: clone.volume
+    dependencies:
+      - name: clonerefresh
+        values:
+          - false 
+
+  - type: query
+    name: exportpolicy
+    label: Export Policy
+    expression: "fn.fnRestBasic('get','https://$(cluster)/api/protocols/nfs/export-policies?svm.name=$(clonesvm)&max_records=500','','ONTAP','[.records[]|{Name: .name}]|map(select(.Name|startswith(\"cl_\")|not))|map(select(.Name|startswith(\"netapp_dataops_\")|not))','','')"
+    columns:
+      - Name
+    required: true
+    default: __auto__
+    group: Clone
+    model: clone.svm
+    dependencies:
+      - name: clonerefresh
+        values:
+          - false  
+
+  - type: text
+    name: exports
+    label: Comma Seperated Export Hosts
+    default: ""
+    required: false
+    regex:
+      #expression: ([^\S+,]+)
+      expression: ^((([a-zA-Z0-9\.]){1,45})+)(,([a-zA-Z0-9\.]){1,45})*$
+      description: Invalid export host list (should be comma seperated)
+    icon: user
+    model: clone.exporthosts
+    group: Clone
+    dependencies:
+      - name: clonerefresh
+        values:
+          - false 
+
+  - type: text
+    name: junctionpath
+    label: Junction Path
+    default: ""
+    required: false
+    regex:
+      expression: ^((\/([a-zA-Z0-9\.]){1,45})+)$
+      description: Invalid junction path
+    help: non default junction path (default will be /volname)
+    icon: user
+    model: clone.junctionpath
+    group: Clone
+    dependencies:
+      - name: clonerefresh
+        values:
+          - false 
+
+
+
+
+  - type: query
+    name: existingclones
+    label: Select existing clone
+    expression: "fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes?fields=comment,clone.is_flexclone,clone.parent_volume,clone.parent_svm,clone.parent_snapshot,svm.name,create_time&max_records=1000','','ONTAP','[.records[]| {\"SVM:Volume\": (.svm.name+\":\" +.name)} + {svm: .svm.name} + {volume: .name} + {Clone: .clone.is_flexclone} + {\"Clone Parent\": (if .clone.parent_volume.name == null then \"\" else .clone.parent_volume.name end)} + {\"Creation Time\": .create_time} + {\"Clone Parent SVM\": (if .clone.parent_svm.name == null then \"\" else .clone.parent_svm.name end)} + {\"Clone Parent Snapshot\": (if .clone.parent_snapshot.name == null then \"\" else .clone.parent_snapshot.name end)} + {\"Clone Splited\":(if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false)then true else false end)}]|map(select (.Clone or .\"Clone Splited\"))|map(select (.\"Clone Parent SVM\"==\"$(svm)\" and .\"Clone Parent\"==\"$(volname)\"))','','')"
+    columns:
+      - SVM:Volume
+      - Clone
+      - Clone Parent Snapshot
+      - Creation Time
+    default: __auto__
+    required: true
+    outputObject: true
+    group: Clone
+    model: clone
+    dependencies:
+      - name: clonerefresh
+        values:
+          - true  
+

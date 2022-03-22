@@ -2,13 +2,13 @@ categories:
   - name: Default
     icon: bars
   - name: Provision
-    icon: bath
+    icon: bars
   - name: Quota
-    icon: bath    
+    icon: bars    
   - name: Maintenance
-    icon: bath
+    icon: bars
   - name: Debug
-    icon: bath    
+    icon: bars    
   - name: Decommission    
     icon: trash
 roles:

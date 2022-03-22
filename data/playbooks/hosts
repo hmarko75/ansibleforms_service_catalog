@@ -1,1 +1,2 @@
 host.docker.internal
+192.168.0.62 ansible_connection=ssh ansible_user=root
