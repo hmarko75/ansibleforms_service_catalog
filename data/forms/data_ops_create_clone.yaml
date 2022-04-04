@@ -1,24 +1,16 @@
-- name: Refresh clone 
+- name: Create/Refresh clone 
   help: |
     Refresh clone (remove existing clone, and recreate a new one )
   roles:
     - Provision
   description: Create/Refresh clone 
   categories:
-    - Clone
+    - Dataops
   #tileClass: has-background-link
   icon: scroll
-  type: multistep 
-  steps:
-  # - type: ansible
-  #   name: Delete existing clone
-  #   playbook: data_ops_delete_clone.yaml
-  #   inventory: hosts
-  - type: ansible
-    name: Create new clone
-    playbook: dataops_create_clone.yaml
-    inventory: hosts
-
+  type: ansible
+  playbook: dataops_create_clone.yaml
+  inventory: hosts
   fields:   
   #load global parameters 
   - type: expression
@@ -174,30 +166,29 @@
         values:
           - false 
 
-  - type: query
-    name: exportpolicy
-    label: Export Policy
-    expression: "fn.fnRestBasic('get','https://$(cluster)/api/protocols/nfs/export-policies?svm.name=$(clonesvm)&max_records=500','','ONTAP','[.records[]|{Name: .name}]|map(select(.Name|startswith(\"cl_\")|not))|map(select(.Name|startswith(\"netapp_dataops_\")|not))','','')"
-    columns:
-      - Name
-    required: true
-    default: __auto__
-    group: Clone
-    model: clone.svm
-    dependencies:
-      - name: clonerefresh
-        values:
-          - false  
+  # - type: query
+  #   name: exportpolicy
+  #   label: Export Policy
+  #   expression: "fn.fnRestBasic('get','https://$(cluster)/api/protocols/nfs/export-policies?svm.name=$(clonesvm)&max_records=500','','ONTAP','[.records[]|{Name: .name}]|map(select(.Name|startswith(\"cl_\")|not))|map(select(.Name|startswith(\"netapp_dataops_\")|not))','','')"
+  #   columns:
+  #     - Name
+  #   required: true
+  #   default: __auto__
+  #   group: Clone
+  #   model: clone.svm
+  #   dependencies:
+  #     - name: clonerefresh
+  #       values:
+  #         - false  
 
   - type: text
     name: exports
-    label: Comma Seperated Export Hosts
+    label: Colon (:) Seperated Export Hosts
     default: ""
     required: false
     regex:
-      #expression: ([^\S+,]+)
-      expression: ^((([a-zA-Z0-9\.]){1,45})+)(,([a-zA-Z0-9\.]){1,45})*$
-      description: Invalid export host list (should be comma seperated)
+      expression: ^((([a-zA-Z0-9\.]){1,45}))(\:([a-zA-Z0-9\.]){1,45})*$
+      description: Invalid export host list (should be colon seperated)
     icon: user
     model: clone.exporthosts
     group: Clone
@@ -223,9 +214,6 @@
         values:
           - false 
 
-
-
-
   - type: query
     name: existingclones
     label: Select existing clone
@@ -245,3 +233,18 @@
         values:
           - true  
 
+  - type: checkbox
+    name: split
+    label: Check to split new clone
+    default: false
+    placeholder: Split clone 
+    required: false
+    group: Clone
+
+  - type: checkbox
+    name: svm_dr_unprotect
+    label: Check to disable SVM-DR protection for new clone 
+    default: false
+    placeholder: Disbale SVM-DR protection 
+    required: false
+    group: Clone    

@@ -67,7 +67,7 @@
         job_months: -1
         <<: *login 
       loop: "{{ range(0,24)|list }}"  
-
+      
 
 
       

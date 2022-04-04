@@ -5,8 +5,19 @@
   gather_facts: no
   tasks:
   - name: create clone 
-    command: "{{ general.dataopscli }} clone volume --cluster={{ cluster }} --source-svm={{ source.svm }} --target-svm={{ clone.svm }} --name={{ clone.volume }} --source-volume={{ source.volume }} --source-snapshot={{ source.snapshot }}"
+    command: "{{ general.dataopscli }} clone volume --cluster={{ cluster }} --source-svm={{ source.svm }} --target-svm={{ clone.svm }} --name={{ clone.volume }} --source-volume={{ source.volume }} --source-snapshot={{ source.snapshot }} {{ ('--junction='+clone.junctionpath if clone.junctionpath != '')|default('') }} {{ (' --export-hosts='+clone.exporthosts if clone.exporthosts != '')|default('') }} {{(' -d ' if svm_dr_unprotect)|default('')}} {{(' --split ' if split)|default('')}}"
     register: out
+    when: not clonerefresh
   - debug: var=out.stdout_lines
+    when: not clonerefresh  
+  - debug: var=out.stderr_lines  
+    when: not clonerefresh    
+  - name: refresh clone 
+    command: "{{ general.dataopscli }} clone volume --cluster={{ cluster }} --source-svm={{ source.svm }} --target-svm={{ clone.svm }} --name={{ clone.volume }} --source-volume={{ source.volume }} --source-snapshot={{ source.snapshot }} --refresh {{(' -d ' if svm_dr_unprotect)|default('')}} {{(' --split ' if split)|default('')}}"
+    register: out
+    when: clonerefresh    
+  - debug: var=out.stdout_lines
+    when: clonerefresh   
   - debug: var=out.stderr_lines 
+    when: clonerefresh   
 

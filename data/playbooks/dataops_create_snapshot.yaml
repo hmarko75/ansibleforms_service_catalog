@@ -1,0 +1,16 @@
+---
+- name: create snapshot
+  hosts: "{{ general.dataopshost }}"
+  become: no 
+  gather_facts: no
+  tasks:
+  - name: create snapshot  
+    command: "{{ general.dataopscli }} create snapshot --cluster={{ cluster }} --svm={{ svm }} --volume={{ volname }} --name={{ snapshotname }} {{(' --retention='+retnetion if retnetion)|default('')}}"
+    register: out
+    when: not usepolicy
+  - debug: var=out.stdout_lines
+    when: not usepolicy  
+  - debug: var=out.stderr_lines  
+    when: not usepolicy    
+
+
