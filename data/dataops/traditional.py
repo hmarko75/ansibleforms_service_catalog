@@ -1892,6 +1892,151 @@ def sync_cloud_sync_relationship(relationship_id: str, wait_until_complete: bool
             # Sleep for 60 seconds before checking progress again
             time.sleep(60)
 
+def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol: str, target_svm: str = None, cluster_name: str = None, 
+        schedule: str = 'hourly', policy: str = 'MirrorAllSnapshots', action: str = None, wait_until_complete: bool = False, print_output: bool = False):
+    # Retrieve config details from config file
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
+        if print_output :
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    if cluster_name:
+        config["hostname"] = cluster_name 
+
+    if connectionType == "ONTAP":
+        # Instantiate connection to ONTAP cluster
+        try:
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
+        except InvalidConfigError:
+            raise
+
+        svm = config["svm"]
+        if not target_svm: 
+            target_svm = svm 
+
+        try: 
+            uuid = None
+            snapmirror_relationship = NetAppSnapmirrorRelationship.get_collection(**{"destination.path": target_svm+":"+target_vol})
+            for rel in snapmirror_relationship:
+                # Retrieve relationship details
+                try:
+                    rel.get()
+                    uuid = rel.uuid
+                except NetAppRestError as err:
+                    rel.get(list_destinations_only=True)
+            if uuid:
+                if print_output:
+                    print("Error: relationship alreay exists: "+target_svm+":"+target_vol)
+                raise InvalidConfigError()
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)         
+        
+        try:
+            newRelationDict = {
+                "source": {
+                    "path": source_svm+":"+source_vol
+                }, 
+                "destination": { 
+                    "path": target_svm+":"+target_vol
+                },
+                #due to bug 1311226 setting the policy wil be done using cli api 
+                "policy":  {
+                    "name": policy,
+                },
+                "schedule": schedule
+            }
+            if print_output:
+                print("Creating snapmirror relationship: "+source_svm+":"+source_vol+" -> "+target_svm+":"+target_vol)
+            newRelationship = NetAppSnapmirrorRelationship.from_dict(newRelationDict)
+            newRelationship.post(poll=True, poll_timeout=120)
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+        try: 
+            uuid = None
+            relation = None
+            snapmirror_relationship = NetAppSnapmirrorRelationship.get_collection(**{"destination.path": target_svm+":"+target_vol})
+            for relation in snapmirror_relationship:
+                # Retrieve relationship details
+                try:
+                    relation.get()
+                    uuid = relation.uuid
+                except NetAppRestError as err:
+                    if print_output:
+                        print("Error: ONTAP Rest API Error: ", err)
+                    raise APIConnectionError(err)
+            if not uuid:
+                if print_output:
+                    print("Error: relationship was not created: "+target_svm+":"+target_vol)
+                raise InvalidConfigError()
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+        if action in  ["resync","initialize"]:
+            try:
+                if print_output:
+                    print("Setting state to snapmirrored (resync/initialize)")
+                patchRelation = NetAppSnapmirrorRelationship(uuid=uuid)
+                patchRelation.state = "snapmirrored"
+                patchRelation.patch(poll=True, poll_timeout=120)
+            except NetAppRestError as err:
+                if print_output:
+                    print("Error: ONTAP Rest API Error: ", err)
+                raise APIConnectionError(err)                
+            
+                       
+ 
+
+        # try:
+        #     updateRelationDict = {
+        #         "destination": { 
+        #             "path": target_svm+":"+target_vol
+        #         },
+        #         "policy":  {
+        #             "name": policy,
+        #         }
+        #     }
+        #     updateRelationDict = NetAppSnapmirrorRelationship.from_dict(newRelationDict)
+        #     updateRelationDict.patch(poll=True, poll_timeout=120)
+        # except NetAppRestError as err:
+        #     if print_output:
+        #         print("Error: ONTAP Rest API Error: ", err)
+        #     raise APIConnectionError(err)
+
+
+        # try:
+        #     if print_output:
+        #         print("Setting up snapmirror policy as: "+policy)                 
+        #     response = NetAppCLI().execute("snapmirror modify",body={"destination-path": target_svm+":"+target_vol, "policy": policy})
+        # except NetAppRestError as err:
+        #     if print_output:
+        #         print("Error: ONTAP Rest API Error: ", err)                    
+        #     raise APIConnectionError(err) 
+
+            # snapmirror_relationship = NetAppSnapmirrorRelationship.get_collection(**{"destination.path": svm+":"})
+            # for rel in snapmirror_relationship:
+            #     try:
+            #         rel.get()
+            #         uuid = rel.uuid
+            #     except NetAppRestError as err:
+            #         rel.get(list_destinations_only=True)
+            #     if uuid: 
+            #         if print_output:
+            #             print("volume is part of svm-dr relationshitp: "+svm+":")                    
+
+
 
 def sync_snap_mirror_relationship(uuid: str = None, svm_name: str = None, volume_name: str = None, cluster_name: str = None, wait_until_complete: bool = False, print_output: bool = False):
     # Retrieve config details from config file

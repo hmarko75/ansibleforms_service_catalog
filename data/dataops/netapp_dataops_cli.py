@@ -28,6 +28,7 @@ from netapp_dataops.traditional import (
     delete_volume,
     list_cloud_sync_relationships,
     list_snap_mirror_relationships,
+    create_snap_mirror_relationship,
     list_snapshots,
     prepopulate_flex_cache,
     pull_bucket_from_s3,
@@ -86,6 +87,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tprepopulate flexcache\t\tPrepopulate specific files/directories on a FlexCache volume (ONTAP 9.8 and above ONLY).
 \tlist snapmirror-relationships\tList all existing SnapMirror relationships.
 \tsync snapmirror-relationship\tTrigger a sync operation for an existing SnapMirror relationship.
+\tcreate snapmirror-relationship\tCreate new SnapMirror relationship.
 '''
 helpTextCloneVolume = '''
 Command: clone volume
@@ -482,6 +484,29 @@ Examples:
 \tnetapp_dataops_cli.py sync snapmirror-relationship -u cluster1 -v svm1 -n vol1 -w
 '''
 
+helpTextCreateSnapMirrorRelationship = '''
+Command: create snapmirror-relationship
+
+create snapmirror relationship 
+
+Required Options/Arguments:
+\t-n, --target-vol=\tName of target volume
+\t-s, --source-svm=\tSource SVM name
+\t-v, --source-vol=\tSource volume name
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster 
+\t-t, --target-svm=\tnon default target SVM
+\t-c, --schedule=\tnon default schedule (default is hourly)
+\t-p, --policy=\tnon default policy (default is MirrorAllSnapshots
+\t-a, --action=\tresync,initialize following creation
+\t-w, --wait\tWait for operation to complete before exiting (for resync/initialize)
+\t-h, --help\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py create snapmirror-relationship -u cluster1 -s svm1 -t svm2 -v vol1 -n vol1 -p MirrorAllSnapshots -c hourly 
+\tnetapp_dataops_cli.py create snapmirror-relationship -u cluster1 -s svm1 -t svm2 -v vol1 -n vol1 -p MirrorAllSnapshots -c hourly -a resync -w
+'''
 
 ## Function for creating config file
 def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str = "config.json", connectionType: str = "ONTAP"):
@@ -936,6 +961,66 @@ if __name__ == '__main__':
             try:
                 create_volume(svm_name=svmName, volume_name=volumeName,  cluster_name=clusterName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
                               unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, junction=junction, readonly=readonly, print_output=True, tiering_policy=tieringPolicy)
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
+                sys.exit(1)
+
+        elif target in ("snapmirror-relationship", "sm"):
+            clusterName = None 
+            sourceSvm = None 
+            targetSvm = None 
+            sourceVol = None 
+            targetVol = None             
+            policy = None
+            schedule = None
+            volumeSize = None
+            action = None
+            wait = False 
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hn:s:v:u:y:c:p:a:wh", ["cluster-name=","help", "target-vol=", "target-svm=", "source-svm=", "source-vol=", "schedule=", "policy=", "action=","wait"])
+            except:
+                handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextCreateSnapMirrorRelationship)
+                    sys.exit(0)
+                elif opt in ("-t", "--target-svm"):
+                    targetSvm = arg
+                elif opt in ("-n", "--target-vol"):
+                    targetVol = arg    
+                elif opt in ("-s", "--source-svm"):
+                    sourceSvm = arg      
+                elif opt in ("-v", "--source-vol"):
+                    sourceVol = arg                                                       
+                elif opt in ("-u", "--cluster-name"):
+                    clusterName = arg                     
+                elif opt in ("-c", "--schedule"):
+                    scedule = arg
+                elif opt in ("-p", "--policy"):
+                    policy = arg
+                elif opt in ("-a", "--action"):
+                    action = arg
+                elif opt in ("-w", "--wait"):
+                    wait = True 
+
+            # Check for required options
+            if not targetVol or not sourceSvm or not sourceVol:
+                handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
+
+            if action not in [None,'resync','initialize']:
+                
+                handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
+
+            if wait and not action:
+                handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
+
+            # Create snapmirror 
+            try:
+                create_snap_mirror_relationship(source_svm=sourceSvm, target_svm=targetSvm, source_vol=sourceVol, target_vol=targetVol, schedule=schedule, policy=policy, 
+                        cluster_name=clusterName, action=action, wait_until_complete=wait, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
