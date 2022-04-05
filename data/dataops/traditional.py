@@ -1929,10 +1929,21 @@ def sync_snap_mirror_relationship(uuid: str = None, svm_name: str = None, volume
                     uuid = rel.uuid
                 except NetAppRestError as err:
                     rel.get(list_destinations_only=True)
+            if not uuid:
+                snapmirror_relationship = NetAppSnapmirrorRelationship.get_collection(**{"destination.path": svm+":"})
+                for rel in snapmirror_relationship:
+                    try:
+                        rel.get()
+                        uuid = rel.uuid
+                    except NetAppRestError as err:
+                        rel.get(list_destinations_only=True)
+                    if uuid: 
+                        if print_output:
+                            print("volume is part of svm-dr relationshitp: "+svm+":")                    
 
         if not uuid:
             if print_output:
-                print("Error: relation ship could not be found.")
+                print("Error: relationship could not be found.")
             raise SnapMirrorSyncOperationError("not found")
 
         if print_output:
@@ -1986,10 +1997,10 @@ def sync_snap_mirror_relationship(uuid: str = None, svm_name: str = None, volume
                     # Print message re: progress
                     if print_output:
                         print("Sync operation is not yet complete. Status:", transferState)
-                        print("Checking again in 60 seconds...")
+                        print("Checking again in 10 seconds...")
 
-                # Sleep for 60 seconds before checking progress again
-                time.sleep(60)
+                # Sleep for 10 seconds before checking progress again
+                time.sleep(10)
 
     else:
         raise ConnectionTypeError()

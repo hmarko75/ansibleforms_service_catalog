@@ -1525,7 +1525,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hi:wn:u:v:", ["help", "cluster=","svm=","name=","uuid=", "wait"])
+                opts, args = getopt.getopt(sys.argv[3:], "hi:wn:u:v:", ["help", "cluster-name=","svm=","name=","uuid=", "wait"])
             except:
                 handleInvalidCommand(helpText=helpTextSyncSnapMirrorRelationship, invalidOptArg=True)
 

@@ -1,3 +1,3 @@
-host.docker.internal
+host.docker.internal ansible_connection=ssh ansible_user=root
 192.168.0.62 ansible_connection=ssh ansible_user=root
 192.168.0.5 ansible_connection=ssh ansible_user=administrator
