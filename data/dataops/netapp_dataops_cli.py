@@ -227,6 +227,8 @@ Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
 \t-v, --svm \tnon default SVM name
 \t-f, --force\tDo not prompt user to confirm operation.
+\t-m, --delete-mirror\t delete/release snapmirror relationship prior to volume deletion 
+\t    --delete-non-clone\tEnable deletion of volume not created as clone by this tool
 \t-h, --help\tPrint help text.
 
 Examples:
@@ -500,12 +502,11 @@ Optional Options/Arguments:
 \t-c, --schedule=\tnon default schedule (default is hourly)
 \t-p, --policy=\tnon default policy (default is MirrorAllSnapshots
 \t-a, --action=\tresync,initialize following creation
-\t-w, --wait\tWait for operation to complete before exiting (for resync/initialize)
 \t-h, --help\tPrint help text.
 
 Examples:
 \tnetapp_dataops_cli.py create snapmirror-relationship -u cluster1 -s svm1 -t svm2 -v vol1 -n vol1 -p MirrorAllSnapshots -c hourly 
-\tnetapp_dataops_cli.py create snapmirror-relationship -u cluster1 -s svm1 -t svm2 -v vol1 -n vol1 -p MirrorAllSnapshots -c hourly -a resync -w
+\tnetapp_dataops_cli.py create snapmirror-relationship -u cluster1 -s svm1 -t svm2 -v vol1 -n vol1 -p MirrorAllSnapshots -c hourly -a resync
 '''
 
 ## Function for creating config file
@@ -974,11 +975,10 @@ if __name__ == '__main__':
             schedule = None
             volumeSize = None
             action = None
-            wait = False 
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:s:v:u:y:c:p:a:wh", ["cluster-name=","help", "target-vol=", "target-svm=", "source-svm=", "source-vol=", "schedule=", "policy=", "action=","wait"])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:s:v:u:y:c:p:a:h", ["cluster-name=","help", "target-vol=", "target-svm=", "source-svm=", "source-vol=", "schedule=", "policy=", "action="])
             except:
                 handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
 
@@ -1003,24 +1003,18 @@ if __name__ == '__main__':
                     policy = arg
                 elif opt in ("-a", "--action"):
                     action = arg
-                elif opt in ("-w", "--wait"):
-                    wait = True 
 
             # Check for required options
             if not targetVol or not sourceSvm or not sourceVol:
                 handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
 
             if action not in [None,'resync','initialize']:
-                
-                handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
-
-            if wait and not action:
                 handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
 
             # Create snapmirror 
             try:
                 create_snap_mirror_relationship(source_svm=sourceSvm, target_svm=targetSvm, source_vol=sourceVol, target_vol=targetVol, schedule=schedule, policy=policy, 
-                        cluster_name=clusterName, action=action, wait_until_complete=wait, print_output=True)
+                        cluster_name=clusterName, action=action, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
@@ -1073,13 +1067,14 @@ if __name__ == '__main__':
             svmName = None
             clusterName = None             
             force = False
+            deleteMirror = False 
+            deleteNonClone = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hfv:n:u:", ["cluster-name=","help", "svm=", "name=", "force"])
+                opts, args = getopt.getopt(sys.argv[3:], "hfv:n:u:m", ["cluster-name=","help", "svm=", "name=", "force", "delete-non-clone","delete-mirror"])
             except:
                 handleInvalidCommand(helpText=helpTextDeleteVolume, invalidOptArg=True)
-
 
             # Parse command line options
             for opt, arg in opts:
@@ -1094,6 +1089,10 @@ if __name__ == '__main__':
                     volumeName = arg
                 elif opt in ("-f", "--force"):
                     force = True
+                elif opt in ("-m", "--delete-mirror"):
+                    deleteMirror = True                    
+                elif opt in ("--delete-non-clone"):
+                    deleteNonClone = True                    
 
             # Check for required options
             if not volumeName:
@@ -1113,7 +1112,7 @@ if __name__ == '__main__':
 
             # Delete volume
             try:
-                delete_volume(volume_name=volumeName, svm_name=svmName, cluster_name=clusterName, print_output=True)
+                delete_volume(volume_name=volumeName, svm_name=svmName, cluster_name=clusterName, delete_mirror=deleteMirror, delete_non_clone=deleteNonClone, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
 

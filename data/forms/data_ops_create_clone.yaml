@@ -28,29 +28,6 @@
     noOutput: true
     hide: true            
 
-  # - type: query
-  #   name: cluster
-  #   label: Select cluster
-  #   expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM',
-  #     'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
-  #     0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
-  #     ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
-  #     }+{Location: .location}+{Contact:.contact}+{\"Total
-  #     Capacity\":(.storage_capacity.total/1024/1024/1024)|round|gb}+{\"Available
-  #     Capacity\":(.storage_capacity.available/1024/1024/1024)|round|gb}+{AvailR\
-  #     aw:.storage_capacity.available}]',[{AvailRaw:{direction:\"desc\"}},{Perf:\
-  #     {direction:\"asc\"}}],'')"
-  #   columns:
-  #     - Name
-  #     - Version
-  #     - Location
-  #     - Contact
-  #     - Total Capacity
-  #     - Available Capacity
-  #   required: true
-  #   default: __auto__
-  #   outputObject: false
-
   - type: query
     name: volumedetails
     label: Select Volume to Clone
@@ -66,7 +43,7 @@
       netapp_model_view.vserver, netapp_model_view.volume 
       WHERE volume.vserverid = vserver.objid and vserver.clusterid = cluster.objid and volume.state =
       'ONLINE' and volume.isVserverRoot = 0 and volume.derivedStyle != 'CONSTITUENT' and volume.volType in ('RW','DP')  and
-      vserver.type='DATA' and vserver.subtype='DEFAULT' ORDER BY 'Cluster:SVM:Volume' ASC
+      vserver.type='DATA' and vserver.subtype in ('DEFAULT','DP_DESTINATION') ORDER BY 'Cluster:SVM:Volume' ASC
     columns:
       - Cluster:SVM:Volume
       - Type
@@ -105,7 +82,8 @@
   - type: query
     name: parent_snapshot
     label: Base Snapshot
-    expression: fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes/$(volumeuuid)/snapshots?name=!snapmirror*&fields=name,create_time,snapmirror_label&order_by=create_time desc','','ONTAP','[(.records[] | ({Snapshot:.name} + {"Creation Time":.create_time} + {"Snapmirror Label":(if .snapmirror_label == null then "none" else .snapmirror_label end)}) ) ]','','')
+    expression: fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes/$(volumeuuid)/snapshots?name=!snapmirror*&fields=name,create_time,snapmirror_label&order_by=create_time desc','','ONTAP',
+      '[(.records[]|{Snapshot:.name}+{"Creation Time":.create_time}+{"Snapmirror Label":(if .snapmirror_label == null then "none" else .snapmirror_label end)})|select(.Snapshot|startswith("vserverdr.")|not)]','','')
     default: __auto__
     multiple: false
     outputObject: false
@@ -250,6 +228,182 @@
     name: svm_dr_unprotect
     label: Check to disable SVM-DR protection for new clone 
     default: false
-    placeholder: Disbale SVM-DR protection 
+    placeholder: Disbale SVM-DR protection when clone SVM is protected using SVM-DR
     required: false
-    group: Clone    
+    group: Clone   
+
+  - type: checkbox
+    name: protect_clone
+    label: Protect the clone with snapmirror based on clone parent protection 
+    default: false
+    placeholder: Protect the clone with snapmirror based on clone parent protection
+    required: false
+    group: Clone protection
+
+  - type: expression
+    name: parent_snapmirrors
+    dbConfig:
+      name: AIQUMSQL
+      type: mysql
+    hide: true
+    noOutput: true
+    query: SELECT cluster_src.name as src_cluster_name, vserver_src.name as      
+            src_vserver_name, volume_src.name as src_volume_name, cluster_dst.name as dst_cluster_name, 
+            vserver_dst.name as dst_vserver_name, volume_dst.name as dst_volume_name, snap_mirror.mirrorStateRaw AS mirror_state, 
+            CASE WHEN snap_mirror.isHealthy=1 THEN 'Yes' ELSE 'No' END AS mirror_health FROM netapp_model_view.snap_mirror
+            INNER JOIN netapp_model_view.cluster cluster_src ON snap_mirror.sourceClusterId = cluster_src.objId 
+            INNER JOIN netapp_model_view.vserver vserver_src ON snap_mirror.sourceVserverId = vserver_src.objId 
+            INNER JOIN netapp_model_view.volume volume_src ON snap_mirror.sourceVolumeId  = volume_src.objId 
+            INNER JOIN netapp_model_view.cluster cluster_dst ON snap_mirror.destinationClusterId = cluster_dst.objId 
+            INNER JOIN netapp_model_view.vserver vserver_dst ON snap_mirror.destinationVserverId = vserver_dst.objId 
+            INNER JOIN netapp_model_view.volume volume_dst ON snap_mirror.destinationVolumeId  = volume_dst.objId 
+            WHERE ((cluster_src.name = '$(cluster)' AND vserver_src.name='$(svm)' AND volume_src.name = '$(volname)') 
+              or (cluster_dst.name = '$(cluster)' AND vserver_dst.name='$(svm)' AND volume_dst.name = '$(volname)')) 
+              and snap_mirror.mirrorStateRaw = 'snapmirrored'
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true 
+
+  - type: query
+    name: parent_snapmirrors_query
+    label: Select parent snapmirror relationship to base clone protection on 
+    expression: "fn.fnJq($(parent_snapmirrors), '[.[] | {src_cluster_name: .src_cluster_name} + {src_vserver_name: .src_vserver_name} + 
+                  {src_volume_name: .src_volume_name} + {dst_cluster_name: .dst_cluster_name} + {dst_vserver_name: .dst_vserver_name} + 
+                  {dst_volume_name: .dst_volume_name} + {\"SRC Path\": (.src_cluster_name+\":\"+.src_vserver_name+\":\"+.src_volume_name)} + 
+                  {\"DST Path\": (.dst_cluster_name+\":\"+.dst_vserver_name+\":\"+.dst_volume_name)} + {\"Mirror Healthy\": .mirror_health} + 
+                  {\"Type\": (if .dst_cluster_name==\"$(cluster)\" and .dst_vserver_name == \"$(svm)\" and .dst_volume_name == \"$(volname)\" then \"Destination\" else \"Source\" end)}]')"
+    columns:
+      - SRC Path
+      - DST Path
+      - Type
+    required: true
+    default: __auto__
+    noOutput: true
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true    
+
+  - type: expression
+    name: replication_cluster
+    runLocal: true
+    hide: true
+    expression: ("$(parent_snapmirrors_query.Type)"=="Destination")?"$(parent_snapmirrors_query.src_cluster_name)":"$(parent_snapmirrors_query.dst_cluster_name)"
+    model: protection.cluster
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true  
+  - type: expression
+    name: replication_svm_target
+    runLocal: true
+    hide: true
+    expression: ("$(parent_snapmirrors_query.Type)"=="Destination")?"$(parent_snapmirrors_query.src_vserver_name)":"$(parent_snapmirrors_query.dst_vserver_name)"
+    model: protection.basesvm
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true           
+
+  - type: expression
+    name: replication_vol
+    runLocal: true
+    hide: true
+    expression: ("$(parent_snapmirrors_query.Type)"=="Destination")?"$(parent_snapmirrors_query.src_volume_name)":"$(parent_snapmirrors_query.dst_volume_name)"
+    model: protection.basevol
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true           
+
+  - type: query
+    name: replication_svm
+    label: Clone protection SVM 
+    expression: fn.fnRestBasic('get','https://$(replication_cluster)/api/svm/svms?subtype=default&fields=name,state','','ONTAP','[.records[]|{Name:.name}+{State:.state}]','','')
+    default: __auto__
+    multiple: false
+    outputObject: false
+    required: true
+    columns:
+    - Name
+    - State 
+    model: protection.svm
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true
+
+  - type: expression
+    name: replication_existingvols
+    label: existingvols
+    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/volumes?cluster.name=$(replication_cluster)&svm.name=$(replication_svm)&max_records=1000','','AIQUM','[.records[]|.name]','','')
+    hide: true
+    noOutput: true
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true   
+
+  - type: text
+    name: replication_clonename
+    label: Clone Name
+    default: ""
+    required: true
+    minLength: 1
+    maxLength: 30
+    model: protection.volume
+    regex:
+      expression: ^[a-z0-9_]*$
+      description: Invalid volume name
+    notIn:
+      field: replication_existingvols
+      description: Volume already exists
+    icon: user
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true  
+
+  - type: query
+    name: replication_scheudle
+    label: Replication schedule
+    expression: fn.fnRestBasic('get','https://$(replication_cluster)/api/cluster/schedules','','ONTAP','[.records[]|{Name:.name}]','','')
+    default: __auto__
+    multiple: false
+    outputObject: false
+    required: true
+    columns:
+    - Name
+    model: protection.schedule
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true
+
+  - type: query
+    name: replication_policy
+    label: Replication policy
+    expression: fn.fnRestBasic('get','https://$(replication_cluster)/api/snapmirror/policies?fields=svm.name','','ONTAP','[.records[]|select (.name != null)|{Name:.name}+{Owner:(if .svm.name==null then \"$(replication_cluster)\" else .svm.name end)}|select(.Owner==\"$(replication_cluster)\" or .Owner==\"$(replication_svm)\")]','','')
+    default: __auto__
+    multiple: false
+    outputObject: false
+    required: true
+    columns:
+    - Name
+    - Owner
+    model: protection.policy
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true          
