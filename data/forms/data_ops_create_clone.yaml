@@ -324,15 +324,15 @@
 
   - type: query
     name: replication_svm
-    label: Clone protection SVM 
-    expression: fn.fnRestBasic('get','https://$(replication_cluster)/api/svm/svms?subtype=default&fields=name,state','','ONTAP','[.records[]|{Name:.name}+{State:.state}]','','')
+    label: Clone protection SVM
+    help: Only peered SVMs will be shown
+    expression: fn.fnRestBasic('get','https://$(replication_cluster)/api/svm/peers?peer.cluster.name=$(cluster)&peer.svm.name=$(clonesvm)&fields=svm.name','','ONTAP','[.records[]|{Name:.svm.name}]','','')
     default: __auto__
     multiple: false
     outputObject: false
     required: true
     columns:
     - Name
-    - State 
     model: protection.svm
     group: Clone protection
     dependencies:
@@ -373,10 +373,16 @@
         values:
           - true  
 
+  - type: expression
+    name: defaultschedule
+    expression: fn.fnJq($(settings),'.defaultschedule')
+    noOutput: true
+    hide: true 
+
   - type: query
     name: replication_scheudle
     label: Replication schedule
-    expression: fn.fnRestBasic('get','https://$(replication_cluster)/api/cluster/schedules','','ONTAP','[.records[]|{Name:.name}]','','')
+    expression: fn.fnRestBasic('get','https://$(replication_cluster)/api/cluster/schedules','','ONTAP','[{\"Name\":\"$(defaultschedule)\"}] + ([.records[]|{Name:.name}]|map(select(.Name!=\"$(defaultschedule)\")))','','')
     default: __auto__
     multiple: false
     outputObject: false
@@ -390,10 +396,16 @@
         values:
           - true
 
+  - type: expression
+    name: defaultpolicy
+    expression: fn.fnJq($(settings),'.defaultpolicy')
+    noOutput: true
+    hide: true             
+
   - type: query
     name: replication_policy
     label: Replication policy
-    expression: fn.fnRestBasic('get','https://$(replication_cluster)/api/snapmirror/policies?fields=svm.name','','ONTAP','[.records[]|select (.name != null)|{Name:.name}+{Owner:(if .svm.name==null then \"$(replication_cluster)\" else .svm.name end)}|select(.Owner==\"$(replication_cluster)\" or .Owner==\"$(replication_svm)\")]','','')
+    expression: "fn.fnRestBasic('get','https://$(replication_cluster)/api/snapmirror/policies?fields=svm.name','','ONTAP','[{\"Name\":  \"$(defaultpolicy)\"}+{\"Owner\": \"$(replication_cluster)\"}]+([.records[]|select (.name != null)|{Name:.name}+{Owner:(if .svm.name==null then \"$(replication_cluster)\" else .svm.name end)}|select(.Owner==\"$(replication_cluster)\" or .Owner==\"$(replication_svm)\")] |map(select(.Name != \"$(defaultpolicy)\")))','','')"
     default: __auto__
     multiple: false
     outputObject: false
@@ -402,6 +414,43 @@
     - Name
     - Owner
     model: protection.policy
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true          
+
+  - type: expression
+    name: protection_volumeuuid
+    expression: fn.fnRestBasic('get','https://$(replication_cluster)/api/storage/volumes?svm.name=$(replication_svm_target)&name=$(replication_vol)&fields=uuid&max_records=500','','ONTAP','.records[]|.uuid','','')
+    hide: true   
+    noOutput: true
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true 
+
+  - type: expression
+    name: protection_snapshot
+    expression: fn.fnRestBasic('get','https://$(replication_cluster)/api/storage/volumes/$(protection_volumeuuid)/snapshots?name="$(parent_snapshot)"&fields=name','','ONTAP','[.records[]|.name]','','')
+    hide: true
+    group: Clone protection
+    dependencies:
+      - name: protect_clone
+        values:
+          - true         
+
+  - type: expression
+    name: validation
+    label: Validation
+    hide: false
+    expression: "($(protection_snapshot).length<1)?'snapshot: $(parent_snapshot) could not be found on parent volume snapmirror destination':'snapshot: $(parent_snapshot) exists on parent volume snapmirror destination'"
+    runLocal: true
+    noOutput: true
+    regex:
+      expression: exists
+      description: base snapshot could not be found on parent volume snapmirror destination
     group: Clone protection
     dependencies:
       - name: protect_clone
