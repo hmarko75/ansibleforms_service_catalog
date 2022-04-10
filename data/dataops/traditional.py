@@ -26,6 +26,7 @@ from netapp_ontap.resources import SnapmirrorTransfer as NetAppSnapmirrorTransfe
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import Volume as NetAppVolume
 from netapp_ontap.resources import ExportPolicy as NetAppExportPolicy
+from netapp_ontap.resources import SnapshotPolicy as NetAppSnapshotPolicy
 from netapp_ontap.resources import CLI as NetAppCLI
 import pandas as pd
 import requests
@@ -362,7 +363,7 @@ def _convert_bytes_to_pretty_size(size_in_bytes: str, num_decimal_points: int = 
 def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: str = None, source_snapshot_name: str = None,
                  source_svm: str = None, target_svm: str = None, export_hosts: str = None, export_policy: str = None, split: bool = False, 
                  unix_uid: str = None, unix_gid: str = None, mountpoint: str = None, junction: str= None, readonly: bool = False,
-                 refresh: bool = False, svm_dr_unprotect: bool = False, print_output: bool = False):
+                 snapshot_policy: str = None, refresh: bool = False, svm_dr_unprotect: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -394,7 +395,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
             targetsvm = sourcesvm
             if target_svm:
                 targetsvm = target_svm 
-            
+
             if not unix_uid:
                 unix_uid = config["defaultUnixUID"]
             if not unix_gid:
@@ -430,9 +431,13 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                     print("Error: clone:"+new_volume_name+" already exists.")
                 raise InvalidVolumeParameterError("name") 
             
-            #for refresh we want to keep the existing export policy
+            #for refresh we want to keep the existing policy
             if currentVolume and refresh and not export_policy and not export_hosts:
                 export_policy = currentVolume.nas.export_policy.name
+
+            # if refresh and not provided new snapshot_policy
+            if currentVolume and refresh and not snapshot_policy:                
+                snapshot_policy = currentVolume.snapshot_policy.name
 
         except NetAppRestError as err:
             if print_output:
@@ -452,6 +457,13 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
             print("Error: could not delete previous clone")
             raise InvalidVolumeParameterError("name")       
         
+        try:
+            if not snapshot_policy :                
+                snapshot_policy = config["defaultSnapshotPolicy"]
+        except:
+            print("Error: default snapshot policy could not be found in config file")
+            raise InvalidVolumeParameterError("name")   
+
         # check export policies 
         try:
             if not export_policy and not export_hosts:
@@ -472,6 +484,27 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
+        #exists check if snapshot-policy 
+        try:
+            snapshotPoliciesDetails  = NetAppSnapshotPolicy.get_collection(**{"name":snapshot_policy})   
+            clusterSnapshotPolicy = False
+            svmSnapshotPolicy = False  
+            for snapshotPolicyDetails in snapshotPoliciesDetails:
+                if str(snapshotPolicyDetails.name) == snapshot_policy:
+                    try:
+                        if str(snapshotPolicyDetails.svm.name) == targetsvm:
+                            svmSnapshotPolicy = True
+                    except:
+                        clusterSnapshotPolicy = True
+
+            if not clusterSnapshotPolicy and not svmSnapshotPolicy:
+                if print_output:
+                    print("Error: snapshot-policy:"+snapshot_policy+" could not be found")
+                raise InvalidVolumeParameterError("snapshot_policy")                
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)            
 
         # Create volume
         if print_output:
@@ -618,19 +651,19 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                     print("Error: ONTAP Rest API Error: ", err)
                 raise APIConnectionError(err)
 
-        #set export policy
+        #set export policy and snapshot policy 
         try:
             if print_output:
-                print("Setting export-policy:"+export_policy) 
-            volumeDetails = NetAppVolume.find(name=new_volume_name, svm=targetsvm)                
+                print("Setting export-policy:"+export_policy+ " snapshot-policy:"+snapshot_policy) 
+            volumeDetails = NetAppVolume.find(name=new_volume_name, svm=targetsvm)   
             updatedVolumeDetails = NetAppVolume(uuid=volumeDetails.uuid)
             updatedVolumeDetails.nas = {"export_policy": {"name": export_policy}}
+            updatedVolumeDetails.snapshot_policy = {"name": snapshot_policy}
             updatedVolumeDetails.patch(poll=True, poll_timeout=120) 
-
         except NetAppRestError as err:
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
+            raise APIConnectionError(err)              
 
         #split clone 
         try:
@@ -786,7 +819,7 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
 def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = False, cluster_name: str = None, svm_name: str = None,
                   volume_type: str = "flexvol", unix_permissions: str = "0777",
                   unix_uid: str = "0", unix_gid: str = "0", export_policy: str = "default",
-                  snapshot_policy: str = "none", aggregate: str = None, mountpoint: str = None, junction: str = None, readonly: bool = False,
+                  snapshot_policy: str = None, aggregate: str = None, mountpoint: str = None, junction: str = None, readonly: bool = False,
                   print_output: bool = False, tiering_policy=None):
     # Retrieve config details from config file
     try:

@@ -112,6 +112,7 @@ Optional Options/Arguments:
 \t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
 \t-e, --export-hosts\t\t colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
 \t-e, --export-policy\t\t export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
+\t-d, --snapshot-policy\t\t snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
 \t-s, --split\t\t start clone split after creation
 \t-r, --refresh\t\t delete existing clone if exists before creating a new one 
 \t-d, --svm-dr-unprotect\t\t disable svm dr protection if svm-dr protection exists 
@@ -123,7 +124,7 @@ Examples (basic usage):
 
 
 Examples (advanced usage):
-\tnetapp_dataops_cli.py clone volume -n testvol -v gold_dataset -u 1000 -g 1000 -x -j /project1
+\tnetapp_dataops_cli.py clone volume -n testvol -v gold_dataset -u 1000 -g 1000 -x -j /project1 -d snappolicy1
 \tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --source-svm=svm1 --target-svm=svm2 --source-snapshot=daily* --export-hosts 10.5.5.3:host1:10.6.4.0/24 --split
 '''
 helpTextConfig = '''
@@ -748,12 +749,13 @@ if __name__ == '__main__':
             split = False
             refresh = False
             exportPolicy = None
+            snapshotPolicy = None
             exportHosts = None
             svmDrUnprotect = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:g:j:xe:p:srd", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","split","refresh","svm-dr-unprotect"])
+                opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:g:j:xe:p:i:srd", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","snapshot-policy=","split","refresh","svm-dr-unprotect"])
             except:
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
@@ -792,6 +794,8 @@ if __name__ == '__main__':
                     svmDrUnprotect = True                    
                 elif opt in ("-p", "--export-policy"):
                     exportPolicy = arg    
+                elif opt in ("-i", "--snapshot-policy"):
+                    snapshotPolicy = arg                     
                 elif opt in ("-e", "--export-hosts"):
                     exportHosts = arg                                                        
 
@@ -807,9 +811,10 @@ if __name__ == '__main__':
 
             # Clone volume
             try:
-                clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName, cluster_name=clusterName,
-                             source_svm=sourceSVM, target_svm=targetSVM, export_policy=exportPolicy, export_hosts=exportHosts, split=split, refresh=refresh,
-                             mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, junction=junction, svm_dr_unprotect=svmDrUnprotect, readonly=readonly, print_output=True)
+                clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName, 
+                             cluster_name=clusterName, source_svm=sourceSVM, target_svm=targetSVM, export_policy=exportPolicy, export_hosts=exportHosts, 
+                             snapshot_policy=snapshotPolicy, split=split, refresh=refresh, mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, 
+                             junction=junction, svm_dr_unprotect=svmDrUnprotect, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError,
                     MountOperationError):
                 sys.exit(1)
