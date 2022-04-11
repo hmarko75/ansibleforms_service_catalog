@@ -976,8 +976,8 @@ if __name__ == '__main__':
             targetSvm = None 
             sourceVol = None 
             targetVol = None             
-            policy = None
-            schedule = None
+            policy = 'MirrorAllSnapshots'
+            schedule = "hourly"
             volumeSize = None
             action = None
 
@@ -1003,7 +1003,7 @@ if __name__ == '__main__':
                 elif opt in ("-u", "--cluster-name"):
                     clusterName = arg                     
                 elif opt in ("-c", "--schedule"):
-                    scedule = arg
+                    schedule = arg
                 elif opt in ("-p", "--policy"):
                     policy = arg
                 elif opt in ("-a", "--action"):

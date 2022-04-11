@@ -104,13 +104,29 @@
     group: Clone
 
   - type: checkbox
-    name: protect_clone
+    name: cloneprotect
     label: Protect the clone
     help: Protect the clone with snapmirror based on clone parent snapmirror relationships (savings will be kept) 
     default: false
     placeholder: Protect the clone
     required: false
     group: Clone    
+
+  - type: expression 
+    name: clone_protect_and_refresh
+    hide: true
+    expression: "($(cloneprotect)&&$(clonerefresh))?true:false"
+    runLocal: true
+    noOutput: true 
+    group: Clone
+
+  - type: expression 
+    name: clone_protect_and_not_refresh
+    hide: true
+    expression: "($(cloneprotect)&&!$(clonerefresh))?true:false"
+    runLocal: true
+    noOutput: true      
+    group: Clone
   
   - type: checkbox
     name: split
@@ -244,9 +260,7 @@
   - type: query
     name: existingclones
     label: Select existing clone
-    #expression: "fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes?fields=comment,clone.is_flexclone,clone.parent_volume,clone.parent_svm,clone.parent_snapshot,svm.name,create_time&max_records=1000','','ONTAP','[.records[]| {\"SVM:Volume\": (.svm.name+\":\" +.name)} + {svm: .svm.name} + {volume: .name} + {Clone: .clone.is_flexclone} + {\"Clone Parent\": (if .clone.parent_volume.name == null then \"\" else .clone.parent_volume.name end)} + {\"Creation Time\": .create_time} + {\"Clone Parent SVM\": (if .clone.parent_svm.name == null then \"\" else .clone.parent_svm.name end)} + {\"Clone Parent Snapshot\": (if .clone.parent_snapshot.name == null then \"\" else .clone.parent_snapshot.name end)} + {\"Clone Splited\":(if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false)then true else false end)}]|map(select (.Clone or .\"Clone Splited\"))|map(select (.\"Clone Parent SVM\"==\"$(svm)\" and .\"Clone Parent\"==\"$(volname)\"))','','')"
-    expression: "fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes?fields=comment,clone.is_flexclone,clone.parent_volume,clone.parent_svm,clone.parent_snapshot,svm.name,create_time&max_records=1000','','ONTAP','[.records[]| {\"SVM:Volume\": (.svm.name+\":\" +.name)} + {svm: .svm.name} + {volume: .name} + {Clone: .clone.is_flexclone} + {\"Clone Parent\": (if .clone.parent_volume.name == null then \"\" else .clone.parent_volume.name end)} + {\"Creation Time\": .create_time} + {\"Clone Parent SVM\": (if .clone.parent_svm.name == null then \"\" else .clone.parent_svm.name end)} + {\"Clone Parent Snapshot\": (if .clone.parent_snapshot.name == null then \"\" else .clone.parent_snapshot.name end)} + {\"Clone Splited\":(if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false)then true else false end)}]|map(select (.Clone or .\"Clone Splited\"))','','')"
-
+    expression: "fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes?fields=snapshot_policy.name,nas.path,comment,clone.is_flexclone,clone.parent_volume,clone.parent_svm,clone.parent_snapshot,svm.name,create_time&max_records=1000','','ONTAP','[.records[]| {snapshotpolicy:.snapshot_policy.name}+{junctionpath:.nas.path}+{\"SVM:Volume\": (.svm.name+\":\" +.name)} + {svm: .svm.name} + {volume: .name} + {Clone: .clone.is_flexclone} + {\"Clone Parent\": (if .clone.parent_volume.name == null then \"\" else .clone.parent_volume.name end)} + {\"Creation Time\": .create_time} + {\"Clone Parent SVM\": (if .clone.parent_svm.name == null then \"\" else .clone.parent_svm.name end)} + {\"Clone Parent Snapshot\": (if .clone.parent_snapshot.name == null then \"\" else .clone.parent_snapshot.name end)} + {\"Clone Splited\":(if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false)then true else false end)}]|map(select (.Clone or .\"Clone Splited\"))','','')"
     columns:
       - SVM:Volume
       - Clone
@@ -254,7 +268,7 @@
       - Creation Time
     default: __auto__
     required: true
-    noOutput: true
+    #noOutput: true
     outputObject: true
     group: Clone
     model: clone
@@ -269,6 +283,10 @@
     hide: true
     noOutput: true
     group: Clone
+    dependencies:
+      - name: clonerefresh
+        values:
+          - false    
   
   - type: expression
     name: svmdr_source
@@ -277,6 +295,10 @@
     runLocal: true
     noOutput: true
     group: Clone
+    dependencies:
+      - name: clonerefresh
+        values:
+          - false    
 
   - type: checkbox
     name: svm_dr_unprotect
@@ -288,9 +310,52 @@
     model: clone.svm_dr_unprotect
     group: Clone  
     dependencies:
+      - name: clonerefresh
+        values:
+          - false    
       - name: svmdr_source
         values:
           - true     
+
+  - type: expression
+    name: svmdr_relationship_refresh
+    expression: "fn.fnRestBasic('get','https://$(cluster)/api/snapmirror/relationships?source.path=$(existingclones.svm):&fields=uuid&list_destinations_only=true','','ONTAP','[.records[]|{\"UUID\":.uuid}]','','')"
+    hide: true
+    noOutput: true
+    group: Clone
+    dependencies:
+      - name: clonerefresh
+        values:
+          - true    
+  
+  - type: expression
+    name: svmdr_source_refresh
+    expression: ($(svmdr_relationship_refresh).length>0)?true:false
+    hide: true
+    runLocal: true
+    noOutput: true
+    group: Clone
+    dependencies:
+      - name: clonerefresh
+        values:
+          - true    
+
+  - type: checkbox
+    name: svm_dr_unprotect_refresh
+    label: Disable SVM-DR protection for clone
+    placeholder: Disable SVM-DR protection for clone
+    default: false
+    help: Disbale SVM-DR protection when clone SVM is protected using SVM-DR
+    required: false
+    model: clone.svm_dr_unprotect
+    group: Clone  
+    dependencies:
+      - name: clonerefresh
+        values:
+          - true 
+      - name: svmdr_source_refresh
+        values:
+          - true  
 
 
   - type: expression
@@ -315,9 +380,9 @@
               and snap_mirror.mirrorStateRaw = 'snapmirrored'
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true 
+    - name: cloneprotect
+      values:
+        - true 
 
   - type: query
     name: parent_snapmirrors_query
@@ -336,12 +401,10 @@
     noOutput: true
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true    
-      - name: clonerefresh
-        values:
-          - false
+    - name: clone_protect_and_not_refresh
+      values:
+        - true           
+  
 
   - type: expression
     name: replication_cluster
@@ -351,12 +414,10 @@
     model: protection.cluster
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true  
-      - name: clonerefresh
-        values:
-          - false          
+    - name: clone_protect_and_not_refresh
+      values:
+        - true           
+          
   - type: expression
     name: replication_svm_target
     runLocal: true
@@ -365,12 +426,10 @@
     model: protection.basesvm
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true           
-      - name: clonerefresh
-        values:
-          - false
+    - name: clone_protect_and_not_refresh
+      values:
+        - true           
+
 
   - type: expression
     name: replication_vol
@@ -380,12 +439,10 @@
     model: protection.basevol
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true           
-      - name: clonerefresh
-        values:
-          - false
+    - name: clone_protect_and_not_refresh
+      values:
+        - true           
+
 
   - type: query
     name: replication_svm
@@ -401,12 +458,9 @@
     model: protection.svm
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true
-      - name: clonerefresh
-        values:
-          - false
+    - name: clone_protect_and_not_refresh
+      values:
+        - true
 
   - type: expression
     name: replication_existingvols
@@ -416,12 +470,9 @@
     noOutput: true
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true   
-      - name: clonerefresh
-        values:
-          - false
+    - name: clone_protect_and_not_refresh
+      values:
+        - true
 
   - type: expression
     name: replication_clonename
@@ -441,12 +492,9 @@
     icon: user
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true  
-      - name: clonerefresh
-        values:
-          - false
+    - name: clone_protect_and_not_refresh
+      values:
+        - true 
 
   - type: expression
     name: defaultschedule
@@ -455,9 +503,9 @@
     hide: true 
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true
+    - name: cloneprotect
+      values:
+        - true
   
   - type: expression
     name: defaultpolicy
@@ -466,9 +514,9 @@
     hide: true             
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
+    - name: cloneprotect
+      values:
+        - true          
 
   - type: query
     name: replication_scheudle
@@ -483,12 +531,9 @@
     model: protection.schedule
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true
-      - name: clonerefresh
-        values:
-          - false
+    - name: clone_protect_and_not_refresh
+      values:
+        - true
 
   - type: query
     name: replication_policy
@@ -504,12 +549,9 @@
     model: protection.policy
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
-      - name: clonerefresh
-        values:
-          - false
+    - name: clone_protect_and_not_refresh
+      values:
+        - true          
 
   - type: expression
     name: protection_volumeuuid
@@ -518,12 +560,9 @@
     noOutput: true
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true 
-      - name: clonerefresh
-        values:
-          - false
+    - name: clone_protect_and_not_refresh
+      values:
+        - true
 
   - type: expression
     name: protection_snapshot
@@ -532,12 +571,9 @@
     group: Clone protection
     noOutput: true
     dependencies:
-      - name: protect_clone
-        values:
-          - true         
-      - name: clonerefresh
-        values:
-          - false
+    - name: clone_protect_and_not_refresh
+      values:
+        - true
 
   - type: expression
     name: validation
@@ -551,13 +587,9 @@
       description: base snapshot could not be found on parent volume snapmirror destination
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
-      - name: clonerefresh
-        values:
-          - false          
-
+    - name: clone_protect_and_not_refresh
+      values:
+        - true         
 
   - type: expression
     name: clone_snapmirrors
@@ -582,17 +614,14 @@
               and snap_mirror.mirrorStateRaw = 'snapmirrored'
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
-      - name: clonerefresh
-        values:
-          - true
+    - name: clone_protect_and_refresh
+      values:
+      - true
 
   - type: query
     name: clone_snapmirrors_query
-    label: select clone protection relationship
-    expression: fn.fnJq($(clone_snapmirrors),'[.[]|{Relationship:(.dst_cluster_name+":"+.dst_vserver_name+":"+.dst_volume_name)}+{cluster:.dst_cluster_name}+{Policy:.mirror_policy}+{Schedule:.schedule}+{svm:.dst_vserver_name}+{volume:.dst_volume_name}]')
+    label: Select existing clone protection relationship
+    expression: fn.fnJq($(clone_snapmirrors),'[.[]|{Relationship:(.dst_cluster_name+":"+.dst_vserver_name+":"+.dst_volume_name)}+{cluster:.dst_cluster_name}+{Policy:.mirror_policy}+{Schedule:(if .schedule then .schedule else "" end)}+{svm:.dst_vserver_name}+{volume:.dst_volume_name}]')
     default: __auto__
     multiple: false
     noOutput: true
@@ -603,13 +632,9 @@
     - Schedule
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
-      - name: clonerefresh
-        values:
-          - true
-
+    - name: clone_protect_and_refresh
+      values:
+      - true         
 
   - type: expression
     name: protection_cluster_refresh
@@ -618,12 +643,9 @@
     model: protection.cluster
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
-      - name: clonerefresh
-        values:
-          - true
+    - name: clone_protect_and_refresh
+      values:
+        - true
 
   - type: expression
     name: protection_svm_refresh
@@ -632,12 +654,9 @@
     model: protection.svm
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
-      - name: clonerefresh
-        values:
-          - true
+    - name: clone_protect_and_refresh
+      values:
+        - true
 
   - type: expression
     name: protection_volume_refresh
@@ -646,12 +665,9 @@
     model: protection.volume
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
-      - name: clonerefresh
-        values:
-          - true
+    - name: clone_protect_and_refresh
+      values:
+        - true
 
   - type: expression
     name: protection_policy_refresh
@@ -660,12 +676,9 @@
     model: protection.policy
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
-      - name: clonerefresh
-        values:
-          - true          
+    - name: clone_protect_and_refresh
+      values:
+        - true         
 
   - type: expression
     name: protection_schedule_refresh
@@ -674,26 +687,20 @@
     model: protection.schedule
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
-      - name: clonerefresh
-        values:
-          - true          
+    - name: clone_protect_and_refresh
+      values:
+        - true         
 
   - type: expression
     name: protection_clone
-    expression: "fn.fnRestBasic('get','https://$(protection_cluster_refresh)/api/storage/volumes?svm.name=$(protection_svm_refresh)&name=$(protection_volume_refresh)&fields=comment,clone.is_flexclone,clone.parent_volume,clone.parent_svm,clone.parent_snapshot,svm.name,create_time&max_records=1000','','ONTAP','[.records[]| {\"clone_splited\":(if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false) then true else false end)} + {svm: .svm.name} + {volume: .name} + {clone: .clone.is_flexclone} + {\"creation_time\": .create_time} + {\"clone_parent\": (if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false) then (.comment|match(\"PARENTVOL:([^,]*)\").captures[0].string) else .clone.parent_volume.name end)} + {\"clone_parent_svm\": (if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false) then (.comment|match(\"PARENTSVM:([^,]*)\").captures[0].string) else .clone.parent_svm.name end)} + {\"clone_parent_snapshot\": (if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false) then (.comment|match(\"SNAP:([^,]*)\").captures[0].string) else .clone.parent_snapshot.name end)}]|map(select (.Clone or .\"clone_splited\"))|.[]','','')"
+    expression: "fn.fnRestBasic('get','https://$(protection_cluster_refresh)/api/storage/volumes?svm.name=$(protection_svm_refresh)&name=$(protection_volume_refresh)&fields=comment,clone.is_flexclone,clone.parent_volume,clone.parent_svm,clone.parent_snapshot,svm.name,create_time&max_records=1000','','ONTAP','[.records[]| {\"clone_splited\":(if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false) then true else false end)} + {svm: .svm.name} + {volume: .name} + {clone: .clone.is_flexclone} + {\"creation_time\": .create_time} + {\"clone_parent\": (if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false) then (.comment|match(\"PARENTVOL:([^,]*)\").captures[0].string) else .clone.parent_volume.name end)} + {\"clone_parent_svm\": (if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false) then (.comment|match(\"PARENTSVM:([^,]*)\").captures[0].string) else .clone.parent_svm.name end)} + {\"clone_parent_snapshot\": (if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false) then (.comment|match(\"SNAP:([^,]*)\").captures[0].string) else .clone.parent_snapshot.name end)}]|map(select (.clone or .\"clone_splited\"))|.[]','','')"
     hide: true
     noOutput: true
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
-      - name: clonerefresh
-        values:
-          - true 
+    - name: clone_protect_and_refresh
+      values:
+        - true
 
   - type: expression
     name: protection_basesvm
@@ -702,12 +709,9 @@
     model: protection.basesvm
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
-      - name: clonerefresh
-        values:
-          - true          
+    - name: clone_protect_and_refresh
+      values:
+        - true          
 
   - type: expression
     name: protection_basevol
@@ -716,9 +720,6 @@
     model: protection.basevol
     group: Clone protection
     dependencies:
-      - name: protect_clone
-        values:
-          - true          
-      - name: clonerefresh
-        values:
-          - true            
+    - name: clone_protect_and_refresh
+      values:
+        - true          

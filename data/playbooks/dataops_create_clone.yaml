@@ -3,40 +3,48 @@
   hosts: "{{ general.dataopshost }}"
   become: no 
   gather_facts: no
+  vars:
+    clone_exportpolicy: "{{ clone.exportpolicy|default('')}}"
+    clone_exporthosts: "{{ clone.exporthosts|default('')}}"
+    clone_snapshotpolicy: "{{ clone.snapshotpolicy|default('')}}"
+    clone_junctionpath: "{{ clone.junctionpath|default('')}}"
+
+    protection_exportpolicy: "{{ protection.exportpolicy if protection.exportpolicy is defined|default('')}}"
+    protection_exporthosts: "{{ protection.exporthosts if protection.exporthosts is defined|default('')}}"
+    protection_snapshotpolicy: "{{ protection.snapshotpolicy if protection.snapshotpolicy is defined|default('')}}"
+    protection_junctionpath: "{{ protection.junctionpath if protection.junctionpath is defined|default('')}}"
+
   tasks:
   - name: create clone 
-    command: "{{ general.dataopscli }} clone volume --cluster={{ cluster }} --source-svm={{ source.svm }} --target-svm={{ clone.svm }} --name={{ clone.volume }} --source-volume={{ source.volume }} --source-snapshot={{ source.snapshot }} {{ ('--junction='+clone.junctionpath if clone.junctionpath != '')|default('') }} {{ (' --export-hosts='+clone.exporthosts if clone.exporthosts != '')|default('') }} {{ (' -d ' if clone.svm_dr_unprotect is defined)|default('') }} {{ (' -i '+clone.snapshotpolicy if clone.snapshotpolicy)|default('') }} {{ (' --split ' if split)|default('') }}"
+    command: "{{ general.dataopscli }} clone volume --cluster={{ cluster }} --source-svm={{ source.svm }} --target-svm={{ clone.svm }} --name={{ clone.volume }} --source-volume={{ source.volume }} --source-snapshot={{ source.snapshot }} {{ ('--junction='+clone_junctionpath if clone_junctionpath != '')|default('') }} {{(' --export-policy='+clone_exportpolicy if clone_exportpolicy != '')|default('') }} {{ (' --export-hosts='+clone_exporthosts if clone_exporthosts != '')|default('') }} {{ (' -d ' if clone.svm_dr_unprotect is defined)|default('') }} {{ (' -i '+clone_snapshotpolicy if clone_snapshotpolicy != '')|default('') }} {{ (' --split ' if split)|default('') }} {{ ' --refresh ' if clonerefresh|default('') }}"
     register: out
-    when: not clonerefresh
   - debug: var=out.stdout_lines
-    when: not clonerefresh  
   - debug: var=out.stderr_lines  
-    when: not clonerefresh 
 
   - name: create clone protection 
-    command: "{{ general.dataopscli }} clone volume --cluster={{ protection.cluster }} --source-svm={{ protection.basesvm }} --target-svm={{ protection.svm }} --name={{ protection.volume }} --source-volume={{ protection.basevol }} --source-snapshot={{ source.snapshot }} {{ ('--junction='+clone.junctionpath if clone.junctionpath != '')|default('') }} {{ (' --export-hosts='+clone.exporthosts if clone.exporthosts != '')|default('')}} {{(' -d ' if clone.svm_dr_unprotect is defined)|default('')}} {{(' --split ' if split)|default('')}}"
+    command: "{{ general.dataopscli }} clone volume --cluster={{ protection.cluster }} --source-svm={{ protection.basesvm }} --target-svm={{ protection.svm }} --name={{ protection.volume }} --source-volume={{ protection.basevol }} --source-snapshot={{ source.snapshot }} {{ ('--junction='+protection_junctionpath if protection_junctionpath != '')|default('') }} {{(' --export-policy='+protection_exportpolicy if protection_exportpolicy != '')|default('') }} {{ (' --export-hosts='+protection_exporthosts if protection_exporthosts != '')|default('')}} {{(' -d ' if clone.svm_dr_unprotect is defined)|default('')}} {{(' --split ' if split)|default('')}} {{ ' --refresh '  if clonerefresh|default('') }}"
     register: out
-    when: not clonerefresh and protection is defined 
+    when: cloneprotect 
   - debug: var=out.stdout_lines
-    when: not clonerefresh and protection is defined 
+    when: cloneprotect 
   - debug: var=out.stderr_lines  
-    when: not clonerefresh and protection is defined 
+    when: cloneprotect 
 
   - name: resync snapmirror between clones  
     command: "{{ general.dataopscli }} create snapmirror-relationship --cluster-name={{ protection.cluster }} --source-svm={{ clone.svm }} --target-svm={{ protection.svm }} --source-vol={{ clone.volume }} --target-vol={{ protection.volume }} --schedule={{ protection.schedule }} --policy={{ protection.policy }} --action=resync"
     register: out
-    when: not clonerefresh and protection is defined 
+    when: cloneprotect 
   - debug: var=out.stdout_lines
-    when: not clonerefresh and protection is defined  
+    when: cloneprotect  
   - debug: var=out.stderr_lines  
-    when: not clonerefresh and protection is defined 
+    when: cloneprotect 
 
-  - name: refresh clone 
-    command: "{{ general.dataopscli }} clone volume --cluster={{ cluster }} --source-svm={{ source.svm }} --target-svm={{ clone.svm }} --name={{ clone.volume }} --source-volume={{ source.volume }} --source-snapshot={{ source.snapshot }} --refresh {{(' -d ' if clone.svm_dr_unprotect)|default('')}} {{(' --split ' if split)|default('')}}"
-    register: out
-    when: clonerefresh    
-  - debug: var=out.stdout_lines
-    when: clonerefresh   
-  - debug: var=out.stderr_lines 
-    when: clonerefresh   
+  # - name: refresh clone 
+  #   command: "{{ general.dataopscli }} clone volume --cluster={{ cluster }} --source-svm={{ source.svm }} --target-svm={{ clone.svm }} --name={{ clone.volume }} --source-volume={{ source.volume }} --source-snapshot={{ source.snapshot }} --refresh {{(' -d ' if clone.svm_dr_unprotect)|default('')}} {{(' --split ' if split)|default('')}}"
+  #   register: out
+  #   when: clonerefresh    
+  # - debug: var=out.stdout_lines
+  #   when: clonerefresh   
+  # - debug: var=out.stderr_lines 
+  #   when: clonerefresh   
 

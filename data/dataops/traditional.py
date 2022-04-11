@@ -1983,7 +1983,7 @@ def sync_cloud_sync_relationship(relationship_id: str, wait_until_complete: bool
             time.sleep(60)
 
 def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol: str, target_svm: str = None, cluster_name: str = None, 
-        schedule: str = 'hourly', policy: str = 'MirrorAllSnapshots', action: str = None, print_output: bool = False):
+        schedule: str = '', policy: str = 'MirrorAllSnapshots', action: str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -2037,13 +2037,15 @@ def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol
                 }, 
                 "destination": { 
                     "path": target_svm+":"+target_vol
-                },
+                }
                 #due to bug 1311226 setting the policy wil be done using cli api 
                 # "policy":  {
                 #     "name": policy,
                 # },
-                "schedule": schedule
             }
+            # if schedule != '':
+            #     newRelationDict['schedule'] = schedule
+
             if print_output:
                 print("Creating snapmirror relationship: "+source_svm+":"+source_vol+" -> "+target_svm+":"+target_vol)
             newRelationship = NetAppSnapmirrorRelationship.from_dict(newRelationDict)
@@ -2055,8 +2057,8 @@ def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol
 
         try:
             if print_output:
-                print("Setting snapmirror policy as: "+policy)
-                response = NetAppCLI().execute("snapmirror modify",destination_path=target_svm+":"+target_vol,body={"policy": policy})
+                print("Setting snapmirror policy as: "+policy+" schedule:"+schedule)
+                response = NetAppCLI().execute("snapmirror modify",destination_path=target_svm+":"+target_vol,body={"policy": policy, "schedule":schedule})
         except NetAppRestError as err:
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
@@ -2084,10 +2086,10 @@ def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
-        if action in  ["resync","initialize"]:
+        if action in ["resync","initialize"]:
             try:
                 if print_output:
-                    print("Setting state to snapmirrored (resync/initialize)")
+                    print("Setting state to snapmirrored, action:"+action)
                 patchRelation = NetAppSnapmirrorRelationship(uuid=uuid)
                 patchRelation.state = "snapmirrored"
                 patchRelation.patch(poll=True, poll_timeout=120)
