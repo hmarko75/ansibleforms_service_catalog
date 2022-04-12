@@ -1130,7 +1130,6 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                         print("Error: ONTAP Rest API Error: ", err)                  
 
             #check if this volume has snapmirror destination relationship
-            #haim
             uuid = None
             try:
                 snapmirror_relationship = NetAppSnapmirrorRelationship.get_collection(list_destinations_only=True,**{"source.path": svm+":"+volume_name})

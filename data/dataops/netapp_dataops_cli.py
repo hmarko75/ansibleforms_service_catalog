@@ -756,7 +756,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:g:j:xe:p:i:srd", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","snapshot-policy=","split","refresh","svm-dr-unprotect"])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
             # Parse command line options
@@ -853,7 +854,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:r:u:l:", ["cluster-name=","help", "svm=", "name=", "volume=", "retention=", "snapmirrror-label="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
 
             # Parse command line options
@@ -915,7 +917,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hv:t:n:s:rt:p:u:g:e:d:m:a:j:xu:", ["cluster-name=","help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly","tiering-policy="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
 
             # Parse command line options
@@ -983,8 +986,9 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:s:v:u:y:c:p:a:h", ["cluster-name=","help", "target-vol=", "target-svm=", "source-svm=", "source-vol=", "schedule=", "policy=", "action="])
-            except:
+                opts, args = getopt.getopt(sys.argv[3:], "hn:t:s:v:u:y:c:p:a:h", ["cluster-name=","help", "target-vol=", "target-svm=", "source-svm=", "source-vol=", "schedule=", "policy=", "action="])
+            except Exception as err:
+                print(err)
                 handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
 
             # Parse command line options
@@ -1040,7 +1044,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:u:", ["cluster-name=","help", "svm=", "name=", "volume="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextDeleteSnapshot, invalidOptArg=True)
 
             # Parse command line options
@@ -1078,7 +1083,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hfv:n:u:m", ["cluster-name=","help", "svm=", "name=", "force", "delete-non-clone","delete-mirror"])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextDeleteVolume, invalidOptArg=True)
 
             # Parse command line options
@@ -1154,7 +1160,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hv:u:", ["cluster-name=","help", "svm="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextListSnapMirrorRelationships, invalidOptArg=True)   
 
             # Parse command line options
@@ -1181,7 +1188,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hv:s:u:", ["cluster-name=","help", "volume=","svm="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextListSnapshots, invalidOptArg=True)
 
             # Parse command line options
@@ -1214,7 +1222,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hsv:u:", ["cluster-name=","help", "include-space-usage-details","svm="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextListVolumes, invalidOptArg=True)
 
             # Parse command line options
@@ -1253,7 +1262,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hv:n:l:m:u:", ["cluster-name=","help", "lif=","svm=", "name=", "mountpoint=", "readonly"])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
 
             # Parse command line options
@@ -1293,7 +1303,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hm:", ["help", "mountpoint="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextUnmountVolume, invalidOptArg=True)
 
             # Parse command line options
@@ -1328,7 +1339,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:p:", ["help", "name=", "paths="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextPrepopulateFlexCache, invalidOptArg=True)
 
             # Parse command line options
@@ -1370,7 +1382,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hb:p:d:e:", ["help", "bucket=", "key-prefix=", "directory="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextPullFromS3Bucket, invalidOptArg=True)
 
             # Parse command line options
@@ -1403,7 +1416,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hb:k:f:", ["help", "bucket=", "key=", "file=", "extra-args="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextPullFromS3Object, invalidOptArg=True)
 
             # Parse command line options
@@ -1445,7 +1459,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hb:p:d:e:", ["help", "bucket=", "key-prefix=", "directory=", "extra-args="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextPushToS3Directory, invalidOptArg=True)
 
             # Parse command line options
@@ -1481,7 +1496,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hb:k:f:e:", ["help", "bucket=", "key=", "file=", "extra-args="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextPushToS3File, invalidOptArg=True)
 
             # Parse command line options
@@ -1526,7 +1542,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hs:n:v:fu:", ["cluster-name=","help", "svm=", "name=", "volume=", "force"])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextRestoreSnapshot, invalidOptArg=True)
 
             # Parse command line options
@@ -1582,7 +1599,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hi:w", ["help", "id=", "wait"])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextSyncCloudSyncRelationship, invalidOptArg=True)
 
             # Parse command line options
@@ -1615,7 +1633,8 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hi:wn:u:v:", ["help", "cluster-name=","svm=","name=","uuid=", "wait"])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextSyncSnapMirrorRelationship, invalidOptArg=True)
 
             # Parse command line options

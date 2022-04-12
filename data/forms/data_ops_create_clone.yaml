@@ -260,7 +260,7 @@
   - type: query
     name: existingclones
     label: Select existing clone
-    expression: "fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes?fields=snapshot_policy.name,nas.path,comment,clone.is_flexclone,clone.parent_volume,clone.parent_svm,clone.parent_snapshot,svm.name,create_time&max_records=1000','','ONTAP','[.records[]| {snapshotpolicy:.snapshot_policy.name}+{junctionpath:.nas.path}+{\"SVM:Volume\": (.svm.name+\":\" +.name)} + {svm: .svm.name} + {volume: .name} + {Clone: .clone.is_flexclone} + {\"Clone Parent\": (if .clone.parent_volume.name == null then \"\" else .clone.parent_volume.name end)} + {\"Creation Time\": .create_time} + {\"Clone Parent SVM\": (if .clone.parent_svm.name == null then \"\" else .clone.parent_svm.name end)} + {\"Clone Parent Snapshot\": (if .clone.parent_snapshot.name == null then \"\" else .clone.parent_snapshot.name end)} + {\"Clone Splited\":(if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false)then true else false end)}]|map(select (.Clone or .\"Clone Splited\"))','','')"
+    expression: "fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes?fields=snapshot_policy.name,nas.path,comment,clone.is_flexclone,clone.parent_volume,clone.parent_svm,clone.parent_snapshot,svm.name,create_time&max_records=1000&type=RW','','ONTAP','[.records[]| {snapshotpolicy:.snapshot_policy.name}+{junctionpath:.nas.path}+{\"SVM:Volume\": (.svm.name+\":\" +.name)} + {svm: .svm.name} + {volume: .name} + {Clone: .clone.is_flexclone} + {\"Clone Parent\": (if .clone.parent_volume.name == null then \"\" else .clone.parent_volume.name end)} + {\"Creation Time\": .create_time} + {\"Clone Parent SVM\": (if .clone.parent_svm.name == null then \"\" else .clone.parent_svm.name end)} + {\"Clone Parent Snapshot\": (if .clone.parent_snapshot.name == null then \"\" else .clone.parent_snapshot.name end)} + {\"Clone Splited\":(if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false)then true else false end)}]|map(select (.Clone or .\"Clone Splited\"))','','')"
     columns:
       - SVM:Volume
       - Clone
@@ -723,3 +723,43 @@
     - name: clone_protect_and_refresh
       values:
         - true          
+
+
+
+  - type: expression
+    name: protection_volumeuuid_refresh
+    expression: fn.fnRestBasic('get','https://$(protection_cluster_refresh)/api/storage/volumes?svm.name=$(protection_basesvm)&name=$(protection_basevol)&fields=uuid&max_records=500','','ONTAP','.records[]|.uuid','','')
+    hide: true   
+    noOutput: true
+    group: Clone protection
+    dependencies:
+    - name: clone_protect_and_refresh
+      values:
+        - true
+
+  - type: expression
+    name: protection_snapshot_refresh
+    expression: fn.fnRestBasic('get','https://$(protection_cluster_refresh)/api/storage/volumes/$(protection_volumeuuid_refresh)/snapshots?name="$(parent_snapshot)"&fields=name','','ONTAP','[.records[]|.name]','','')
+    hide: true
+    group: Clone protection
+    noOutput: true
+    dependencies:
+    - name: clone_protect_and_refresh
+      values:
+        - true
+
+  - type: expression
+    name: validation_refresh
+    label: Validation
+    hide: false
+    expression: "($(protection_snapshot_refresh).length<1)?'snapshot: $(parent_snapshot) could not be found on parent volume snapmirror destination':'snapshot: $(parent_snapshot) exists on parent volume snapmirror destination'"
+    runLocal: true
+    noOutput: true
+    regex:
+      expression: exists
+      description: base snapshot could not be found on parent volume snapmirror destination
+    group: Clone protection
+    dependencies:
+    - name: clone_protect_and_refresh
+      values:
+        - true         
