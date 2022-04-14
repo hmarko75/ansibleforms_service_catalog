@@ -753,6 +753,8 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
                 'volume': volume.to_dict()
             }
             if snapmirror_label:
+                if print_output:
+                    print("Setting snapmirror label as:"+snapmirror_label)                
                 snapshotDict['snapmirror_label'] = snapmirror_label
 
             # Create snapshot

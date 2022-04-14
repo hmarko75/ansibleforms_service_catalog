@@ -8,6 +8,9 @@ RUN apk --update --no-cache add ansible
 RUN apk --update --no-cache add py3-pip
 
 #install pandas and numpy
+RUN apk add --update --no-cache openssh
+
+#install pandas and numpy
 RUN apk add --update --no-cache py3-numpy py3-pandas
 
 #install build tools

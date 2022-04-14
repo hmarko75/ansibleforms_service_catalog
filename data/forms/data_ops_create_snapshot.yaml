@@ -98,7 +98,7 @@
 
   - type: text
     name: snapshotname
-    label: Snapshot Name
+    label: Snapshot Name (or prefix when retention is used)
     default: ""
     required: true
     minLength: 1
@@ -108,12 +108,12 @@
       description: Invalid snapshot name
     icon: user
     dependencies:
-      - name: usepolicy
-        values:
-          - false   
+    - name: usepolicy
+      values:
+        - false   
 
   - type: text
-    name: retnetion
+    name: retention
     label: Snapshot renention (count or number of days)
     placeholder: ex. 12 for 12 snapshot or 5d - for 5 days 
     default: ""
@@ -122,168 +122,57 @@
     maxLength: 5
     regex:
       expression: ^[0-9]*d?$
-      description: Invalid retnetion
+      description: Invalid retention
     icon: user
     dependencies:
-      - name: usepolicy
-        values:
-          - false   
+    - name: usepolicy
+      values:
+        - false   
 
+  - type: query
+    name: snapshotpolicy
+    label: Snapshot Policy
+    expression: "fn.fnJq($(settings),'[.snapshot_policies[]|{Name:.name}+{Keep:.keep}+{Prefix:.prefix}]')"
+    columns:
+      - Name
+      - Keep
+      - Prefix
+    required: true
+    default: __auto__
+    icon: user
+    noOutput: true
+    dependencies:
+    - name: usepolicy
+      values:
+        - true  
 
+  - type: expression
+    name: retention_policy
+    expression: "'$(snapshotpolicy.Keep)'"
+    hide: true  
+    model: retention 
+    dependencies:
+    - name: usepolicy
+      values:
+        - true 
 
-  # - type: expression
-  #   name: volumeuuid
-  #   expression: fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes?svm.name=$(svm)&name=$(volname)&fields=uuid&max_records=500','','ONTAP','.records[]|.uuid','','')
-  #   hide: true   
-  #   noOutput: true
-  #   group: Parent Volume
-  # - type: expression
-  #   name: parent_snapshot
-  #   label: Base Snapshot
-  #   expression: fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes/$(volumeuuid)/snapshots?fields=name,create_time&order_by=create_time desc','','ONTAP','[(.records[] | ({Snapshot:.name} + {"Creation Time":.create_time} ) ) ]','','')
-  #   default: __auto__
-  #   multiple: false
-  #   outputObject: false
-  #   columns:
-  #   - Snapshot
-  #   - "Creation Time"
-  #   model: source.snapshot
-  #   group: Parent Volume
-  # - type: checkbox
-  #   name: clonerefresh
-  #   label: Check to refresh existing clones 
-  #   default: false
-  #   placeholder: Refresh Existing Clone
-  #   required: false
-  #   group: Clone
-  
-  # - type: query
-  #   name: clonesvm
-  #   label: Clone SVM
-  #   expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster)','','AIQUM','[{\"Name\":  \"$(svm)\"}]+([.records[]|{Name: .name}]|map(select(.Name != \"$(svm)\")))','','')"
-  #   columns:
-  #     - Name
-  #   required: true
-  #   default: __auto__
-  #   group: Clone
-  #   model: clone.svm
-  #   dependencies:
-  #     - name: clonerefresh
-  #       values:
-  #         - false  
+  - type: expression
+    name: prefix_policy
+    expression: "'$(snapshotpolicy.Prefix)'"
+    hide: true  
+    model: snapshotname 
+    dependencies:
+    - name: usepolicy
+      values:
+        - true 
 
-  # - type: expression
-  #   name: existingvols
-  #   label: existingvols
-  #   expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/volumes?cluster.name=$(cluster)&svm.name=$(svm)&max_records=1000','','AIQUM','[.records[]|.name]','','')
-  #   hide: true
-  #   noOutput: true
-  #   group: Clone
-  #   dependencies:
-  #     - name: clonerefresh
-  #       values:
-  #         - false   
+  - type: expression
+    name: snapmirror_label_policy
+    expression: "'$(snapshotpolicy.snapmirror_label)'"
+    hide: true  
+    model: snapmirror_label 
+    dependencies:
+    - name: usepolicy
+      values:
+        - true         
 
-  # - type: text
-  #   name: clonename
-  #   label: Clone Name
-  #   default: ""
-  #   required: true
-  #   minLength: 1
-  #   maxLength: 30
-  #   regex:
-  #     expression: ^[a-z0-9_]*$
-  #     description: Invalid volume name
-  #   notIn:
-  #     field: existingvols
-  #     description: Volume already exists
-  #   icon: user
-  #   group: Clone
-  #   model: clone.volume
-  #   dependencies:
-  #     - name: clonerefresh
-  #       values:
-  #         - false 
-
-  # # - type: query
-  # #   name: exportpolicy
-  # #   label: Export Policy
-  # #   expression: "fn.fnRestBasic('get','https://$(cluster)/api/protocols/nfs/export-policies?svm.name=$(clonesvm)&max_records=500','','ONTAP','[.records[]|{Name: .name}]|map(select(.Name|startswith(\"cl_\")|not))|map(select(.Name|startswith(\"netapp_dataops_\")|not))','','')"
-  # #   columns:
-  # #     - Name
-  # #   required: true
-  # #   default: __auto__
-  # #   group: Clone
-  # #   model: clone.svm
-  # #   dependencies:
-  # #     - name: clonerefresh
-  # #       values:
-  # #         - false  
-
-  # - type: text
-  #   name: exports
-  #   label: Colon (:) Seperated Export Hosts
-  #   default: ""
-  #   required: false
-  #   regex:
-  #     expression: ^((([a-zA-Z0-9\.]){1,45}))(\:([a-zA-Z0-9\.]){1,45})*$
-  #     description: Invalid export host list (should be colon seperated)
-  #   icon: user
-  #   model: clone.exporthosts
-  #   group: Clone
-  #   dependencies:
-  #     - name: clonerefresh
-  #       values:
-  #         - false 
-
-  # - type: text
-  #   name: junctionpath
-  #   label: Junction Path
-  #   default: ""
-  #   required: false
-  #   regex:
-  #     expression: ^((\/([a-zA-Z0-9\.]){1,45})+)$
-  #     description: Invalid junction path
-  #   help: non default junction path (default will be /volname)
-  #   icon: user
-  #   model: clone.junctionpath
-  #   group: Clone
-  #   dependencies:
-  #     - name: clonerefresh
-  #       values:
-  #         - false 
-
-  # - type: query
-  #   name: existingclones
-  #   label: Select existing clone
-  #   expression: "fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes?fields=comment,clone.is_flexclone,clone.parent_volume,clone.parent_svm,clone.parent_snapshot,svm.name,create_time&max_records=1000','','ONTAP','[.records[]| {\"SVM:Volume\": (.svm.name+\":\" +.name)} + {svm: .svm.name} + {volume: .name} + {Clone: .clone.is_flexclone} + {\"Clone Parent\": (if .clone.parent_volume.name == null then \"\" else .clone.parent_volume.name end)} + {\"Creation Time\": .create_time} + {\"Clone Parent SVM\": (if .clone.parent_svm.name == null then \"\" else .clone.parent_svm.name end)} + {\"Clone Parent Snapshot\": (if .clone.parent_snapshot.name == null then \"\" else .clone.parent_snapshot.name end)} + {\"Clone Splited\":(if(.comment|contains(\"CLONENAME\"))and(.clone.is_flexclone==false)then true else false end)}]|map(select (.Clone or .\"Clone Splited\"))|map(select (.\"Clone Parent SVM\"==\"$(svm)\" and .\"Clone Parent\"==\"$(volname)\"))','','')"
-  #   columns:
-  #     - SVM:Volume
-  #     - Clone
-  #     - Clone Parent Snapshot
-  #     - Creation Time
-  #   default: __auto__
-  #   required: true
-  #   outputObject: true
-  #   group: Clone
-  #   model: clone
-  #   dependencies:
-  #     - name: clonerefresh
-  #       values:
-  #         - true  
-
-  # - type: checkbox
-  #   name: split
-  #   label: Check to split new clone
-  #   default: false
-  #   placeholder: Split clone 
-  #   required: false
-  #   group: Clone
-
-  # - type: checkbox
-  #   name: svm_dr_unprotect
-  #   label: Check to disable SVM-DR protection for new clone 
-  #   default: false
-  #   placeholder: Disbale SVM-DR protection 
-  #   required: false
-  #   group: Clone    

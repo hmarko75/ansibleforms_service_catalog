@@ -853,7 +853,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:r:u:l:", ["cluster-name=","help", "svm=", "name=", "volume=", "retention=", "snapmirrror-label="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:r:u:l:", ["cluster-name=","help", "svm=", "name=", "volume=", "retention=", "snapmirror-label="])
             except Exception as err:                
                 print(err)
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
