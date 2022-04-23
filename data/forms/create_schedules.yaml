@@ -42,7 +42,7 @@
     - type: query
       name: cluster
       label: Select cluster
-      expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters','','AIQUM',
+      expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/cluster/clusters','','AIQUM',
         'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
         0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
         ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\

@@ -126,16 +126,16 @@ fields:
     label: Volume to Service Mapping
     expression: "$(prod_svm_count)>1?'Containing SVM is configured for more than one
       service':$(prod_svm_count)<1?'Containing SVM is not configured for a
-      service': '<p style=\"color:green;\">SERVICE:&nbsp</p> $(service) &nbsp;<p
-      style=\"color:green;\">COMPANY:&nbsp</p>$(company)&nbsp; <p
-      style=\"color:green;\">ENVIRONMENT:&nbsp</p>$(environment)&nbsp;<p
-      style=\"color:green;\">LOCATION:&nbsp</p>$(location)'"
+      service': '<p class=\"has-text-success\">SERVICE:&nbsp</p> $(service) &nbsp;<p
+      class=\"has-text-success\">COMPANY:&nbsp</p>$(company)&nbsp; <p
+      class=\"has-text-success\">ENVIRONMENT:&nbsp</p>$(environment)&nbsp;<p
+      class=\"has-text-success\">LOCATION:&nbsp</p>$(location)'"
     runLocal: true
     noOutput: true
     isHtml: true
   - type: expression
     name: volume_comment
-    expression: fn.fnRestBasic('get','https://'+'$(cluster)'+'/api/storage/volumes?fields=comment&svm.name=$(svm)&name=$(volname)','','ONTAP','.records[]|.comment','','')
+    expression: fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes?fields=comment&svm.name=$(svm)&name=$(volname)','','ONTAP','.records[]|.comment','','')
     hide: true
     noOutput: true
   # - type: expression
@@ -180,19 +180,19 @@ fields:
     label: Volume Informaton
     hide: false
     expression: "('$(volume_comment)').includes('CR:')? 
-                  '<p style=\"color:green;\">Change Request:&nbsp</p> $(cr) &nbsp;
-                  <p style=\"color:green;\">Application:&nbsp</p>$(application)&nbsp; 
-                  <p style=\"color:green;\">Used For:&nbsp</p>$(used_for)&nbsp;
-                  <p style=\"color:green;\">Owner:&nbsp</p>$(owner)&nbsp;
-                  <p style=\"color:green;\">Comment:&nbsp</p>$(comment)':
-                  'Information is not avaialble'"
+                  '<p class=\"has-text-success\">Change Request:&nbsp</p> $(cr) &nbsp;
+                  <p class=\"has-text-success\">Application:&nbsp</p>$(application)&nbsp; 
+                  <p class=\"has-text-success\">Used For:&nbsp</p>$(used_for)&nbsp;
+                  <p class=\"has-text-success\">Owner:&nbsp</p>$(owner)&nbsp;
+                  <p class=\"has-text-success\">Comment:&nbsp</p>$(comment)':
+                  'Information is not available'"
     runLocal: true
     noOutput: true
     isHtml: true
   - type: expression
     name: existingqtrees
     label: existingqtrees
-    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/qtrees?cluster.name=$(cluster)&svm.name=$(svm)&volume.name=$(volname)&max_records=1000','','AIQUM','[.records[]|select(.name!="")|.name]','','')
+    expression: fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storage/qtrees?cluster.name=$(cluster)&svm.name=$(svm)&volume.name=$(volname)&max_records=1000','','AIQUM','[.records[]|select(.name!="")|.name]','','')
     hide: true
     noOutput: true    
   
@@ -233,7 +233,7 @@ fields:
   - type: expression
     name: volume_quota_state
     label: Volume Current Quota State
-    expression: fn.fnRestBasic('get','https://'+'$(cluster)'+'/api/storage/volumes?fields=quota.state&svm.name=$(svm)&name=$(volname)','','ONTAP','.records[]|.quota.state','','')
+    expression: fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes?fields=quota.state&svm.name=$(svm)&name=$(volname)','','ONTAP','.records[]|.quota.state','','')
     hide: false
     noOutput: true
     refresh: 5s

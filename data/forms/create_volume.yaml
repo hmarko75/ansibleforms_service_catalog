@@ -25,7 +25,7 @@ fields:
   - type: expression
     name: datasource_info
     label: datasource_info
-    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/admin/datasources/clusters','','AIQUM','[.records[]|{name:.name}+{key:.key}]','','')
+    expression: fn.fnRestBasic('get','https://$(aiqum)/api/admin/datasources/clusters','','AIQUM','[.records[]|{name:.name}+{key:.key}]','','')
     hide: true
     noOutput: true    
   - type: expression
@@ -124,7 +124,7 @@ fields:
   - type: query
     name: cluster
     label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters?name=$(aggr_filter_jq)','','AIQUM',
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/cluster/clusters?name=$(aggr_filter_jq)','','AIQUM',
       'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
       0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
       ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
@@ -149,7 +149,7 @@ fields:
   - type: query
     name: aggregate
     label: Aggregate
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name}+{Cluster:
@@ -181,7 +181,7 @@ fields:
   - type: query
     name: fg_aggrs
     label: Aggregates
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name} + {Node: .node.name}+{Size:
@@ -236,7 +236,7 @@ fields:
   - type: query
     name: svm
     label: SVM
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/sv\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/svm/sv\
       ms?cluster.name=$(cluster)&name=$(svm_filter_jq)','','AIQUM','[.records[]\
       |{Name: .name}]','','')"
     columns:
@@ -248,7 +248,7 @@ fields:
   - type: expression
     name: existingvols
     label: existingvols
-    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/volumes?cluster.name=$(cluster)&svm.name=$(svm)&max_records=1000','','AIQUM','[.records[]|.name]','','')
+    expression: fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storage/volumes?cluster.name=$(cluster)&svm.name=$(svm)&max_records=1000','','AIQUM','[.records[]|.name]','','')
     hide: true
     group: Production
     noOutput: true
@@ -499,7 +499,7 @@ fields:
   - type: query
     name: dr1_cluster
     label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters?name=$(dr1_aggr_filter_jq)','','AIQUM',
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/cluster/clusters?name=$(dr1_aggr_filter_jq)','','AIQUM',
       'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
       0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
       ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
@@ -528,7 +528,7 @@ fields:
   - type: query
     name: dr1_aggregate
     label: Aggregate
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(dr1_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name}+{Cluster:
@@ -560,7 +560,7 @@ fields:
   - type: query
     name: dr1_fg_aggrs
     label: Aggregates
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(dr1_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name} + {Node: .node.name}+{Size:
@@ -635,7 +635,7 @@ fields:
   - type: query
     name: dr1_svm
     label: SVM
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/sv\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/svm/sv\
       ms?cluster.name=$(dr1_cluster)&name=$(dr1_svm_filter_jq)',''\
       ,'AIQUM','[.records[]|{Name: .name}]','','')"
     columns:
@@ -757,7 +757,7 @@ fields:
   - type: query
     name: b2d1_cluster
     label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters?name=$(b2d1_aggr_filter_jq)','','AIQUM',
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/cluster/clusters?name=$(b2d1_aggr_filter_jq)','','AIQUM',
       'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
       0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
       ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
@@ -786,7 +786,7 @@ fields:
   - type: query
     name: b2d1_aggregate
     label: Aggregate
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(b2d1_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name}+{Cluster:
@@ -818,7 +818,7 @@ fields:
   - type: query
     name: b2d1_fg_aggrs
     label: Aggregates
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(b2d1_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name} + {Node: .node.name}+{Size:
@@ -892,7 +892,7 @@ fields:
   - type: query
     name: b2d1_svm
     label: SVM
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/sv\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/svm/sv\
       ms?cluster.name=$(b2d1_cluster)&name=$(b2d1_svm_filter_jq)','','AIQUM','[\
       .records[]|{Name: .name}]','','')"
     columns:
@@ -1015,7 +1015,7 @@ fields:
   - type: query
     name: dr2_cluster
     label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters?name=$(dr2_aggr_filter_jq)','','AIQUM',
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/cluster/clusters?name=$(dr2_aggr_filter_jq)','','AIQUM',
       'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
       0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
       ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
@@ -1044,7 +1044,7 @@ fields:
   - type: query
     name: dr2_aggregate
     label: Aggregate
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(dr2_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name}+{Cluster:
@@ -1076,7 +1076,7 @@ fields:
   - type: query
     name: dr2_fg_aggrs
     label: Aggregates
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(dr2_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name} + {Node: .node.name}+{Size:
@@ -1150,7 +1150,7 @@ fields:
   - type: query
     name: dr2_svm
     label: SVM
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/sv\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/svm/sv\
       ms?cluster.name=$(dr2_cluster)&name=$(dr2_svm_filter_jq)','','AIQUM','[.r\
       ecords[]|{Name: .name}]','','')"
     columns:
@@ -1274,7 +1274,7 @@ fields:
   - type: query
     name: b2d2_cluster
     label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters?name=$(b2d2_aggr_filter_jq)','','AIQUM',
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/cluster/clusters?name=$(b2d2_aggr_filter_jq)','','AIQUM',
       'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
       0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
       ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
@@ -1303,7 +1303,7 @@ fields:
   - type: query
     name: b2d2_aggregate
     label: Aggregate
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(b2d2_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name}+{Cluster:
@@ -1334,7 +1334,7 @@ fields:
   - type: query
     name: b2d2_fg_aggrs
     label: Aggregates
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storag\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storag\
       e/aggregates?state=online&cluster.name=$(b2d2_cluster)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 + 0.5|floor/100.0;[.records[]|{Aggregate: .name} + {Node: .node.name}+{Size:
@@ -1408,7 +1408,7 @@ fields:
   - type: query
     name: b2d2_svm
     label: SVM
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/sv\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/svm/sv\
       ms?cluster.name=$(b2d2_cluster)&name=$(b2d2_svm_filter_jq)','','AIQUM','[\
       .records[]|{Name: .name}]','','')"
     columns:

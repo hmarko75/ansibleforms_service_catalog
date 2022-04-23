@@ -43,7 +43,7 @@ fields:
   - type: expression
     name: datasource_info
     label: datasource_info
-    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/admin/datasources/clusters','','AIQUM','[.records[]|{name:.name}+{key:.key}]','','')
+    expression: fn.fnRestBasic('get','https://$(aiqum)/api/admin/datasources/clusters','','AIQUM','[.records[]|{name:.name}+{key:.key}]','','')
     hide: true
     noOutput: true
   - type: expression
@@ -165,7 +165,7 @@ fields:
   - type: query
     name: cluster_list
     label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters$(cluster_filter)','','AIQUM',
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/cluster/clusters$(cluster_filter)','','AIQUM',
       'def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def roundit: .*100.0 +
       0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
       ostring)+\".\"+(.version.major|tostring)+\".\"+(.version.minor|tostring))\
@@ -203,7 +203,7 @@ fields:
   - type: expression
     name: existingsvms
     label: existingsvms
-    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster_list)&max_records=1000','','AIQUM','[.records[]|.name]','','')
+    expression: fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/svm/svms?cluster.name=$(cluster_list)&max_records=1000','','AIQUM','[.records[]|.name]','','')
     hide: true
     group: Production
     noOutput: true
@@ -292,7 +292,7 @@ fields:
     group: Production
   - type: expression
     name: availableip
-    label: avaialbleip
+    label: availableip
     hide: true
     runLocal: true
     expression: (($(iplist)).filter(x=>!~($(usedip)).indexOf(x)).slice(0,$(lifcount)).length<$(lifcount))?[]:($(iplist)).filter(x=>!~($(usedip)).indexOf(x)).slice(0,$(lifcount))
@@ -311,7 +311,7 @@ fields:
     label: IP/Port allocation status
     hide: false
     expression: ($(availableip).length<$(lifcount))?'Not enough IP addresses
-      avaialble':(($(selectedports).length<$(lifcount))?'Not enought ports to
+      available':(($(selectedports).length<$(lifcount))?'Not enought ports to
       host requested IP addresses':'IP and port requirements are satisfied')
     runLocal: true
     noOutput: true
@@ -353,7 +353,7 @@ fields:
   - type: query
     name: dr1_cluster_list
     label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluster/clusters$(dr1_cluster_filter)','',
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/cluster/clusters$(dr1_cluster_filter)','',
       'AIQUM','def gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 +
       0.5|floor/100.0;[.records[]|{Name:.name}+{Version:((.version.generation|t\
@@ -453,7 +453,7 @@ fields:
   - type: expression
     name: dr1_existingsvms
     label: dr1_existingsvms
-    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(dr1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|.
+    expression: fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/svm/svms?cluster.name=$(dr1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|.
       +=["$(svm)"]','','')
     hide: true
     group: DR1
@@ -616,11 +616,11 @@ fields:
     label: IP/Port allocation status
     hide: false
     expression: ($(dr1_availableip)).length<$(dr1_lifcount)?'Not enough IP addresses
-      avaialble':($(dr1_selectedports)).length<$(dr1_lifcount)?'Not enought
+      available':($(dr1_selectedports)).length<$(dr1_lifcount)?'Not enought
       ports to host requested IP
       addresses':'$(dr1_cluster_peer)'==''&&'$(dr1_cluster)'!='$(dr1_source_cluster)'?'Cluster
       peer to $(dr1_source_cluster) is missing or not healthy':!(['prod'].includes('$(dr1_source_copy)'))?'source cpoy can be only:prod currently:$(dr1_source_copy)':'IP, ports and
-      cluster peer requirements are satisfied, souce copy:$(dr1_source_copy)'
+      cluster peer requirements are satisfied, source copy:$(dr1_source_copy)'
     runLocal: true
     noOutput: true
     regex:
@@ -671,7 +671,7 @@ fields:
   - type: query
     name: b2d1_cluster_list
     label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluste\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/cluste\
       r/clusters$(b2d1_cluster_filter)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 +
@@ -772,7 +772,7 @@ fields:
   - type: expression
     name: b2d1_existingsvms
     label: b2d1_existingsvms
-    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(b2d1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|.
+    expression: fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/svm/svms?cluster.name=$(b2d1_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|.
       +=["$(svm)"] |. +=["$(dr1_svm)"]|. +=["$(dr2_svm)"]','','')
     hide: true
     group: B2D1
@@ -919,7 +919,7 @@ fields:
           - true
   - type: expression
     name: b2d1_availableip
-    label: b2d1_avaialbleip
+    label: b2d1_availableip
     hide: true
     runLocal: true
     expression: (($(b2d1_iplist)).filter(x=>!~($(b2d1_usedip)).indexOf(x)).slice(0,$(b2d1_lifcount)).length<$(b2d1_lifcount))?[]:($(b2d1_iplist)).filter(x=>!~($(b2d1_usedip)).indexOf(x)).slice(0,$(b2d1_lifcount))
@@ -947,11 +947,11 @@ fields:
     label: IP/Port allocation status
     hide: false
     expression: ($(b2d1_availableip)).length<$(b2d1_lifcount)?'Not enough IP
-      addresses avaialble':($(b2d1_selectedports)).length<$(b2d1_lifcount)?'Not
+      addresses available':($(b2d1_selectedports)).length<$(b2d1_lifcount)?'Not
       enought ports to host requested IP
       addresses':'$(b2d1_cluster_peer)'==''&&'$(b2d1_cluster)'!='$(b2d1_source_cluster)'?'Cluster
       peer to $(b2d1_source_cluster) is missing or not healthy':!(['prod','dr1'].includes('$(b2d1_source_copy)'))?'source cpoy can be only:prod,dr1 currently:$(b2d1_source_copy)':'IP, ports and
-      cluster peer requirements are satisfied, souce copy:$(b2d1_source_copy)'
+      cluster peer requirements are satisfied, source copy:$(b2d1_source_copy)'
     runLocal: true
     noOutput: true
     regex:
@@ -1004,7 +1004,7 @@ fields:
   - type: query
     name: dr2_cluster_list
     label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluste\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/cluste\
       r/clusters$(dr2_cluster_filter)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 +
@@ -1105,7 +1105,7 @@ fields:
   - type: expression
     name: dr2_existingsvms
     label: dr2_existingsvms
-    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(dr2_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|.
+    expression: fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/svm/svms?cluster.name=$(dr2_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|.
       +=["$(svm)"]|. +=["$(dr1_svm)"]','','')
     hide: true
     group: DR2
@@ -1252,7 +1252,7 @@ fields:
           - true
   - type: expression
     name: dr2_availableip
-    label: dr2_avaialbleip
+    label: dr2_availableip
     hide: true
     runLocal: true
     expression: (($(dr2_iplist)).filter(x=>!~($(dr2_usedip)).indexOf(x)).slice(0,$(dr2_lifcount)).length<$(dr2_lifcount))?[]:($(dr2_iplist)).filter(x=>!~($(dr2_usedip)).indexOf(x)).slice(0,$(dr2_lifcount))
@@ -1280,11 +1280,11 @@ fields:
     label: IP/Port allocation status
     hide: false
     expression: ($(dr2_availableip)).length<$(dr2_lifcount)?'Not enough IP addresses
-      avaialble':($(dr2_selectedports)).length<$(dr2_lifcount)?'Not enought
+      available':($(dr2_selectedports)).length<$(dr2_lifcount)?'Not enought
       ports to host requested IP
       addresses':'$(dr2_cluster_peer)'==''&&'$(dr2_cluster)'!='$(dr2_source_cluster)'?'Cluster
       peer to $(dr2_source_cluster) is missing or not healthy':!(['prod','dr1','b2d1'].includes('$(dr2_source_copy)'))?'source cpoy can be only:prod,dr1,b2d1 currently:$(dr2_source_copy)':'IP, ports and
-      cluster peer requirements are satisfied, souce copy:$(dr2_source_copy)'
+      cluster peer requirements are satisfied, source copy:$(dr2_source_copy)'
     runLocal: true
     noOutput: true
     regex:
@@ -1335,7 +1335,7 @@ fields:
   - type: query
     name: b2d2_cluster_list
     label: Select cluster
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/cluste\
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/cluste\
       r/clusters$(b2d2_cluster_filter)','','AIQUM','def
       gb:tostring|[while(length>0;.[:-3])|.[-3:]]|reverse|join(\",\")+\"GB\";def
       roundit: .*100.0 +
@@ -1436,7 +1436,7 @@ fields:
   - type: expression
     name: b2d2_existingsvms
     label: b2d2_existingsvms
-    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(b2d2_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|.
+    expression: fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/svm/svms?cluster.name=$(b2d2_cluster)&max_records=1000','','AIQUM','[.records[]|.name]|.
       +=["$(svm)"]|. +=["$(dr1_svm)"]|. +=["$(dr2_svm)"]|.
       +=["$(b2d1_svm)"]','','')
     hide: true
@@ -1584,7 +1584,7 @@ fields:
           - true
   - type: expression
     name: b2d2_availableip
-    label: b2d2_avaialbleip
+    label: b2d2_availableip
     hide: true
     runLocal: true
     expression: (($(b2d2_iplist)).filter(x=>!~($(b2d2_usedip)).indexOf(x)).slice(0,$(b2d2_lifcount)).length<$(b2d2_lifcount))?[]:($(b2d2_iplist)).filter(x=>!~($(b2d2_usedip)).indexOf(x)).slice(0,$(b2d2_lifcount))
@@ -1611,11 +1611,11 @@ fields:
     label: IP/Port allocation status
     hide: false
     expression: ($(b2d2_availableip)).length<$(b2d2_lifcount)?'Not enough IP
-      addresses avaialble':($(b2d2_selectedports)).length<$(b2d2_lifcount)?'Not
+      addresses available':($(b2d2_selectedports)).length<$(b2d2_lifcount)?'Not
       enought ports to host requested IP
       addresses':'$(b2d2_cluster_peer)'==''&&'$(b2d2_cluster)'!='$(b2d2_source_cluster)'?'Cluster
       peer to $(b2d2_source_cluster) is missing or not healthy':!(['prod','dr1','b2d1','dr2'].includes('$(b2d2_source_copy)'))?'source cpoy can be only:prod,dr1,b2d1,dr2 currently:$(b2d2_source_copy)':'IP, ports and
-      cluster peer requirements are satisfied, souce copy:$(b2d2_source_copy)'
+      cluster peer requirements are satisfied, source copy:$(b2d2_source_copy)'
     runLocal: true
     noOutput: true
     regex:

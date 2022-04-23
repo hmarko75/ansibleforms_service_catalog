@@ -34,7 +34,7 @@ services:
     # Only start after MySql
     depends_on:
       - mysqldb
-    image: ansibleguy/ansibleforms:latest
+    image: ansibleguy/ansibleforms:beta
     restart: unless-stopped
     ports:
       # Mount host port to docker internal port

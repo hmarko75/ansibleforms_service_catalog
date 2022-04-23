@@ -141,17 +141,17 @@ fields:
     hide: false
     expression: "$(prod_svm_count)>1?'Containing SVM is configured for more than one
       service':$(prod_svm_count)<1?'Containing SVM is not configured for a
-      service': '<p style=\"color:green;\">SERVICE:&nbsp</p> $(service) &nbsp;<p
-      style=\"color:green;\">COMPANY:&nbsp</p>$(company)&nbsp; <p
-      style=\"color:green;\">ENVIRONMENT:&nbsp</p>$(environment)&nbsp;<p
-      style=\"color:green;\">LOCATION:&nbsp</p>$(location)'"
+      service': '<p class=\"has-text-success\">SERVICE:&nbsp</p> $(service) &nbsp;<p
+      class=\"has-text-success\">COMPANY:&nbsp</p>$(company)&nbsp; <p
+      class=\"has-text-success\">ENVIRONMENT:&nbsp</p>$(environment)&nbsp;<p
+      class=\"has-text-success\">LOCATION:&nbsp</p>$(location)'"
     runLocal: true
     noOutput: true
     isHtml: true
   - type: expression
     name: volume_comment
     label: volume_comment
-    expression: fn.fnRestBasic('get','https://'+'$(cluster)'+'/api/storage/volumes?fields=comment&svm.name=$(svm)&name=$(volname)','','ONTAP','.records[]|.comment','','')
+    expression: fn.fnRestBasic('get','https://$(cluster)/api/storage/volumes?fields=comment&svm.name=$(svm)&name=$(volname)','','ONTAP','.records[]|.comment','','')
     hide: true
   - type: expression
     name: cr
@@ -193,12 +193,12 @@ fields:
     label: Volume Informaton
     hide: false
     expression: "('$(volume_comment)').includes('CR:')? 
-                  '<p style=\"color:green;\">Change Request:&nbsp</p> $(cr) &nbsp;
-                  <p style=\"color:green;\">Application:&nbsp</p>$(application)&nbsp; 
-                  <p style=\"color:green;\">Used For:&nbsp</p>$(used_for)&nbsp;
-                  <p style=\"color:green;\">Owner:&nbsp</p>$(owner)&nbsp;
-                  <p style=\"color:green;\">Comment:&nbsp</p>$(comment)':
-                  'Information is not avaialble'"
+                  '<p class=\"has-text-success\">Change Request:&nbsp</p> $(cr) &nbsp;
+                  <p class=\"has-text-success\">Application:&nbsp</p>$(application)&nbsp; 
+                  <p class=\"has-text-success\">Used For:&nbsp</p>$(used_for)&nbsp;
+                  <p class=\"has-text-success\">Owner:&nbsp</p>$(owner)&nbsp;
+                  <p class=\"has-text-success\">Comment:&nbsp</p>$(comment)':
+                  'Information is not available'"
     runLocal: true
     noOutput: true
     isHtml: true
@@ -415,12 +415,12 @@ fields:
     label: DR1
     hide: false
     expression: "'$(dr1_volname)'==''?'could not identify dr1 volume': '<p
-      style=\"color:green;\">SOURCE:&nbsp</p>$(dr1_source_copy)&nbsp;<p
-      style=\"color:green;\">CLUSTER:&nbsp</p>$(dr1_cluster)&nbsp; <p
-      style=\"color:green;\">SVM:&nbsp</p>$(dr1_svm)&nbsp;<p
-      style=\"color:green;\">VOLUME:&nbsp</p>$(dr1_volname)&nbsp; <p
-      style=\"color:green;\">STATE:&nbsp</p>$(dr1_mirror_state)&nbsp; <p
-      style=\"color:green;\">HEALTHY:&nbsp</p>$(dr1_mirror_health)&nbsp;'"
+      class=\"has-text-success\">SOURCE:&nbsp</p>$(dr1_source_copy)&nbsp;<p
+      class=\"has-text-success\">CLUSTER:&nbsp</p>$(dr1_cluster)&nbsp; <p
+      class=\"has-text-success\">SVM:&nbsp</p>$(dr1_svm)&nbsp;<p
+      class=\"has-text-success\">VOLUME:&nbsp</p>$(dr1_volname)&nbsp; <p
+      class=\"has-text-success\">STATE:&nbsp</p>$(dr1_mirror_state)&nbsp; <p
+      class=\"has-text-success\">HEALTHY:&nbsp</p>$(dr1_mirror_health)&nbsp;'"
     runLocal: true
     noOutput: true
     isHtml: true
@@ -580,12 +580,12 @@ fields:
     label: B2D1
     hide: false
     expression: "'$(b2d1_volname)'==''?'could not identify b2d1 volume': '<p
-      style=\"color:green;\">SOURCE:&nbsp</p>$(b2d1_source_copy)&nbsp;<p
-      style=\"color:green;\">CLUSTER:&nbsp</p>$(b2d1_cluster)&nbsp; <p
-      style=\"color:green;\">SVM:&nbsp</p>$(b2d1_svm)&nbsp;<p
-      style=\"color:green;\">VOLUME:&nbsp</p>$(b2d1_volname)&nbsp; <p
-      style=\"color:green;\">STATE:&nbsp</p>$(b2d1_mirror_state)&nbsp; <p
-      style=\"color:green;\">HEALTHY:&nbsp</p>$(b2d1_mirror_health)&nbsp;'"
+      class=\"has-text-success\">SOURCE:&nbsp</p>$(b2d1_source_copy)&nbsp;<p
+      class=\"has-text-success\">CLUSTER:&nbsp</p>$(b2d1_cluster)&nbsp; <p
+      class=\"has-text-success\">SVM:&nbsp</p>$(b2d1_svm)&nbsp;<p
+      class=\"has-text-success\">VOLUME:&nbsp</p>$(b2d1_volname)&nbsp; <p
+      class=\"has-text-success\">STATE:&nbsp</p>$(b2d1_mirror_state)&nbsp; <p
+      class=\"has-text-success\">HEALTHY:&nbsp</p>$(b2d1_mirror_health)&nbsp;'"
     runLocal: true
     noOutput: true
     isHtml: true
@@ -746,12 +746,12 @@ fields:
     label: DR2
     hide: false
     expression: "'$(dr2_volname)'==''?'could not identify dr2 volume': '<p
-      style=\"color:green;\">SOURCE:&nbsp</p>$(dr2_source_copy)&nbsp;<p
-      style=\"color:green;\">CLUSTER:&nbsp</p>$(dr2_cluster)&nbsp; <p
-      style=\"color:green;\">SVM:&nbsp</p>$(dr2_svm)&nbsp;<p
-      style=\"color:green;\">VOLUME:&nbsp</p>$(dr2_volname)&nbsp; <p
-      style=\"color:green;\">STATE:&nbsp</p>$(dr2_mirror_state)&nbsp; <p
-      style=\"color:green;\">HEALTHY:&nbsp</p>$(dr2_mirror_health)&nbsp;'"
+      class=\"has-text-success\">SOURCE:&nbsp</p>$(dr2_source_copy)&nbsp;<p
+      class=\"has-text-success\">CLUSTER:&nbsp</p>$(dr2_cluster)&nbsp; <p
+      class=\"has-text-success\">SVM:&nbsp</p>$(dr2_svm)&nbsp;<p
+      class=\"has-text-success\">VOLUME:&nbsp</p>$(dr2_volname)&nbsp; <p
+      class=\"has-text-success\">STATE:&nbsp</p>$(dr2_mirror_state)&nbsp; <p
+      class=\"has-text-success\">HEALTHY:&nbsp</p>$(dr2_mirror_health)&nbsp;'"
     runLocal: true
     noOutput: true
     isHtml: true
@@ -919,12 +919,12 @@ fields:
     label: B2D2
     hide: false
     expression: "'$(b2d2_volname)'==''?'could not identify b2d2 volume': '<p
-      style=\"color:green;\">SOURCE:&nbsp</p>$(b2d2_source_copy)&nbsp;<p
-      style=\"color:green;\">CLUSTER:&nbsp</p>$(b2d2_cluster)&nbsp; <p
-      style=\"color:green;\">SVM:&nbsp</p>$(b2d2_svm)&nbsp;<p
-      style=\"color:green;\">VOLUME:&nbsp</p>$(b2d2_volname)&nbsp; <p
-      style=\"color:green;\">STATE:&nbsp</p>$(b2d2_mirror_state)&nbsp; <p
-      style=\"color:green;\">HEALTHY:&nbsp</p>$(b2d2_mirror_health)&nbsp;'"
+      class=\"has-text-success\">SOURCE:&nbsp</p>$(b2d2_source_copy)&nbsp;<p
+      class=\"has-text-success\">CLUSTER:&nbsp</p>$(b2d2_cluster)&nbsp; <p
+      class=\"has-text-success\">SVM:&nbsp</p>$(b2d2_svm)&nbsp;<p
+      class=\"has-text-success\">VOLUME:&nbsp</p>$(b2d2_volname)&nbsp; <p
+      class=\"has-text-success\">STATE:&nbsp</p>$(b2d2_mirror_state)&nbsp; <p
+      class=\"has-text-success\">HEALTHY:&nbsp</p>$(b2d2_mirror_health)&nbsp;'"
     runLocal: true
     noOutput: true
     isHtml: true

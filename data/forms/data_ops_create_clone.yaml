@@ -140,7 +140,7 @@
   - type: query
     name: clonesvm
     label: Clone SVM
-    expression: "fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/svm/svms?cluster.name=$(cluster)','','AIQUM','[{\"Name\":  \"$(svm)\"}]+([.records[]|{Name: .name}]|map(select(.Name != \"$(svm)\")))','','')"
+    expression: "fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/svm/svms?cluster.name=$(cluster)','','AIQUM','[{\"Name\":  \"$(svm)\"}]+([.records[]|{Name: .name}]|map(select(.Name != \"$(svm)\")))','','')"
     columns:
       - Name
     required: true
@@ -155,7 +155,7 @@
   - type: expression
     name: existingvols
     label: existingvols
-    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/volumes?cluster.name=$(cluster)&svm.name=$(clonesvm)&max_records=1000','','AIQUM','[.records[]|.name]','','')
+    expression: fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storage/volumes?cluster.name=$(cluster)&svm.name=$(clonesvm)&max_records=1000','','AIQUM','[.records[]|.name]','','')
     hide: true
     noOutput: true
     group: Clone
@@ -465,7 +465,7 @@
   - type: expression
     name: replication_existingvols
     label: existingvols
-    expression: fn.fnRestBasic('get','https://'+'$(aiqum)'+'/api/datacenter/storage/volumes?cluster.name=$(replication_cluster)&svm.name=$(replication_svm)&max_records=1000','','AIQUM','[.records[]|.name]','','')
+    expression: fn.fnRestBasic('get','https://$(aiqum)/api/datacenter/storage/volumes?cluster.name=$(replication_cluster)&svm.name=$(replication_svm)&max_records=1000','','AIQUM','[.records[]|.name]','','')
     hide: true
     noOutput: true
     group: Clone protection
