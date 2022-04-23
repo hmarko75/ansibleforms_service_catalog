@@ -1,0 +1,21 @@
+
+aiqum: aiqum.demo.netapp.com
+dataopshost: host.docker.internal
+dataopscli: /root/ansibleforms-docker/data/dataops/netapp_dataops_cli
+default:
+  snapshotpolicy: koko
+  schedule: hourly
+  mirrorpolicy: MirrorAllSnapshots
+snapshot_policies:
+  - name: daily
+    keep: 5d
+    snapmirror_label: daily
+    prefix: daily_data_ops_
+  - name: weekly
+    keep: 100d
+    snapmirror_label: weekly 
+    prefix: weekly_data_ops_
+  - name: monthly
+    keep: 365d
+    snapmirror_label: monthly     
+    prefix: monthly_data_ops_
