@@ -7,6 +7,10 @@ default:
   schedule: hourly
   mirrorpolicy: MirrorAllSnapshots
 snapshot_policies:
+  - name: sapdaily
+    keep: 2
+    snapmirror_label: daily
+    prefix: sap
   - name: daily
     keep: 5d
     snapmirror_label: daily
