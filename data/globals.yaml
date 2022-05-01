@@ -83,6 +83,9 @@ services:
                             bru-cluster_svm1:
                                 cluster: tlv-cluster
                                 svm: svm1_backup
+                            bru-cluster_vmware:
+                                cluster: tlv-cluster
+                                svm: vmware_backup
                             tlv-cluster_maya:
                                 cluster: tlv-cluster
                                 svm: mayab2d
@@ -126,6 +129,7 @@ services:
                             - ansible
                             - cifs
                             - svm1
+                            - vmware
                             tlv-cluster:
                             - maya
                         efficiency:

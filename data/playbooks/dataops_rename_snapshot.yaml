@@ -1,0 +1,13 @@
+---
+- name: rename snapshot
+  hosts: "{{ general.dataopshost }}"
+  become: no 
+  gather_facts: no
+  tasks:
+  - name: rename snapshot  
+    command: "{{ general.dataopscli }} rename snapshot --cluster-name={{ cluster }} --svm={{ svm }} --volume={{ volname }} --name={{ snapshot }} --new-name={{ newsnapshot }}"
+    register: out
+  - debug: var=out.stdout_lines
+  - debug: var=out.stderr_lines  
+
+

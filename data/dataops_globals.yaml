@@ -11,6 +11,10 @@ snapshot_policies:
     keep: 2
     snapmirror_label: daily
     prefix: sap
+  - name: koko
+    keep: 2
+    snapmirror_label: daily
+    prefix: sap    
   - name: daily
     keep: 5d
     snapmirror_label: daily
