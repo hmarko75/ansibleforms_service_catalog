@@ -623,7 +623,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                 output = response.http_response.json()
                 newmsid = output['records'][0]['msid']
                 #change msid 
-                print("Changin MSID of clone to orginal MSID:"+str(oldmsid)+" .")
+                print("Changing MSID of clone to original MSID:"+str(oldmsid)+" .")
                 response = NetAppCLI().execute("debug vserverdr restamp-volume-msid",body={"vserver":targetsvm,"volume":new_volume_name,"msid": str(newmsid),"new_msid": str(oldmsid)}, privilege_level='diagnostic',poll=True)
         except:
             print("Error: could not change new clone msid")
