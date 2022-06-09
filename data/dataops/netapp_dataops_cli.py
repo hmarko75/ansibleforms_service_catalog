@@ -113,11 +113,13 @@ Optional Options/Arguments:
 \t-x, --readonly\t\t Read-only option for mounting volumes locally.
 \t-j, --junction\t\t Specify a custom junction path for the volume to be exported at.
 \t-e, --export-hosts\t colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
-\t-e, --export-policy\t export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
-\t-d, --snapshot-policy\t snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
+\t-p, --export-policy\t export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
+\t-i, --snapshot-policy\t snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
+\t-o, --igroup\t map luns in clone the the provided igroup
 \t-s, --split\t\t start clone split after creation
 \t-r, --refresh\t\t delete existing clone if exists before creating a new one 
 \t-a, --preserve-msid\t when refreshing clone preserve the original clone msid (can help nfs remount)
+\t-q, --preserve-lun-maps when refreshing clone preserve the original clone lun mapping, lun-id and serial number
 \t-d, --svm-dr-unprotect\t disable svm dr protection if svm-dr protection exists 
 
 Examples (basic usage):
@@ -774,13 +776,15 @@ if __name__ == '__main__':
             refresh = False
             exportPolicy = None
             snapshotPolicy = None
+            igroup = None
             exportHosts = None
             svmDrUnprotect = False
             preserveMSID = False
+            preserveLUNMaps = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:l:g:j:xe:p:i:srda", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","snapshot-policy=","split","refresh","preserve-msid","svm-dr-unprotect"])
+                opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:l:g:j:xe:p:i:o:srdaq", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","snapshot-policy=","igroup=","split","refresh","preserve-msid","preserve-lun-maps","svm-dr-unprotect"])
             except Exception as err:                
                 print(err)
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
@@ -819,11 +823,15 @@ if __name__ == '__main__':
                 elif opt in ("-d", "--svm-dr-unprotect"):
                     svmDrUnprotect = True                
                 elif opt in ("-a", "--preserve-msid"):
-                    preserveMSID = True                         
+                    preserveMSID = True 
+                elif opt in ("-q", "--preserve-lun-maps"):
+                    preserveLUNMaps = True                                              
                 elif opt in ("-p", "--export-policy"):
                     exportPolicy = arg    
                 elif opt in ("-i", "--snapshot-policy"):
-                    snapshotPolicy = arg                     
+                    snapshotPolicy = arg  
+                elif opt in ("-o", "--igroup"):
+                    igroup = arg                                        
                 elif opt in ("-e", "--export-hosts"):
                     exportHosts = arg                                                        
 
@@ -837,15 +845,22 @@ if __name__ == '__main__':
                 print("Error: cannot use both --export-policy and --export-hosts. only one of them can be specified.")
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
             if preserveMSID and not refresh:
-                print("Error: cannot use both --preserve-msid without --refresh.")
+                print("Error: cannot use --preserve-msid without --refresh.")
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
+            if preserveLUNMaps and not refresh:
+                print("Error: cannot use --preserve-lun-map without --refresh.")
+                handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
+            if preserveLUNMaps and igroup:
+                print("Error: cannot use both --preserve-lun-map and --igroup.")
+                handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
+
 
             # Clone volume
             try:
                 clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName, 
                              cluster_name=clusterName, source_svm=sourceSVM, target_svm=targetSVM, export_policy=exportPolicy, export_hosts=exportHosts, 
                              snapshot_policy=snapshotPolicy, split=split, refresh=refresh, preserve_msid=preserveMSID, mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, 
-                             junction=junction, svm_dr_unprotect=svmDrUnprotect, readonly=readonly, print_output=True)
+                             junction=junction, svm_dr_unprotect=svmDrUnprotect, igroup=igroup, preserve_lun_maps=preserveLUNMaps, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError,
                     MountOperationError):
                 sys.exit(1)
