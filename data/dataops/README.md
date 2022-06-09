@@ -149,9 +149,8 @@ Optional Options/Arguments:
         -i, --snapshot-policy    snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
         -o, --igroup             map luns in clone the the provided igroup
         -s, --split              start clone split after creation
-        -r, --refresh            delete existing clone if exists before creating a new one
+        -r, --refresh            delete existing clone if exists before creating a new one, lun maps and serial numbers will be preserved if oroginal clone contains maped luns
         -a, --preserve-msid      when refreshing clone preserve the original clone msid (can help nfs remount)
-        -q, --preserve-lun-maps when refreshing clone preserve the original clone lun mapping, lun-id and serial number
         -d, --svm-dr-unprotect   disable svm dr protection if svm-dr protection exists
 
 Examples (basic usage):

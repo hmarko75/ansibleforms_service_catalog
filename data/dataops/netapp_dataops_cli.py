@@ -107,7 +107,7 @@ Optional Options/Arguments:
 \t-g, --gid=\t\t Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
 \t-h, --help\t\t Print help text.
 \t-m, --mountpoint=\t Local mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
-\t-s, --source-snapshot=\tName of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
+\t-s, --source-snapshot=\t Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
 \t\t\t\twhen snapshot name suffixed with * the latest snapshot will be used (hourly* will use the latest snapshot prefixed with hourly )
 \t-u, --uid=\t\t Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
 \t-x, --readonly\t\t Read-only option for mounting volumes locally.
@@ -115,11 +115,10 @@ Optional Options/Arguments:
 \t-e, --export-hosts\t colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
 \t-p, --export-policy\t export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
 \t-i, --snapshot-policy\t snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
-\t-o, --igroup\t map luns in clone the the provided igroup
+\t-o, --igroup\t\t map luns in clone the the provided igroup
 \t-s, --split\t\t start clone split after creation
-\t-r, --refresh\t\t delete existing clone if exists before creating a new one 
+\t-r, --refresh\t\t delete existing clone if exists before creating a new one, lun maps and serial numbers will be preserved if oroginal clone contains maped luns 
 \t-a, --preserve-msid\t when refreshing clone preserve the original clone msid (can help nfs remount)
-\t-q, --preserve-lun-maps when refreshing clone preserve the original clone lun mapping, lun-id and serial number
 \t-d, --svm-dr-unprotect\t disable svm dr protection if svm-dr protection exists 
 
 Examples (basic usage):
@@ -780,7 +779,7 @@ if __name__ == '__main__':
             exportHosts = None
             svmDrUnprotect = False
             preserveMSID = False
-            preserveLUNMaps = False
+            preserveLUNMaps = True
 
             # Get command line options
             try:
@@ -847,12 +846,14 @@ if __name__ == '__main__':
             if preserveMSID and not refresh:
                 print("Error: cannot use --preserve-msid without --refresh.")
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
-            if preserveLUNMaps and not refresh:
-                print("Error: cannot use --preserve-lun-map without --refresh.")
-                handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
-            if preserveLUNMaps and igroup:
-                print("Error: cannot use both --preserve-lun-map and --igroup.")
-                handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
+            if not refresh:
+                preserveLUNMaps = False
+                #print("Error: cannot use --preserve-lun-map without --refresh.")
+                #handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
+            if igroup:
+                preserveLUNMaps = False
+                # print("Error: cannot use both --preserve-lun-map and --igroup.")
+                # handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
 
             # Clone volume

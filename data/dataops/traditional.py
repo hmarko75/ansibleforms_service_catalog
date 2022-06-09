@@ -676,6 +676,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                                 lunobj.svm = {'name': targetsvm}
                                 lunobj.igroup = {'name': lunmap.igroup.name}
                                 lunobj.logical_unit_number = lunmap.logical_unit_number
+                                lunobj.logical_unit_number = 10
                                 lunobj.post(poll=True, poll_timeout=120)
                                 
                                 
@@ -683,8 +684,9 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                         else:
                             print("Origianl LUN '"+lun.name+"' was not mapped")
 
-        except:
-                print("Error: could not restore LUN configuration existing luns")
+        except Exception as err:
+                print("Error: could not restore LUN configuration existing luns:")
+                print(err)
                 raise InvalidVolumeParameterError("name") 
 
         #map lun to provided igroup 
@@ -701,7 +703,8 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                     lunobj.post(poll=True, poll_timeout=120)
 
         except Exception as err:
-                print("Error: could not map LUNs "+err)
+                print("Error: could not map LUNs:")
+                print(err)
                 raise InvalidVolumeParameterError("name")                           
 
         #if need to set old msid
