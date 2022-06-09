@@ -676,7 +676,6 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                                 lunobj.svm = {'name': targetsvm}
                                 lunobj.igroup = {'name': lunmap.igroup.name}
                                 lunobj.logical_unit_number = lunmap.logical_unit_number
-                                lunobj.logical_unit_number = 10
                                 lunobj.post(poll=True, poll_timeout=120)
                                 
                                 
