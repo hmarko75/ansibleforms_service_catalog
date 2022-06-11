@@ -1053,7 +1053,9 @@ def clone_volume(
     mountpoint: str = None,                # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
     junction: str= None,                   # Custom junction path for volume to be exported at. If not specified, junction path will be: ("/"+Volume Name).
     readonly: bool = False,                # Option to mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
-    refresh: bool = False,                 # when true a previous clone using this name will be deleted prior to the new clone creation
+    refresh: bool = False,                 # delete existing clone if exists before creating a new one
+    preserve_lun_maps: bool = False,       # lun maps and serial numbers will be preserved if original clone contains mapped luns
+    igroup: str = None,                    # map luns in clone to the provided igroup
     preserver_msid: bool = False,          # when refreshing clone preserve the original clone msid (can help nfs remount)
     svm_dr_unprotect: bool = False,        # mark the clone created to be excluded from svm-dr replication when onfigured on the clone svm 
     print_output: bool = False             # print log to the console

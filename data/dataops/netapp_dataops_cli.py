@@ -115,9 +115,9 @@ Optional Options/Arguments:
 \t-e, --export-hosts\t colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
 \t-p, --export-policy\t export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
 \t-i, --snapshot-policy\t snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
-\t-o, --igroup\t\t map luns in clone the the provided igroup
+\t-o, --igroup\t\t map luns in cloned volume the the provided igroup
 \t-s, --split\t\t start clone split after creation
-\t-r, --refresh\t\t delete existing clone if exists before creating a new one, lun maps and serial numbers will be preserved if oroginal clone contains maped luns 
+\t-r, --refresh\t\t delete existing clone if exists before creating a new one, lun maps and serial numbers will be preserved if original clone contains mapped luns 
 \t-a, --preserve-msid\t when refreshing clone preserve the original clone msid (can help nfs remount)
 \t-d, --svm-dr-unprotect\t disable svm dr protection if svm-dr protection exists 
 
