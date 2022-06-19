@@ -16,6 +16,7 @@ from netapp_dataops.traditional import (
     InvalidVolumeParameterError,
     InvalidSnapMirrorParameterError,
     InvalidSnapshotParameterError,
+    InvalidSnapCenterParameterError,
     APIConnectionError,
     mount_volume,
     unmount_volume,
@@ -36,11 +37,13 @@ from netapp_dataops.traditional import (
     pull_object_from_s3,
     push_directory_to_s3,
     push_file_to_s3,
+    backup_oracle_sc,
     restore_snapshot,
     CloudSyncSyncOperationError,
     sync_cloud_sync_relationship,
     sync_snap_mirror_relationship,
-    SnapMirrorSyncOperationError
+    SnapMirrorSyncOperationError,
+    SnapCenterOperationError
 )
 
 
@@ -72,6 +75,11 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tdelete snapshot\t\t\tDelete an existing snapshot for a data volume.
 \tlist snapshots\t\t\tList all snapshots for a data volume.
 \trestore snapshot\t\tRestore a snapshot for a data volume (restore the volume to its exact state at the time that the snapshot was created).
+
+Snap Center Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+
+\toracle-backup snapcenter\t\t\tCreate a new oracle backup using snapcenter oracle plugin
 
 Data Fabric Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -275,6 +283,26 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_cli.py unmount volume --mountpoint=/project2
 \tnetapp_dataops_cli.py unmount volume -m /project2
+'''
+
+helpTextBackupOracle = '''
+Command: backup-oracle snapcenter
+
+create oracle backup using snapscenter resource-group and policy.
+
+Required Options/Arguments:
+\t-i, --instance=\tName of the oracle instance
+\t-s, --host=\tName of the oracle host (sc plugin name)
+\t-p, --policy=\tName of the snapcenter policy to use when running backup
+
+Optional Options/Arguments:
+\t-w, --wait\tWait for completion
+\t-h, --help\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py oracle-backup snapcenter --instance=ORCLCDB --host=ora1.demo.netapp.com --policy=ORACLE_DAILY
+\tnetapp_dataops_cli.py oracle-backup snapcenter --instance=ORCLCDB --host=ora1.demo.netapp.com --policy=ORACLE_DAILY -w
+
 '''
 
 helpTextListCloudSyncRelationships = '''
@@ -648,6 +676,32 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
     else:
         raise ConnectionTypeError()
 
+    
+    # Ask user if they want to Snap Center connectivity 
+    # Verify value entered; prompt user to re-enter if invalid
+    while True:
+        useSnapCenter = input("Do you intend to use this toolkit to trigger Snap Center operations? (yes/no): ")
+
+        if useSnapCenter in ("yes", "Yes", "YES"):
+
+            config["scserver"] = 'https://'+input("Enter Snap Center server name (API access is https://servername:8146): ")+':8146'
+            config["scusername"] = input("Enter Snap Center user name: ")
+            scPassword = getpass("Enter Snap Center user password: ")
+
+            # Convert password to base64 enconding
+            scPasswordBytes = scPassword.encode("ascii")
+            scPasswordnBase64Bytes = base64.b64encode(scPasswordBytes)
+            config["scpassword"] = scPasswordnBase64Bytes.decode("ascii")
+
+            break
+
+        elif useCloudSync in ("no", "No", "NO"):
+            break
+
+        else:
+            print("Invalid value. Must enter 'yes' or 'no'.")
+
+    
     # Ask user if they want to use cloud sync functionality
     # Verify value entered; prompt user to re-enter if invalid
     while True:
@@ -1232,6 +1286,47 @@ if __name__ == '__main__':
 
     elif action in ("help", "h", "-h", "--help"):
         print(helpTextStandard)
+    
+    elif action in ("oracle-backup","oracle-bck","sco-backup","sco-bck"):
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+
+        # Invoke desired action based on target
+        if target in ("snapcenter", "sc") :
+            instance = None
+            host = None
+            policy = None 
+            wait = False
+
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hi:s:p:w", ["instance=","host=","policy=","wait","help"])
+            except Exception as err:                
+                print(err)
+                handleInvalidCommand(helpText=helpTextBackupOracle, invalidOptArg=True)    
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextBackupOracle)
+                    sys.exit(0)
+                elif opt in ("-i", "--instance"):
+                    instance = arg
+                elif opt in ("-s", "--host"):
+                    host = arg                    
+                elif opt in ("-p", "--policy"):
+                    policy = arg                     
+                elif opt in ("-w", "--wait"):
+                    wait = True                    
+            # Check for required options
+
+            if not instance or not policy or not host:
+                handleInvalidCommand(helpText=helpTextBackupOracle, invalidOptArg=True)
+
+            # Backup_oracle
+            try:
+                backup_oracle_sc(instance=instance, host=host, policy=policy, wait_until_complete=wait, print_output=True)
+            except (InvalidConfigError, APIConnectionError, InvalidSnapCenterParameterError,SnapCenterOperationError):
+                sys.exit(1)
 
     elif action in ("list", "ls"):
         # Get desired target from command line args

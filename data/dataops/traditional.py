@@ -34,6 +34,10 @@ from netapp_ontap.resources import Igroup as NetAppIgroup
 
 import pandas as pd
 import requests
+from urllib3.exceptions import InsecureRequestWarning
+from urllib3 import disable_warnings
+disable_warnings(InsecureRequestWarning)
+
 from tabulate import tabulate
 import yaml
 
@@ -95,6 +99,14 @@ class SnapMirrorSyncOperationError(Exception) :
 class APIConnectionError(Exception) :
     '''Error that will be raised when an API connection cannot be established'''
     pass
+
+class InvalidSnapCenterParameterError(Exception):
+    """Error that will be raised when an invalid snapcenter parameter is given"""
+    pass 
+
+class SnapCenterOperationError(Exception) :
+    """Error that will be raised when a Snap Center operation fails"""
+    pass       
 
 
 def _print_api_response(response: requests.Response):
@@ -259,6 +271,105 @@ def _retrieve_config(configDirPath: str = "~/.netapp_dataops", configFilename: s
             _print_invalid_config_error()
         raise InvalidConfigError()
     return config
+
+
+def _sc_api_call(token: str, endpoint: str, method: str ='GET', requestheaders: dict ={}, body: dict ={}, print_output: bool = False) -> hash:
+    # Retrieve SC API endpoint, username and password from config file
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+        
+    try:
+        scServer = config["scserver"]
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError() 
+
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Token": token
+    }
+    for requestheader in requestheaders.keys():
+        headers[requestheader] =  requestheaders[requestheader]
+
+    apiBase = '/api/4.6'
+    scURL = scServer+apiBase+endpoint
+    # if print_output:
+    #     print("Running sc api:"+scURL)
+
+    out = {}
+    out['response'] = requests.request(method,scURL, headers=headers, json=body, verify=False)
+
+    try:
+        out['body'] = json.loads(out['response'].content)
+    except:
+        out['body'] = {}
+
+    return out
+
+def _retrieve_sc_token(print_output: bool = False) -> str:
+    
+    # Retrieve SC API endpoint, username and password from config file
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+        
+    try:
+        scServer = config["scserver"]
+        scUsername = config["scusername"]
+        scPasswdBase64 = config["scpassword"]
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError() 
+    
+    scPasswdBase64Bytes = scPasswdBase64.encode("ascii")
+    scPasswdBytes = base64.b64decode(scPasswdBase64Bytes)
+    scPasswd = scPasswdBytes.decode("ascii")   
+
+    if (print_output):
+        print("Connecting to snapcenter: "+scServer)
+
+    scURL = scServer+"/api/4.6/auth/login?TokenNeverExpires=false"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+
+    body = {
+        "UserOperationContext": {
+            "User": {
+                "Name": scUsername,
+                "Passphrase": scPasswd,
+                "Rolename": "SnapCenterAdmin"
+            }
+        }
+    }
+
+    response = requests.post(scURL, headers=headers, json=body, verify=False)
+
+    # Check for API response status code of 200; if not 202, raise error
+    if response.status_code != 200:
+        errorMessage = "Error calling snap center API. "
+        if print_output:
+            print("Error:", errorMessage)
+            _print_api_response(response)
+        raise APIConnectionError(errorMessage, response)
+
+    responseBody = response.json()
+    try:        
+        scToken = responseBody['User']['Token']
+    except:
+        if print_output:
+            print("Error: token could not be retrived from snap center api endpoint.")
+        raise InvalidConfigError()
+    
+    return scToken
 
 
 def _retrieve_cloud_central_refresh_token(print_output: bool = False) -> str:
@@ -2107,6 +2218,120 @@ def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = N
 
     else:
         raise ConnectionTypeError()
+
+def backup_oracle_sc(instance: str, host: str, policy: str, wait_until_complete: bool = False, print_output: bool = True):
+    # Step 1: Obtain access token from snap center server
+    # Retrieve token
+    try:
+        scToken = _retrieve_sc_token(print_output=print_output)
+    except InvalidConfigError:
+        raise 
+
+    # Retrieve SC API endpoint, username and password from config file
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+        
+    try:
+        scServer = config["scserver"]
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()         
+
+    hostDetails = _sc_api_call(scToken, '/hosts/'+host, print_output=print_output)
+    if not hostDetails['response'].ok: 
+        if print_output:
+            print("Error: snapcenter host not found: "+host)
+        raise SnapCenterOperationError("Host not found")
+
+    hostResources = _sc_api_call(scToken, '/hosts/'+host+'/plugins/SCO/resources?ResourceType=Database', print_output=print_output)
+    if not hostResources['response'].ok: 
+        if print_output:
+            print("Error: cannot retirve SCO plugin database resources for host: "+host)
+        raise SnapCenterOperationError("Resource not found")
+    
+    resourceInfo = None
+    for resource in hostResources['body']['Resources']:
+        if 'OperationResults' in resource:
+            for operationResult in resource['OperationResults']:
+                if 'Target' in operationResult:
+                    if 'DbUniqueName' in operationResult['Target']:
+                        if operationResult['Target']['DbUniqueName'].lower() == instance.lower():
+                            resourceInfo = operationResult['Target']
+                            break
+    
+    if not resourceInfo:
+        if print_output:
+            print("Error: instance: "+instance+" cannot be found on host: "+host)
+        raise SnapCenterOperationError()            
+
+    policyInfo = _sc_api_call(scToken, '/policies/'+policy, print_output=print_output)
+    if not policyInfo['response'].ok: 
+        if print_output:
+            print("Error: cannot find policy: "+policy)
+        raise SnapCenterOperationError()    
+  
+    startSCOBackup = _sc_api_call(scToken, '/plugins/SCO/resources/'+str(resourceInfo['Key'])+'/backup', method='post',body={'name': policy}, print_output=print_output)
+    if not startSCOBackup['response'].ok: 
+        if print_output:
+            print("Error: cannot not start backup job, check snap center job monitor for more information")
+        raise SnapCenterOperationError()
+
+    jobs = _sc_api_call(scToken, '/jobs', print_output=print_output)
+    if not jobs['response'].ok: 
+        if print_output:
+            print("Error: cannot retirvie list of jobs from snap center")
+        raise SnapCenterOperationError() 
+
+    jobID = jobs['body']['Results'][0]['Id']
+    jobName = jobs['body']['Results'][0]['Name']
+
+    if print_output:
+        print("Job: "+jobName+" Job ID: "+str(jobID)+" started")
+        print("Extended job logs can be found at: "+scServer+"/Logs?Job="+str(jobID))
+        
+    if wait_until_complete:
+        error = False 
+        while True: 
+            #get job status informaiton 
+            job = _sc_api_call(scToken, '/jobs/'+str(jobID), print_output=print_output)
+            if not job['response'].ok: 
+                if print_output:
+                    print("Error: cannot retriv job information from snap center")
+                raise SnapCenterOperationError() 
+            
+            jobStatus = job['body']['Results'][0]['Status']
+            jobError = job['body']['Results'][0]['Error']
+
+            #print(json.dumps(job['body']['Results'][0], indent=1, sort_keys=True))
+
+            #job is running 
+            if jobStatus == 0:
+                if print_output:
+                    print("Job is running")
+            #if job completed successfully 
+            elif jobStatus == 3:
+                if print_output:
+                    print("Backup job completed successfully ")
+                break
+            #job is cancled externaly 
+            elif jobStatus == 8: 
+                if print_output:
+                    print("Error: job been cancled ")
+                raise SnapCenterOperationError() 
+            #job failed with an error
+            elif jobStatus == 2:
+                if print_output:
+                    print("Error: job been failed with error: ")
+                    print(jobError)   
+                raise SnapCenterOperationError()                          
+
+            # Sleep for 10 seconds before checking progress again
+            time.sleep(10)
+        
+
 
 
 def sync_cloud_sync_relationship(relationship_id: str, wait_until_complete: bool = False, print_output: bool = False):
