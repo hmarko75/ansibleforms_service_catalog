@@ -38,6 +38,8 @@ from netapp_dataops.traditional import (
     push_directory_to_s3,
     push_file_to_s3,
     backup_oracle_sc,
+    mount_backup_sc,
+    clone_oracle_sc,
     restore_snapshot,
     CloudSyncSyncOperationError,
     sync_cloud_sync_relationship,
@@ -71,7 +73,7 @@ Snapshot Management Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
 \tcreate snapshot\t\t\tCreate a new snapshot for a data volume.
-\rename snapshot\t\t\tRename existing snapshot for a data volume.
+\trename snapshot\t\t\tRename existing snapshot for a data volume.
 \tdelete snapshot\t\t\tDelete an existing snapshot for a data volume.
 \tlist snapshots\t\t\tList all snapshots for a data volume.
 \trestore snapshot\t\tRestore a snapshot for a data volume (restore the volume to its exact state at the time that the snapshot was created).
@@ -79,7 +81,9 @@ Note: To view details regarding options/arguments for a specific command, run th
 Snap Center Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
-\toracle-backup snapcenter\t\t\tCreate a new oracle backup using snapcenter oracle plugin
+\tsnapcenter oracle-backup\tCreate a new oracle backup using snapcenter oracle plugin
+\tsnapcenter mount-backup\t\tMount snap center backup 
+\tsnapcenter oracle-clone\t\tCreate a new oracle clone using snapcenter oracle plugin
 
 Data Fabric Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -286,9 +290,9 @@ Examples:
 '''
 
 helpTextBackupOracle = '''
-Command: backup-oracle snapcenter
+Command: snapcenter backup-oracle 
 
-create oracle backup using snapscenter resource-group and policy.
+create oracle backup using snapscenter oracle resource and policy.
 
 Required Options/Arguments:
 \t-i, --instance=\tName of the oracle instance
@@ -300,9 +304,53 @@ Optional Options/Arguments:
 \t-h, --help\tPrint help text.
 
 Examples:
-\tnetapp_dataops_cli.py oracle-backup snapcenter --instance=ORCLCDB --host=ora1.demo.netapp.com --policy=ORACLE_DAILY
-\tnetapp_dataops_cli.py oracle-backup snapcenter --instance=ORCLCDB --host=ora1.demo.netapp.com --policy=ORACLE_DAILY -w
+\tnetapp_dataops_cli.py snapcenter oracle-backup --instance=ORCLCDB --host=ora1.demo.netapp.com --policy=ORACLE_DAILY
+\tnetapp_dataops_cli.py snapcenter oracle-backup --instance=ORCLCDB --host=ora1.demo.netapp.com --policy=ORACLE_DAILY -w
+'''
+helpTextMountOracle = '''
+Command: snapcenter mount-oracle-backup
 
+mount snapcenter backup
+
+Required Options/Arguments:
+\t-s, --host=\t\tName of the server hosting the instance
+\t-i, --instance=\t\tName of the oracle instance
+\t-b, --backup-name=\tName of the snap center backup to be mount. when not providing the _0 (data backup) and _1 (log backup) suffixes both will be mounted
+\t-p, --policy-name=\tUse last backup created using specific policy. both data and logs backup will be mounted (cannot be used together with --backup-name). 
+\t-d, --destination-host=\tName of the host to mount the backup on 
+
+Optional Options/Arguments:
+\t-w, --wait\tWait for completion
+\t-h, --help\tPrint help text.
+
+Examples:
+\t#to mount only data backup:
+\tnetapp_dataops_cli.py snapcenter mount-oracle-backup --host=ora1 --instance=ORCLCDB --backup-name=ora1_demo_netapp_com_ORCLCDB_ora1_07-03-2022_07.03.38.5883_0 --destination-host=ora2 -w
+\t#to mount only log backup
+\tnetapp_dataops_cli.py snapcenter mount-oracle-backup --host=ora1 --instance=ORCLCDB --backup-name=ora1_demo_netapp_com_ORCLCDB_ora1_07-03-2022_07.03.38.5883_1 --destination-host=ora2 -w
+\t#to mount last backup for policy ORACLE_DAILY:
+\tnetapp_dataops_cli.py snapcenter mount-oracle-backup --host=ora1 --instance=ORCLCDB --policy-name=ORACLE_DAILY --destination-host=ora2 -w
+'''
+
+helpTextCloneOracle = '''
+Command: snapcenter clone-oracle 
+
+create oracle clone using snapscenter resource-group and policy.
+
+Required Options/Arguments:
+\t-i, --instance=\tName of the oracle instance
+\t-s, --host=\tName of the oracle host (sc plugin name)
+\t-c, --cloneDatabaseSID=\tName of the oracle clone instance
+\t-t, --cloneToHost=\tName of the oracle host you want to clone to
+
+Optional Options/Arguments:
+\t-b, --backupName=\tName of the backup you want to clone from, else the last backup will be picked
+\t-w, --wait\tWait for completion
+\t-h, --help\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py snapcenter oracle-clone --instance=ORCLCDB --host=ora1.demo.netapp.com --cloneDatabaseSID=ORACLCL --cloneToHost=ora2.demo.netapp.com -w
+\tnetapp_dataops_cli.py snapcenter oracle-clone --instance=ORCLCDB --host=ora1.demo.netapp.com --cloneDatabaseSID=ORACLCL --cloneToHost=ora2.demo.netapp.com --backupName=ora1_demo_netapp_com_ORCLCDB_ora1_06-29-2022_04.09.12.1653_0
 '''
 
 helpTextListCloudSyncRelationships = '''
@@ -1287,12 +1335,12 @@ if __name__ == '__main__':
     elif action in ("help", "h", "-h", "--help"):
         print(helpTextStandard)
     
-    elif action in ("oracle-backup","oracle-bck","sco-backup","sco-bck"):
+    elif action in ("snapcenter", "sc"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
 
         # Invoke desired action based on target
-        if target in ("snapcenter", "sc") :
+        if target in ("oracle-backup","oracle-bck","sco-backup","sco-bck") :
             instance = None
             host = None
             policy = None 
@@ -1327,6 +1375,100 @@ if __name__ == '__main__':
                 backup_oracle_sc(instance=instance, host=host, policy=policy, wait_until_complete=wait, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapCenterParameterError,SnapCenterOperationError):
                 sys.exit(1)
+
+        # Invoke desired action based on target
+        elif target in ("mount-backup","mount") :
+            host = None
+            instance = None
+            backupName = None 
+            policyName = None
+            destinationHost = None 
+            wait = False
+
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hs:i:p:b:d:w", ["host=","instance=","backup-name=","policy-name=","destination-host=","wait","help"])
+            except Exception as err:                
+                print(err)
+                handleInvalidCommand(helpText=helpTextMountOracle, invalidOptArg=True)    
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextMountOracle)
+                    sys.exit(0)
+                elif opt in ("-s", "--host"):
+                    host = arg    
+                elif opt in ("-i", "--instance"):
+                    instance = arg
+                elif opt in ("-b", "--backup-name"):
+                    backupName = arg 
+                elif opt in ("-p", "--policy-name"):
+                    policyName = arg                     
+                elif opt in ("-d", "--destination-host"):
+                    destinationHost = arg                                          
+                elif opt in ("-w", "--wait"):
+                    wait = True                    
+            
+            # Check for required options
+            if (policyName and backupName) or (not policyName and not backupName):
+                print("Error: --backup-name or --policy-name should be provided")
+                handleInvalidCommand(helpText=helpTextMountOracle, invalidOptArg=True)
+
+            if not host or not instance or not destinationHost:
+                print("Error: mandatory arguments are missing")
+                handleInvalidCommand(helpText=helpTextMountOracle, invalidOptArg=True)
+
+            # Mount Snapcenter backup
+            try:
+                mount_backup_sc(host=host, instance=instance, backup_name=backupName, policy_name=policyName, destination_host=destinationHost, wait_until_complete=wait, print_output=True)
+            except (InvalidConfigError, APIConnectionError, InvalidSnapCenterParameterError,SnapCenterOperationError):
+                sys.exit(1)
+
+        # Invoke desired action based on target
+        elif target in ("oracle-clone","clone-oracle") :
+            instance = None
+            host = None
+            cloneDatabaseSID = None
+            cloneToHost = None
+            backupName = None
+            wait = False
+
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hi:s:c:b:w", ["instance=","host=","cloneToHost=","cloneDatabaseSID=","backupName=","wait","help"])
+            except Exception as err:                
+                print(err)
+                handleInvalidCommand(helpText=helpTextCloneOracle, invalidOptArg=True)    
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextCloneOracle)
+                    sys.exit(0)
+                elif opt in ("-i", "--instance"):
+                    instance = arg
+                elif opt in ("-s", "--host"):
+                    host = arg                    
+                elif opt in ("-c", "--cloneDatabaseSID"):
+                    cloneDatabaseSID = arg                
+                elif opt in ("-b", "--backupName"):
+                    backupName = arg                     
+                elif opt in ("-t", "--cloneToHost"):
+                    cloneToHost = arg                     
+                elif opt in ("-w", "--wait"):
+                    wait = True                    
+            # Check for required options
+
+            if not instance or not host or not cloneDatabaseSID or not cloneToHost:
+                handleInvalidCommand(helpText=helpTextCloneOracle, invalidOptArg=True)
+
+            # Clone_oracle
+            try:
+                clone_oracle_sc(instance=instance, host=host, cloneToHost=cloneToHost, cloneDatabaseSID=cloneDatabaseSID, backupName=backupName, wait_until_complete=wait, print_output=True)
+            except (InvalidConfigError, APIConnectionError, InvalidSnapCenterParameterError,SnapCenterOperationError):
+                sys.exit(1)
+
+        else:
+            handleInvalidCommand()
 
     elif action in ("list", "ls"):
         # Get desired target from command line args

@@ -38,6 +38,8 @@ from urllib3.exceptions import InsecureRequestWarning
 from urllib3 import disable_warnings
 disable_warnings(InsecureRequestWarning)
 
+import subprocess
+
 from tabulate import tabulate
 import yaml
 
@@ -271,6 +273,45 @@ def _retrieve_config(configDirPath: str = "~/.netapp_dataops", configFilename: s
             _print_invalid_config_error()
         raise InvalidConfigError()
     return config
+
+def _sccli_call (token: str, cmd: list = [], print_output: bool = False) -> str:
+
+    import os
+    import subprocess
+
+    spltokenfile = os.path.expanduser('~')+'/.spl_token_store'
+    scclipath = '/opt/NetApp/snapcenter/spl/bin/sccli'
+
+    hostname = 'host.docker.internal'
+
+    cmdarr =  ['ssh','-o','StrictHostKeyChecking=no',hostname,scclipath] + cmd
+  
+    tokenstring = 'Token='+token
+    try:
+        spltokenfilehandle = open(spltokenfile, "w")
+        spltokenfilehandle.write(tokenstring) 
+        #close file
+        spltokenfilehandle.close()
+    except InvalidConfigError:
+        if print_output:
+            print("cannot write token to:"+spltokenfile)        
+        raise
+
+    result = subprocess.run(cmdarr, capture_output=True)
+    output = {'returncode': result.returncode,
+              'stdout': result.stdout.decode('utf-8'),
+              'stderr': result.stderr.decode('utf-8')
+             }
+
+    matchObj = re.match(" jobId \'(\d+)\'",output['stdout'])
+    if matchObj:
+        output['jobid'] = matchObj.group(1) 
+
+    for line in result.stdout.decode('utf-8').splitlines():
+        if line.startswith("ERROR:"):
+            output['error'] = line
+    
+    return output
 
 
 def _sc_api_call(token: str, endpoint: str, method: str ='GET', requestheaders: dict ={}, body: dict ={}, print_output: bool = False) -> hash:
@@ -2219,6 +2260,143 @@ def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = N
     else:
         raise ConnectionTypeError()
 
+def mount_backup_sc(host: str, instance:str, backup_name: str, policy_name: str, destination_host: str, wait_until_complete: bool = False, print_output: bool = True):
+    # Obtain access token from snap center server
+    # Retrieve token
+    try:
+        scToken = _retrieve_sc_token(print_output=print_output)
+    except InvalidConfigError:
+        raise 
+  
+
+    # Retrieve SC API endpoint, username and password from config file
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+        
+    try:
+        scServer = config["scserver"]
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()         
+
+    hostDetails = _sc_api_call(scToken, '/hosts/'+host, print_output=print_output)
+    if not hostDetails['response'].ok: 
+        if print_output:
+            print("Error: snapcenter host not found: "+host)
+        raise SnapCenterOperationError("Host not found")
+    try:
+        host = hostDetails['body']['HostInfo']['Hosts'][0]['HostName']        
+    except:
+        raise SnapCenterOperationError("Cannot retrive hostname from host information for host:"+host)
+
+    hostDetails = _sc_api_call(scToken, '/hosts/'+destination_host, print_output=print_output)
+    if not hostDetails['response'].ok: 
+        if print_output:
+            print("Error: snapcenter destination host not found: "+destination_host)
+        raise SnapCenterOperationError("Host not found")
+    
+    try:
+        destination_host = hostDetails['body']['HostInfo']['Hosts'][0]['HostName']
+    except:
+        raise SnapCenterOperationError("Cannot retrive hostname from host information for host:"+destination_host)    
+
+    hostResources = _sc_api_call(scToken, '/hosts/'+host+'/plugins/SCO/resources?ResourceType=Database', print_output=print_output)
+    if not hostResources['response'].ok: 
+        if print_output:
+            print("Error: cannot retirve SCO plugin database resources for host: "+host)
+        raise SnapCenterOperationError("Resource not found")
+    
+    resourceInfo = None
+    for resource in hostResources['body']['Resources']:
+        if 'OperationResults' in resource:
+            for operationResult in resource['OperationResults']:
+                if 'Target' in operationResult:
+                    if 'DbUniqueName' in operationResult['Target']:
+                        if operationResult['Target']['DbUniqueName'].lower() == instance.lower():
+                            resourceInfo = operationResult['Target']
+                            break
+    
+    if not resourceInfo:
+        if print_output:
+            print("Error: instance: "+instance+" cannot be found on host: "+host)
+        raise SnapCenterOperationError() 
+
+    #get list of backup for the required resource
+    backups = _sc_api_call(scToken, '/backups?ResourceId='+resourceInfo['Id'], print_output=print_output)
+    if not backups['response'].ok: 
+        if print_output:
+            print("Error: cannot retirve backup list for instance: "+instance)
+        raise SnapCenterOperationError("Resource not found")  
+
+    #locate the required backups 
+    backups_to_mount = {}
+    #backup name is not ending _0 (data files backup) _1 (logs backup)
+    if backup_name:
+        if not backup_name.endswith("_0") and not backup_name.endswith("_1"):
+            backups_to_mount[backup_name+'_0'] = {'validated': False}
+            backups_to_mount[backup_name+'_1'] = {'validated': False} 
+        else:
+            backups_to_mount[backup_name] = {'validated': False}
+    
+        for backup in backups['body']['Backups']:
+            #print(json.dumps(backup, indent=1, sort_keys=True))
+            if backup['BackupName'] in backups_to_mount.keys():
+                backups_to_mount[backup['BackupName']] = { 'validated': True, 
+                                                           'backupid': backup['BackupId'], 
+                                                           'mounted': backup['IsMounted'],
+                                                           'backuptime': backup['Startime'],
+                                                           'type': backup['BackupType'],
+                                                           'policy': backup['PolicyName']
+                                                         }
+                                                    
+        
+    if policy_name:
+        for backup in (backups['body']['Backups'])[::-1]:
+            if backup['PolicyName'] == policy_name and len(backups_to_mount.keys())<2:
+                backups_to_mount[backup['BackupName']] = { 'validated': True, 
+                                                           'backupid': str(backup['BackupId']), 
+                                                           'mounted': str(backup['IsMounted']),
+                                                           'backuptime': str(backup['Startime']),
+                                                           'type': str(backup['BackupType']),
+                                                           'policy': str(backup['PolicyName'])
+                                                         }                
+
+    backup1=''
+    backup2=''
+    for backup in backups_to_mount:
+        if not backups_to_mount[backup]['validated']: 
+            if print_output:
+                print("Error: backup:"+backup+" could not be found")
+            raise SnapCenterOperationError("Resource not found")
+        if backups_to_mount[backup]['mounted']==True: 
+            if print_output:
+                print("Error: backup:"+backup+" is already mounted")
+            raise SnapCenterOperationError("Resource not found")
+        if not backup1: 
+            backup1 = backup 
+        else:
+            backup2 = backup
+    
+    if backup1 and backup2:
+        if backup1[:-2] != backup2[:-2]:
+            if print_output:
+                print("Error: backup:"+backup1+" and backup:"+backup2+" are not part of the same data/log backup set")
+            raise SnapCenterOperationError("Resource not found")            
+
+
+    if print_output:
+        print("the following backups will be mounted:"+backup1+" "+backup2)
+    
+    for backup in backups_to_mount:
+        output = _sccli_call (scToken, ['New-SmMountBackup','-BackupName',backup,'-AppObjectId',host+"\\\\"+instance,'-HostName',destination_host])
+        # if output.returncode:
+        #     haim
+        print(json.dumps(output, indent=1, sort_keys=True))
+    # exit(1)
+
 def backup_oracle_sc(instance: str, host: str, policy: str, wait_until_complete: bool = False, print_output: bool = True):
     # Step 1: Obtain access token from snap center server
     # Retrieve token
@@ -2245,6 +2423,11 @@ def backup_oracle_sc(instance: str, host: str, policy: str, wait_until_complete:
         if print_output:
             print("Error: snapcenter host not found: "+host)
         raise SnapCenterOperationError("Host not found")
+    
+    try:
+        host = hostDetails['body']['HostInfo']['Hosts'][0]['HostName'] 
+    except:
+        raise SnapCenterOperationError("Cannot retrive hostname from host information for host:"+host)                   
 
     hostResources = _sc_api_call(scToken, '/hosts/'+host+'/plugins/SCO/resources?ResourceType=Database', print_output=print_output)
     if not hostResources['response'].ok: 
@@ -2291,6 +2474,7 @@ def backup_oracle_sc(instance: str, host: str, policy: str, wait_until_complete:
     if print_output:
         print("Job: "+jobName+" Job ID: "+str(jobID)+" started")
         print("Extended job logs can be found at: "+scServer+"/Logs?Job="+str(jobID))
+
         
     if wait_until_complete:
         error = False 
@@ -2304,13 +2488,17 @@ def backup_oracle_sc(instance: str, host: str, policy: str, wait_until_complete:
             
             jobStatus = job['body']['Results'][0]['Status']
             jobError = job['body']['Results'][0]['Error']
-
             #print(json.dumps(job['body']['Results'][0], indent=1, sort_keys=True))
 
             #job is running 
             if jobStatus == 0:
                 if print_output:
                     print("Job is running")
+            #if job completed with warnings 
+            elif jobStatus == 1:
+                if print_output:
+                    print("Backup job completed with warnings, check job logs for additional information")
+                break
             #if job completed successfully 
             elif jobStatus == 3:
                 if print_output:
@@ -2327,11 +2515,146 @@ def backup_oracle_sc(instance: str, host: str, policy: str, wait_until_complete:
                     print("Error: job been failed with error: ")
                     print(jobError)   
                 raise SnapCenterOperationError()                          
+            else:
+                if print_output:
+                    print("Error: job been finished with unknow exit code: ")
+                    print(jobError)   
+                raise SnapCenterOperationError()               
 
             # Sleep for 10 seconds before checking progress again
             time.sleep(10)
         
+def clone_oracle_sc(instance: str, host: str, cloneToHost: str, cloneDatabaseSID: str, backupName: str = None, wait_until_complete: bool = False, print_output: bool = True):
+    # Step 1: Obtain access token from snap center server
+    # Retrieve token
+    try:
+        scToken = _retrieve_sc_token(print_output=print_output)
+    except InvalidConfigError:
+        raise 
+    # Retrieve SC API endpoint, username and password from config file
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+        
+    try:
+        scServer = config["scserver"]
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()         
 
+    hostDetails = _sc_api_call(scToken, '/hosts/'+host, print_output=print_output)
+    if not hostDetails['response'].ok: 
+        if print_output:
+            print("Error: snapcenter host not found: "+host)
+        raise SnapCenterOperationError("Host not found")
+
+    hostResources = _sc_api_call(scToken, '/hosts/'+host+'/plugins/SCO/resources?ResourceType=Database', print_output=print_output)
+    if not hostResources['response'].ok: 
+        if print_output:
+            print("Error: cannot retirve SCO plugin database resources for host: "+host)
+        raise SnapCenterOperationError("Resource not found")
+    
+    resourceInfo = None
+    for resource in hostResources['body']['Resources']:
+        if 'OperationResults' in resource:
+            for operationResult in resource['OperationResults']:
+                if 'Target' in operationResult:
+                    if 'DbUniqueName' in operationResult['Target']:
+                        if operationResult['Target']['DbUniqueName'].lower() == instance.lower():
+                            resourceInfo = operationResult['Target']
+                            break
+    if not resourceInfo:
+        if print_output:
+            print("Error: instance: "+instance+" cannot be found on host: "+host)
+        raise SnapCenterOperationError()            
+    if backupName:
+        body = {
+            "BackupName": backupName,
+            "CloneDatabaseSID": cloneDatabaseSID
+        }
+    else:
+        body = {
+            "CloneLastBackup": 0,
+            "CloneDatabaseSID": cloneDatabaseSID
+        }
+    # Create clone specification
+    createCloneSpecification = _sc_api_call(scToken, '/plugins/SCO/resources/'+str(resourceInfo['Key'])+'/clonespecification', method='post',body=body, print_output=print_output)
+    if not createCloneSpecification['response'].ok: 
+        if print_output:
+            print("Error: cannot not create clone specification, check snap center job monitor for more information")
+        raise SnapCenterOperationError()
+    print (createCloneSpecification)
+    # Create Clone from clone specification
+    body = {
+        "OracleCloneSpecificationFile": createCloneSpecification['body']['CloneSpecFilePath']+createCloneSpecification['body']['CloneSpecFileName'],
+        "CloneToHost": cloneToHost,
+        "CloneDatabaseSID": cloneDatabaseSID
+    }
+    createClone = _sc_api_call(scToken, '/plugins/SCO/resources/clone', method='post',body=body, print_output=print_output)
+    if not createClone['response'].ok: 
+        if print_output:
+            print("Error: cannot not create clone, check snap center job monitor for more information")
+        raise SnapCenterOperationError()
+    jobs = _sc_api_call(scToken, '/jobs', print_output=print_output)
+    if not jobs['response'].ok: 
+        if print_output:
+            print("Error: cannot retirvie list of jobs from snap center")
+        raise SnapCenterOperationError() 
+
+    jobID = jobs['body']['Results'][0]['Id']
+    jobName = jobs['body']['Results'][0]['Name']
+
+    if print_output:
+        print("Job: "+jobName+" Job ID: "+str(jobID)+" started")
+        print("Extended job logs can be found at: "+scServer+"/Logs?Job="+str(jobID))
+        
+    if wait_until_complete:
+        error = False 
+        while True: 
+            #get job status informaiton 
+            job = _sc_api_call(scToken, '/jobs/'+str(jobID), print_output=print_output)
+            if not job['response'].ok: 
+                if print_output:
+                    print("Error: cannot retriv job information from snap center")
+                raise SnapCenterOperationError() 
+            
+            jobStatus = job['body']['Results'][0]['Status']
+            jobError = job['body']['Results'][0]['Error']
+            #print(json.dumps(job['body']['Results'][0], indent=1, sort_keys=True))
+
+            #job is running 
+            if jobStatus == 0:
+                if print_output:
+                    print("Job is running")
+            elif jobStatus == 1:
+                if print_output:
+                    print("Job ended with warnings, check job logs for additional info")                    
+            #if job completed successfully 
+            elif jobStatus == 3:
+                if print_output:
+                    print("Backup job completed successfully ")
+                break
+            #job is cancled externaly 
+            elif jobStatus == 8: 
+                if print_output:
+                    print("Error: job been cancled ")
+                raise SnapCenterOperationError() 
+            #job failed with an error
+            elif jobStatus == 2:
+                if print_output:
+                    print("Error: job been failed with error: ")
+                    print(jobError)   
+                raise SnapCenterOperationError()                          
+            else:
+                if print_output:
+                    print("Error: job been failed with error: ")
+                    print(jobError)   
+                raise SnapCenterOperationError()                    
+
+            # Sleep for 10 seconds before checking progress again
+            time.sleep(10)
 
 
 def sync_cloud_sync_relationship(relationship_id: str, wait_until_complete: bool = False, print_output: bool = False):
