@@ -321,19 +321,30 @@ def _sc_monitor_job (scToken: str, jobid, print_output: bool = True):
             raise SnapCenterOperationError()               
 
         # Sleep for 10 seconds before checking progress again
-        time.sleep(10)    
+        time.sleep(10)
 
-def _sccli_call (token: str, cmd: list = [], print_output: bool = False) -> str:
+def _run_cmd_on_host_from_docker (cmd: list = []):
+    
+    if os.path.isfile('/.dockerenv'):
+        hostname = 'host.docker.internal'
+        cmdarr =  ['ssh','-o','StrictHostKeyChecking=no',hostname] + cmd
+    else:
+        cmdarr =  [] + cmd
 
-    import os
-    import subprocess
+    result = subprocess.run(cmdarr, capture_output=True)
+    output = {'returncode': result.returncode,
+              'stdout': result.stdout.decode('utf-8'),
+              'stderr': result.stderr.decode('utf-8'),
+              'stdoutlines': result.stdout.decode('utf-8').splitlines()
+             }   
+    return(output) 
+
+def _sccli_call (token: str, cmd: list = [], print_output: bool = False):
 
     spltokenfile = os.path.expanduser('~')+'/.spl_token_store'
     scclipath = '/opt/NetApp/snapcenter/spl/bin/sccli'
 
-    hostname = 'host.docker.internal'
-
-    cmdarr =  ['ssh','-o','StrictHostKeyChecking=no',hostname,scclipath] + cmd
+    cmdarr =  [scclipath] + cmd
   
     tokenstring = 'Token='+token
     try:
@@ -346,12 +357,7 @@ def _sccli_call (token: str, cmd: list = [], print_output: bool = False) -> str:
             print("cannot write token to:"+spltokenfile)        
         raise
 
-    result = subprocess.run(cmdarr, capture_output=True)
-    output = {'returncode': result.returncode,
-              'stdout': result.stdout.decode('utf-8'),
-              'stderr': result.stderr.decode('utf-8'),
-              'stdoutlines': result.stdout.decode('utf-8').splitlines()
-             }
+    output = _run_cmd_on_host_from_docker(cmdarr)
 
     matchObj = re.search(" jobId \'(\d+)\'",output['stdout'])
     if matchObj:
@@ -2474,6 +2480,85 @@ def mount_backup_sc(host: str, instance:str, backup_name: str, policy_name: str,
             print(output['stdout'])
         if 'jobid' in output and wait_until_complete:
             _sc_monitor_job(scToken, output['jobid'])
+
+
+    #create ln to snapcenter mount point based on the content of the mountinfo file located on the root of each mounted file name. 
+    #this will be done only if the script is running on the destination host 
+    hostname = os.uname()[1]
+    if destination_host.split('.')[0].lower() == hostname and wait_until_complete:
+        if print_output:
+            print("looking for 'mountinfo' file in the root of each one of the mounted filesystem")
+
+        #getting mounted backup information (done using CLI due to bug in REST)
+        mountinfo = _sccli_call (scToken, ['Get-SMBackup','-AppObjectId',host+"\\\\"+instance,'-ListMountInfo','-SetConsoleOutputWidth','300'])
+        if mountinfo['returncode']:
+            if print_output:
+                print("Error: cannot list existing backup information")
+            raise SnapCenterOperationError("Resource not found") 
+
+        for backup in backups_to_mount: 
+            rx = r'\|\s+{0}\s+\|\s+Mounted\s+\|\s+(\S+)\s+\|'.format(backup) 
+            matchObj = re.search(rx,mountinfo['stdout'])
+            if matchObj:
+                mountbasepath = matchObj.group(1)
+
+                if print_output:
+                    print("located backup: "+backup+" is mounted under: "+mountbasepath)
+                
+                if _run_cmd_on_host_from_docker(['test','-d',mountbasepath])['returncode']:
+                    if print_output:
+                        print("Error: could not validate mount point: "+mountbasepath+" for backup: "+backup)
+                    raise SnapCenterOperationError("Resource not found")    
+
+                dirchilds = _run_cmd_on_host_from_docker(['ls','-d',os.path.join(mountbasepath,'*')])['stdoutlines']
+
+                for directory in dirchilds:
+                    if os.path.basename(directory).isnumeric():
+                        mountinfofile = os.path.join(directory,'mountinfo')
+                        if not _run_cmd_on_host_from_docker(['test','-f',mountinfofile])['returncode']:
+                            mountinfofilecontent = _run_cmd_on_host_from_docker(['cat',mountinfofile])['stdoutlines']
+                            linktopath = ''
+                            for line in mountinfofilecontent:
+                                if line.startswith('/'): 
+                                    linktopath = line 
+                                    break
+                            
+                            if linktopath: 
+                                print("trying to use: "+linktopath+" as link to backup")
+                                
+                                checklink = _run_cmd_on_host_from_docker(['file','-b',linktopath])
+                                if len(checklink['stdoutlines']):
+                                    if 'broken symbolic link' in checklink['stdoutlines'][0]:
+                                        if print_output:
+                                            print("link path: "+linktopath+" already exists as broken link, deleting")
+                                        if _run_cmd_on_host_from_docker(['rm','-rf',linktopath])['returncode']:
+                                            if print_output:
+                                                print("ERROR: could not delete broken link: "+linktopath)
+                                            raise SnapCenterOperationError("Resource not found") 
+
+                                if not _run_cmd_on_host_from_docker(['test','-e',linktopath])['returncode']:
+                                    if print_output:
+                                        print("ERROR: link path: "+linktopath+" already exists")
+                                    raise SnapCenterOperationError("Resource not found") 
+                                else:
+                                    linkdirname = os.path.dirname(linktopath)
+                                    if _run_cmd_on_host_from_docker(['mkdir','-p',linkdirname])['returncode']:
+                                        if print_output:
+                                            print("ERROR: could not create directory: "+linkdirname)
+                                        raise SnapCenterOperationError("Resource not found") 
+                                    else:
+                                        if _run_cmd_on_host_from_docker(['ln','-s',directory,linktopath])['returncode']:
+                                            if print_output:
+                                                print("ERROR: could not create link from: "+directory+" to: "+linktopath)
+                                            raise SnapCenterOperationError("Resource not found") 
+                                        else:
+                                            if print_output:
+                                                print("link from: "+directory+" to: "+linktopath+" created successfuly")
+                                
+                        else:
+                            if print_output:
+                                print("no :"+mountinfofile+" file for mounted fs, skipping")
+
 
         #print(json.dumps(output, indent=1, sort_keys=True))
 
