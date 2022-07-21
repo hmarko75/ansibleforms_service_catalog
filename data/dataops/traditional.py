@@ -323,9 +323,9 @@ def _sc_monitor_job (scToken: str, jobid, print_output: bool = True):
         # Sleep for 10 seconds before checking progress again
         time.sleep(10)
 
-def _run_cmd_on_host_from_docker (cmd: list = []):
+def _run_cmd_on_host_from_docker (cmd: list = [], local_run: bool = False):
     
-    if os.path.isfile('/.dockerenv'):
+    if os.path.isfile('/.dockerenv') and not local_run:
         hostname = 'host.docker.internal'
         cmdarr =  ['ssh','-o','StrictHostKeyChecking=no',hostname] + cmd
     else:
@@ -337,6 +337,14 @@ def _run_cmd_on_host_from_docker (cmd: list = []):
               'stderr': result.stderr.decode('utf-8'),
               'stdoutlines': result.stdout.decode('utf-8').splitlines()
              }   
+    matchObj = re.search(" jobId \'(\d+)\'",output['stdout'])
+    if matchObj:
+        output['jobid'] = matchObj.group(1) 
+
+    for line in output['stdoutlines']:
+        if line.startswith("ERROR:"):
+            output['error'] = line
+
     return(output) 
 
 def _sccli_call (token: str, cmd: list = [], print_output: bool = False):
@@ -357,16 +365,7 @@ def _sccli_call (token: str, cmd: list = [], print_output: bool = False):
             print("cannot write token to:"+spltokenfile)        
         raise
 
-    output = _run_cmd_on_host_from_docker(cmdarr)
-
-    matchObj = re.search(" jobId \'(\d+)\'",output['stdout'])
-    if matchObj:
-        output['jobid'] = matchObj.group(1) 
-
-    for line in output['stdoutlines']:
-        if line.startswith("ERROR:"):
-            output['error'] = line
-    
+    output = _run_cmd_on_host_from_docker(cmdarr)    
     return output
 
 
@@ -2482,7 +2481,7 @@ def mount_backup_sc(host: str, instance:str, backup_name: str, policy_name: str,
             _sc_monitor_job(scToken, output['jobid'])
 
 
-    #create ln to snapcenter mount point based on the content of the mountinfo file located on the root of each mounted file name. 
+    #create ln to snapcenter mount point based on the content of the 'mountinfo' file located on the root of each mounted file name. 
     #this will be done only if the script is running on the destination host 
     hostname = os.uname()[1]
     if destination_host.split('.')[0].lower() == hostname and wait_until_complete:
@@ -2528,7 +2527,7 @@ def mount_backup_sc(host: str, instance:str, backup_name: str, policy_name: str,
                                 
                                 checklink = _run_cmd_on_host_from_docker(['file','-b',linktopath])
                                 if len(checklink['stdoutlines']):
-                                    if 'broken symbolic link' in checklink['stdoutlines'][0]:
+                                    if checklink['stdoutlines'][0].startswith('broken symbolic link'):
                                         if print_output:
                                             print("link path: "+linktopath+" already exists as broken link, deleting")
                                         if _run_cmd_on_host_from_docker(['rm','-rf',linktopath])['returncode']:
@@ -2561,6 +2560,232 @@ def mount_backup_sc(host: str, instance:str, backup_name: str, policy_name: str,
 
 
         #print(json.dumps(output, indent=1, sort_keys=True))
+
+def unmount_backup_sc(host: str, instance:str, backup_name: str = None, policy_name: str = None, wait_until_complete: bool = False, print_output: bool = True):
+    # Obtain access token from snap center server
+    # Retrieve token
+    try:
+        scToken = _retrieve_sc_token(print_output=print_output)
+    except InvalidConfigError:
+        raise 
+
+    # Retrieve SC API endpoint, username and password from config file
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+        
+    try:
+        scServer = config["scserver"]
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()         
+
+    hostDetails = _sc_api_call(scToken, '/hosts/'+host, print_output=print_output)
+    if not hostDetails['response'].ok: 
+        if print_output:
+            print("Error: snapcenter host not found: "+host)
+        raise SnapCenterOperationError("Host not found")
+    try:
+        host = hostDetails['body']['HostInfo']['Hosts'][0]['HostName']        
+    except:
+        raise SnapCenterOperationError("Cannot retrive hostname from host information for host:"+host)
+
+    hostResources = _sc_api_call(scToken, '/hosts/'+host+'/plugins/SCO/resources?ResourceType=Database', print_output=print_output)
+    if not hostResources['response'].ok: 
+        if print_output:
+            print("Error: cannot retirve SCO plugin database resources for host: "+host)
+        raise SnapCenterOperationError("Resource not found")
+    
+    resourceInfo = None
+    for resource in hostResources['body']['Resources']:
+        if 'OperationResults' in resource:
+            for operationResult in resource['OperationResults']:
+                if 'Target' in operationResult:
+                    if 'DbUniqueName' in operationResult['Target']:
+                        if operationResult['Target']['DbUniqueName'].lower() == instance.lower():
+                            resourceInfo = operationResult['Target']
+                            break
+    
+    if not resourceInfo:
+        if print_output:
+            print("Error: instance: "+instance+" cannot be found on host: "+host)
+        raise SnapCenterOperationError() 
+
+    #get list of backup for the required resource
+    backups = _sc_api_call(scToken, '/backups?ResourceId='+resourceInfo['Id'], print_output=print_output)
+    if not backups['response'].ok: 
+        if print_output:
+            print("Error: cannot retirve backup list for instance: "+instance)
+        raise SnapCenterOperationError("Resource not found")
+
+    #locate the required backups 
+    backups_to_mount = {}
+
+    # search for backup
+    if backup_name:
+        backupFound = False
+        for backup in backups['body']['Backups']:
+            if not backup_name.endswith("_0") and not backup_name.endswith("_1"):
+                if backup_name == backup['BackupName'][:-2]:
+                    backupFound = True
+            elif backup_name == backup['BackupName']:
+                backupFound = True
+    
+        if not backupFound:
+            raise SnapCenterOperationError("Backup not found")
+
+        if not backup_name.endswith("_0") and not backup_name.endswith("_1"):
+            backups_to_mount[backup_name+'_0'] = {'validated': False}
+            backups_to_mount[backup_name+'_1'] = {'validated': False} 
+        else:
+            backups_to_mount[backup_name] = {'validated': False}
+    
+        for backup in backups['body']['Backups']:
+            #print(json.dumps(backup, indent=1, sort_keys=True))
+            if backup['BackupName'] in backups_to_mount.keys():
+                backups_to_mount[backup['BackupName']] = { 'validated': True, 
+                                                           'backupid': backup['BackupId'], 
+                                                           'mounted': backup['IsMounted'],
+                                                           'backuptime': backup['Startime'],
+                                                           'type': backup['BackupType'],
+                                                           'policy': backup['PolicyName']
+                                                         } 
+    if policy_name:
+        #for backups from newest to oldest 
+        for backup in (backups['body']['Backups'])[::-1]:
+            if backup['PolicyName'] == policy_name and len(backups_to_mount.keys())<2:                
+                backups_to_mount[backup['BackupName']] = { 'validated': True, 
+                                                           'backupid': str(backup['BackupId']), 
+                                                           'mounted': backup['IsMounted'],
+                                                           'backuptime': str(backup['Startime']),
+                                                           'type': str(backup['BackupType']),
+                                                           'policy': str(backup['PolicyName'])
+                                                         }   
+    #validate backup is mounted (done using CLI due to bug in REST)
+    mountinfo = _sccli_call (scToken, ['Get-SMBackup','-AppObjectId',host+"\\\\"+instance,'-ListMountInfo','-SetConsoleOutputWidth','300'])
+    if mountinfo['returncode']:
+        if print_output:
+            print("Error: cannot list existing backup information")
+        raise SnapCenterOperationError("Resource not found")   
+    for backup in backups_to_mount: 
+        rx = r'{0}\s+\|\s+Mounted\s+\|\s+(\S+)\s+\|\s+(\S+)\s+\|'.format(backup)
+        matchObj = re.search(rx,mountinfo['stdout'])
+        if matchObj:
+            backups_to_mount[backup]['mounted'] = True
+            backups_to_mount[backup]['mountpath'] = matchObj.group(1)
+            backups_to_mount[backup]['mounthost'] = matchObj.group(2)
+        else:
+            backups_to_mount[backup]['mounted'] = False
+
+
+
+    backup1=''
+    backup2=''
+    for backup in backups_to_mount:
+        if not backups_to_mount[backup]['validated']: 
+            if print_output:
+                print("Error: backup:"+backup+" could not be found")
+            raise SnapCenterOperationError("Resource not found")
+        
+        if backups_to_mount[backup]['mounted']==False: 
+            if print_output:
+                print("Error: backup:"+backup+" is not mounted")
+            raise SnapCenterOperationError("Resource not found")
+        if not backup1: 
+            backup1 = backup 
+        else:
+            backup2 = backup
+
+    #validate both backups are for the same dataset 
+    if backup1 and backup2:
+        if backup1[:-2] != backup2[:-2]:
+            if print_output:
+                print("Error: backup:"+backup1+" and backup:"+backup2+" are not part of the same data/log backup set")
+            raise SnapCenterOperationError("Resource not found")            
+
+    if print_output:
+        print("the following backups will be unmounted:"+backup1+" "+backup2)
+    
+    for backup in backups_to_mount:
+        print("unmounting backup:"+backup)
+
+        #remove ln for mounted backup before unmouning them 
+        if backups_to_mount[backup]['mounted']:
+            hostname = os.uname()[1]
+            if backups_to_mount[backup]['mounthost'].split('.')[0].lower() == hostname.lower():
+                backupmountpoint = backups_to_mount[backup]['mountpath']
+                
+                if _run_cmd_on_host_from_docker(['test','-d',backupmountpoint])['returncode']:
+                    if print_output:
+                        print("Error: could not validate mount point: "+backupmountpoint+" for backup: "+backup)
+                    raise SnapCenterOperationError("Resource not found")    
+
+                dirchilds = _run_cmd_on_host_from_docker(['ls','-d',os.path.join(backupmountpoint,'*')])['stdoutlines']
+
+                for directory in dirchilds:
+                    if os.path.basename(directory).isnumeric():
+                        mountinfofile = os.path.join(directory,'mountinfo')
+                        if not _run_cmd_on_host_from_docker(['test','-f',mountinfofile])['returncode']:
+                            mountinfofilecontent = _run_cmd_on_host_from_docker(['cat',mountinfofile])['stdoutlines']
+                            linktopath = ''
+                            for line in mountinfofilecontent:
+                                if line.startswith('/'): 
+                                    linktopath = line 
+                                    break
+                            
+                            if linktopath: 
+                                checklink = _run_cmd_on_host_from_docker(['file','-b',linktopath])
+                                if len(checklink['stdoutlines']):
+                                    rx = r'^symbolic link to ({0})\s*$'.format(directory)
+                                    matchObj = re.search(rx,checklink['stdoutlines'][0])
+                                    if matchObj:
+                                        if print_output:
+                                            print("validated: "+linktopath+" is pointing to: "+directory+", deleting")
+                                        if _run_cmd_on_host_from_docker(['rm','-rf',linktopath])['returncode']:
+                                            if print_output:
+                                                print("ERROR: could not delete broken link: "+linktopath)
+                                            raise SnapCenterOperationError("Resource not found") 
+                                    else:
+                                        if print_output:
+                                            print("link: "+linktopath+" does not exist, skipping")                                       
+                            else:
+                                if print_output:
+                                    print("no link configured for: "+directory+" ,skipping")
+
+        #create expect script to approve the unmount (SC 4.7 will have rest api for mount/unmount)        
+        ssh = ''
+        if os.path.isfile('/.dockerenv'):
+            hostname = 'host.docker.internal'
+            ssh =  'ssh -o StrictHostKeyChecking=no '+hostname+' '
+
+        expectfilename = "/tmp/unmountexpect."+str(os.getpid())
+        with open(expectfilename, 'w') as expectfile:
+            expectfile.write('#!/usr/bin/expect -f'+"\n")
+            expectfile.write('set timeout -1'+"\n")
+            expectfile.write('spawn '+ssh+'/opt/NetApp/snapcenter/spl/bin/sccli New-SmUnmountBackup -BackupName '+backup+"\n")
+            expectfile.write('expect "): "'+"\n")
+            expectfile.write('send -- "Y\\r"'+"\n")
+            expectfile.write('expect eof'+"\n")
+            expectfile.write('lassign [wait] pid spawnid os_error_flag value'+"\n")
+            expectfile.write('exit $value'+"\n")
+
+            expectfile.close()
+
+        output = _run_cmd_on_host_from_docker (['expect',expectfilename],local_run=True)        
+        if output['returncode']:
+            if print_output:
+                print("Error: starting the unmount job failed.")
+                if 'error' in output:
+                    print(output['error'])
+            raise SnapCenterOperationError("Resource not found") 
+
+        if print_output:
+            print(output['stdout'])
+
+        if 'jobid' in output and wait_until_complete:
+            _sc_monitor_job(scToken, output['jobid'])
 
 def backup_oracle_sc(instance: str, host: str, policy: str, wait_until_complete: bool = False, print_output: bool = True):
     # Step 1: Obtain access token from snap center server
@@ -2654,7 +2879,6 @@ def backup_oracle_sc(instance: str, host: str, policy: str, wait_until_complete:
         print("Job: "+jobName+" Job ID: "+str(jobID)+" started")
         print("Extended job logs can be found at: "+scServer+"/Logs?Job="+str(jobID))
 
-        
     if wait_until_complete:
         _sc_monitor_job(scToken, jobID)
         
@@ -2743,9 +2967,9 @@ def clone_oracle_sc(instance: str, host: str, cloneToHost: str, cloneDatabaseSID
     if print_output:
         print("Job: "+jobName+" Job ID: "+str(jobID)+" started")
         print("Extended job logs can be found at: "+scServer+"/Logs?Job="+str(jobID))
-        
+
     if wait_until_complete:
-        _sc_monitor_job(jobID, print_output)
+        _sc_monitor_job(scToken, jobID)
 
 
 def sync_cloud_sync_relationship(relationship_id: str, wait_until_complete: bool = False, print_output: bool = False):

@@ -5,4 +5,4 @@ export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && p
 touch $HOME/.netapp_dataops
 touch $HOME/.spl_token_store
 
-docker run --add-host=host.docker.internal:host-gateway -v /etc/localtime:/etc/localtime:ro -v /etc/localtime:/etc/localtime:ro -v $HOME/.netapp_dataops:/root/.netapp_dataops -v $HOME/.spl_token_store:/root/.spl_token_store -v $HOME/.ssh/:/root/.ssh/ -v $SCRIPT_DIR/netapp_dataops_cli.py:/usr/bin/netapp_dataops_cli.py -v $SCRIPT_DIR/traditional.py:/usr/lib/python3.9/site-packages/netapp_dataops/traditional.py --privileged=true -it --rm --network=host hmarko75/netapp-data-ops /usr/bin/netapp_dataops_cli.py "$@"
+docker run --add-host=host.docker.internal:host-gateway -v /etc/localtime:/etc/localtime:ro -v /etc/localtime:/etc/localtime:ro -v $HOME/.netapp_dataops:/root/.netapp_dataops -v $HOME/.spl_token_store:/root/.spl_token_store -v $HOME/.ssh/:/root/.ssh/ -v $SCRIPT_DIR/netapp_dataops_cli.py:/usr/bin/netapp_dataops_cli.py -v $SCRIPT_DIR/traditional.py:/usr/lib/python3.10/site-packages/netapp_dataops/traditional.py --privileged=true -it --rm --network=host hmarko75/netapp-data-ops /usr/bin/netapp_dataops_cli.py "$@"

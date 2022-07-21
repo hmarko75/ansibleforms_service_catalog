@@ -16,6 +16,10 @@ RUN apk add --update --no-cache py3-numpy py3-pandas
 #install build tools
 RUN apk add --update --no-cache make automake gcc g++ subversion python3-dev
 
+#install build tools
+RUN apk add --update --no-cache expect
+
+
 #install netapp ansible coolection from galaxy 
 RUN ansible-galaxy collection install netapp.ontap -p /usr/share/ansible/collections
 RUN ansible-galaxy collection install netapp.elementsw -p /usr/share/ansible/collections

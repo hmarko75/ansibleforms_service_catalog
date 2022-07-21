@@ -7,7 +7,7 @@ import re
 from getpass import getpass
 
 import sys
-sys.path.insert(0, "/root/netapp-dataops-toolkit/netapp_dataops_traditional/netapp_dataops")
+#sys.path.insert(0, "/root/netapp-dataops-toolkit/netapp_dataops_traditional/netapp_dataops")
 
 from netapp_dataops import traditional
 from netapp_dataops.traditional import (
@@ -39,6 +39,7 @@ from netapp_dataops.traditional import (
     push_file_to_s3,
     backup_oracle_sc,
     mount_backup_sc,
+    unmount_backup_sc,
     clone_oracle_sc,
     restore_snapshot,
     CloudSyncSyncOperationError,
@@ -82,7 +83,8 @@ Snap Center Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
 \tsnapcenter oracle-backup\tCreate a new oracle backup using snapcenter oracle plugin
-\tsnapcenter mount-backup\t\tMount snap center backup 
+\tsnapcenter mount-backup\t\tMount snap center backup
+\tsnapcenter unmount-backup\t\tUnmount snap center backup 
 \tsnapcenter oracle-clone\t\tCreate a new oracle clone using snapcenter oracle plugin
 
 Data Fabric Commands:
@@ -330,6 +332,30 @@ Examples:
 \tnetapp_dataops_cli.py snapcenter mount-oracle-backup --host=ora1 --instance=ORCLCDB --backup-name=ora1_demo_netapp_com_ORCLCDB_ora1_07-03-2022_07.03.38.5883_1 --destination-host=ora2 -w
 \t#to mount last backup for policy ORACLE_DAILY:
 \tnetapp_dataops_cli.py snapcenter mount-oracle-backup --host=ora1 --instance=ORCLCDB --policy-name=ORACLE_DAILY --destination-host=ora2 -w
+'''
+
+helpTextUnMountOracle = '''
+Command: snapcenter unmount-oracle-backup
+
+unmount snapcenter backup
+
+Required Options/Arguments:
+\t-s, --host=\t\tName of the server hosting the instance
+\t-i, --instance=\t\tName of the oracle instance
+\t-b, --backup-name=\tName of the snap center backup to be unmount
+\t-p, --policy-name=\tUse last backup created using specific policy. both data and logs backup will be unmounted (cannot be used together with --backup-name). 
+
+Optional Options/Arguments:
+\t-w, --wait\tWait for completion
+\t-h, --help\tPrint help text.
+
+Examples:
+\t#to unmount only data backup:
+\tnetapp_dataops_cli.py snapcenter unmount-oracle-backup --host=ora1 --instance=ORCLCDB --backup-name=ora1_demo_netapp_com_ORCLCDB_ora1_07-03-2022_07.03.38.5883_0 -w
+\t#to unmount only log backup
+\tnetapp_dataops_cli.py snapcenter unmount-oracle-backup --host=ora1 --instance=ORCLCDB --backup-name=ora1_demo_netapp_com_ORCLCDB_ora1_07-03-2022_07.03.38.5883_1 -w
+\t#to unmount last backup for policy ORACLE_DAILY:
+\tnetapp_dataops_cli.py snapcenter unmount-oracle-backup --host=ora1 --instance=ORCLCDB --policy-name=ORACLE_DAILY --destination-host=ora2 -w
 '''
 
 helpTextCloneOracle = '''
@@ -1424,6 +1450,50 @@ if __name__ == '__main__':
             except (InvalidConfigError, APIConnectionError, InvalidSnapCenterParameterError,SnapCenterOperationError):
                 sys.exit(1)
 
+        elif target in ("unmount-oracle-backup","unmount-backup","unmount") :
+            host = None
+            instance = None
+            backupName = None 
+            destinationHost = None 
+            policyName = None
+            wait = False
+
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hs:i:b:p:w", ["host=","instance=","backup-name=","policy-name=","wait","help"])
+            except Exception as err:                
+                print(err)
+                handleInvalidCommand(helpText=helpTextUnMountOracle, invalidOptArg=True)    
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextUnMountOracle)
+                    sys.exit(0)
+                elif opt in ("-s", "--host"):
+                    host = arg    
+                elif opt in ("-i", "--instance"):
+                    instance = arg
+                elif opt in ("-b", "--backup-name"):
+                    backupName = arg                
+                elif opt in ("-p", "--policy-name"):
+                    policyName = arg                                          
+                elif opt in ("-w", "--wait"):
+                    wait = True                    
+            
+            # Check for required options
+            if (policyName and backupName) or (not policyName and not backupName):
+                print("Error: --backup-name or --policy-name should be provided")
+                handleInvalidCommand(helpText=helpTextMountOracle, invalidOptArg=True)
+            if not host or not instance:
+                print("Error: mandatory arguments are missing")
+                handleInvalidCommand(helpText=helpTextUnMountOracle, invalidOptArg=True)
+
+            # Mount Snapcenter backup
+            try:
+                unmount_backup_sc(host=host, instance=instance, backup_name=backupName, policy_name=policyName, wait_until_complete=wait, print_output=True)
+            except (InvalidConfigError, APIConnectionError, InvalidSnapCenterParameterError,SnapCenterOperationError):
+                sys.exit(1)
+
         # Invoke desired action based on target
         elif target in ("oracle-clone","clone-oracle") :
             instance = None
@@ -1434,7 +1504,7 @@ if __name__ == '__main__':
             wait = False
 
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hi:s:c:b:w", ["instance=","host=","cloneToHost=","cloneDatabaseSID=","backupName=","wait","help"])
+                opts, args = getopt.getopt(sys.argv[3:], "hi:s:c:bw", ["instance=","host=","cloneToHost=","cloneDatabaseSID=","backupName=","wait","help"])
             except Exception as err:                
                 print(err)
                 handleInvalidCommand(helpText=helpTextCloneOracle, invalidOptArg=True)    
